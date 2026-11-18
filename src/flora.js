@@ -12,9 +12,14 @@ const UP = new THREE.Vector3(0, 1, 0);
 const GRASS_U = yearToU(-56e6);
 
 /** A field of instanced things, each alive for its own span of time. `parts` share one set of transforms. */
+// Fraction of plants drawn (lower quality levels thin the forest); bumping the version makes every field refresh.
+let density = 1, densityVersion = 0;
+export function setFloraDensity(v) { if (v !== density) { density = v; densityVersion++; } }
+
 export class Scatter {
-  constructor(world, parts, items) {
-    this.world = world; this.items = items;
+  /** `thin`: this field may be thinned out by setFloraDensity. */
+  constructor(world, parts, items, thin = false) {
+    this.world = world; this.items = items; this.thin = thin; this.lastD = -1;
     this.meshes = parts.map(({ geo, mat, tint = true, cast = true }) => {
       const m = new THREE.InstancedMesh(geo, mat, items.length);
       m.frustumCulled = false; m.castShadow = cast; m.receiveShadow = true;
@@ -29,13 +34,14 @@ export class Scatter {
   update(u) {
     const on = !(u < this.minU - FADE || u > this.maxU + FADE);
     for (const m of this.meshes) m.visible = on;
-    if (!on || (u === this.lastU && this.world.shapeVersion === this.lastV)) return;
-    this.lastU = u; this.lastV = this.world.shapeVersion;
+    if (!on || (u === this.lastU && this.world.shapeVersion === this.lastV && densityVersion === this.lastD)) return;
+    this.lastU = u; this.lastV = this.world.shapeVersion; this.lastD = densityVersion;
+    const keep = this.thin ? density : 1;
     const w = this.world, first = this.meshes[0];
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
       const f = it.s * smooth((u - it.u0) / FADE + (it.u0 <= 0 ? 1 : 0)) * smooth((it.u1 - u) / FADE + (it.u1 >= 1 ? 1 : 0));
-      if (f <= 0.001) { _m.makeScale(0, 0, 0); }
+      if (f <= 0.001 || (keep < 1 && (i * 0.6180339887) % 1 >= keep)) { _m.makeScale(0, 0, 0); }
       else {
         _p.set(it.x, w.heightAt(it.x, it.z) - 0.1, it.z); _q.setFromAxisAngle(UP, it.rot);
         _m.compose(_p, _q, _s.set(it.sx ? it.sx * f : f, it.sy ? it.sy * f : f, it.sx ? it.sx * f : f));
@@ -244,7 +250,7 @@ export function buildFlora(world, scene) {
         if (extra) extra(it);
         items.push(it);
       }
-      const s = new Scatter(world, K[kind], items); sets.push(s); scene.add(...s.meshes);
+      const s = new Scatter(world, K[kind], items, kind !== 'lowrise'); sets.push(s); scene.add(...s.meshes);
     }
   }
   const both = () => () => (r() < 0.82 ? island() : shore());

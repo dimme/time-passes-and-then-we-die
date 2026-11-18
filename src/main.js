@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { NOW, yearToU, uToYear, envAt } from './timeline.js';
 import { World } from './world.js';
-import { buildFlora } from './flora.js';
+import { buildFlora, setFloraDensity } from './flora.js';
 import { buildFauna } from './fauna.js';
 import { buildCity } from './city.js';
 import { Player } from './controls.js';
@@ -19,9 +19,9 @@ const canvas = $('view'), beginBtn = $('begin'), statusEl = $('loadstatus');
 
 // ---------- quality levels ----------
 const LEVELS = {
-  low: { ratio: 1, shadow: 0, post: false, grass: 0.35, label: 'Low' },
-  medium: { ratio: 1.5, shadow: 2048, post: true, grass: 0.7, label: 'Medium' },
-  high: { ratio: 2, shadow: 4096, post: true, grass: 1, label: 'High' },
+  low: { ratio: 1, shadow: 0, post: false, grass: 0.35, trees: 0.4, label: 'Low' },
+  medium: { ratio: 1.5, shadow: 2048, post: true, grass: 0.7, trees: 0.7, label: 'Medium' },
+  high: { ratio: 2, shadow: 4096, post: true, grass: 1, trees: 1, label: 'High' },
 };
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
 const asked = new URLSearchParams(location.search).get('q') || store.get('quality');
@@ -86,7 +86,7 @@ async function boot() {
   function applyQuality(name, remember) {
     quality = name; Q = LEVELS[name]; if (remember) store.set('quality', name);
     post = Q.post && !!composer;
-    world.shadows = Q.shadow > 0;
+    world.shadows = Q.shadow > 0; setFloraDensity(Q.trees);
     const sun = world.sunLight;
     if (Q.shadow && sun.shadow.mapSize.x !== Q.shadow) { sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
     renderer.setPixelRatio(Math.min(devicePixelRatio, Q.ratio));
