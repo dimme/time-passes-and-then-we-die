@@ -11,7 +11,7 @@ export class Scatter {
   constructor(world, geo, items, mat = vcMat()) {
     this.world = world; this.items = items;
     this.mesh = new THREE.InstancedMesh(geo, mat, items.length);
-    this.mesh.frustumCulled = false;
+    this.mesh.frustumCulled = false; this.mesh.castShadow = this.mesh.receiveShadow = true;
     this.minU = Infinity; this.maxU = -Infinity;
     items.forEach((it, i) => {
       this.minU = Math.min(this.minU, it.u0); this.maxU = Math.max(this.maxU, it.u1);

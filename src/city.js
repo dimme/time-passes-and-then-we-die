@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { rng, smooth, clamp, box, cyl, cone, ball, part, merge, vcMat, prismGeo } from './util.js';
+import { rng, smooth, clamp, box, cyl, cone, ball, part, merge, vcMat, prismGeo, shadowed } from './util.js';
 import { yearToU } from './timeline.js';
 import { LAND } from './world.js';
 
@@ -241,8 +241,8 @@ export function buildCity(world, scene) {
   const group = new THREE.Group(); scene.add(group);
   const occ = [];     // buildings: appear, grow, get replaced
   const props = [];   // everything else with a lifespan
-  const addOcc = (b, x, z, y0, y1) => { b.obj.position.set(x, LAND, z); occ.push({ ...b, x, z, u0: Y(y0), u1: Y(y1), in: false }); };
-  const addProp = (obj, x, z, y0, y1, ground = true) => { obj.position.set(x, ground ? LAND : 0, z); props.push({ obj, x, z, u0: Y(y0), u1: Y(y1), ground, in: false, tick: obj.userData.tick }); };
+  const addOcc = (b, x, z, y0, y1) => { shadowed(b.obj); b.obj.position.set(x, LAND, z); occ.push({ ...b, x, z, u0: Y(y0), u1: Y(y1), in: false }); };
+  const addProp = (obj, x, z, y0, y1, ground = true) => { shadowed(obj); obj.position.set(x, ground ? LAND : 0, z); props.push({ obj, x, z, u0: Y(y0), u1: Y(y1), ground, in: false, tick: obj.userData.tick }); };
 
   const reserved = { '2,-3': 1929, '1,-5': 1927, '1,1': 1966, '1,2': 1966, '2,1': 0, '1,0': 1733 };
   for (let c = 0; c < 4; c++) for (let row = -8; row < 8; row++) {

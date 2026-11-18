@@ -7,18 +7,32 @@ import { buildCity } from './city.js';
 import { Player } from './controls.js';
 import { UI } from './ui.js';
 import { Sound } from './audio.js';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js';
 
 const canvas = document.getElementById('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, 1, 0.3, 12000);
 
-const world = new World(scene);
+const world = new World(scene, renderer);
 const flora = buildFlora(world, scene);
 const fauna = buildFauna(world, scene);
 const city = buildCity(world, scene);
 const player = new Player(camera, canvas, world, city);
+
+// HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping
+const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rt);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.7, 1.0);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
 
 let uTarget = yearToU(NOW), u = uTarget, playing = false;
 const setU = (v) => { uTarget = Math.max(0, Math.min(1, v)); };
@@ -47,6 +61,7 @@ document.getElementById('begin').addEventListener('click', () => { intro.classLi
 
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
+  composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
@@ -63,7 +78,7 @@ function frame(nowMs) {
   if (Math.abs(uTarget - u) < 1e-7) u = uTarget;
 
   envAt(u, env);
-  world.update(env, dt, time, camera);
+  world.update(env, dt, time, camera, u);
   flora.update(u);
   fauna.update(u, time);
   city.update(u, time);
@@ -71,7 +86,8 @@ function frame(nowMs) {
   world.sky.position.copy(camera.position);
   ui.update(u, env.glow);
   sound.update(u, dt);
-  renderer.render(scene, camera);
+  bloom.strength = env.bloom; renderer.toneMappingExposure = env.exposure;
+  composer.render();
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);

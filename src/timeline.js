@@ -156,9 +156,9 @@ export function eventAt(y) {
 // ---------- environment keyframes ----------
 // Every numeric / colour field is interpolated in slider space between keyframes.
 const base = {
-  top: 0x3f8fe0, hor: 0xbfe0f5, fogD: 0.0016, sun: 0xfff4d6, sunSize: 0.035, sunEl: 0.75, sunI: 2.2, amb: 1.0,
+  top: 0x3f8fe0, hor: 0xbfe0f5, fogD: 0.0016, sun: 0xfff4d6, sunSize: 0.035, sunEl: 0.95, sunI: 2.2, amb: 1.0,
   ground: 0x4f7a35, water: 0x2f6f8f, sea: 0, hill: 1, ice: -60, cloud: 0.45, precip: 0, pCol: 0xffffff, pVy: -2, pSize: 0.25,
-  lava: 0x000000, glow: 0, far: 0x4a6a4a,
+  lava: 0x000000, glow: 0, far: 0x4a6a4a, bloom: 0.22, exposure: 1.0, grass: 0,
 };
 const K = (y, o) => ({ y, ...o });
 const forest = { ground: 0x3f6a2c, far: 0x35552f };
@@ -218,7 +218,7 @@ const KEYS = [
 ].map((k) => ({ ...base, ...k, u: yearToU(k.y) }));
 
 const COLOR_FIELDS = ['top', 'hor', 'sun', 'ground', 'water', 'pCol', 'lava', 'far'];
-const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow'];
+const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow', 'bloom', 'exposure', 'grass'];
 const rgb = (h) => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255];
 for (const k of KEYS) for (const f of COLOR_FIELDS) k[f] = rgb(k[f]);
 

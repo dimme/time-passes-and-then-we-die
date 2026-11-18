@@ -105,7 +105,7 @@ class Herd {
   add(geo, n, from, to, { R = [20, 70], speed = 1.5, fly = 0, scale = [0.8, 1.2], bob = 0.1, mat } = {}) {
     const r = this.r; mat = mat || vcMat();
     for (let i = 0; i < n; i++) {
-      const m = new THREE.Mesh(geo, mat); m.scale.setScalar(scale[0] + r() * (scale[1] - scale[0]));
+      const m = new THREE.Mesh(geo, mat); m.castShadow = m.receiveShadow = true; m.scale.setScalar(scale[0] + r() * (scale[1] - scale[0]));
       const Rr = R[0] + r() * (R[1] - R[0]);
       this.list.push({ m, cx: (r() * 2 - 1) * (215 - Rr), cz: (r() * 2 - 1) * 260, R: Rr, w: (speed * (0.7 + r() * 0.6)) / Rr * (r() < 0.5 ? -1 : 1), ph: r() * 6.28, u0: yearToU(from), u1: yearToU(to), fly: fly && fly * (0.6 + r() * 0.8), bob, in: false });
     }
@@ -130,7 +130,7 @@ class Movers {
   /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, s } */
   constructor(world, geo, items, { mat = vcMat(), span = 480, ground = true } = {}) {
     this.world = world; this.items = items; this.span = span; this.ground = ground;
-    this.mesh = new THREE.InstancedMesh(geo, mat, items.length); this.mesh.frustumCulled = false;
+    this.mesh = new THREE.InstancedMesh(geo, mat, items.length); this.mesh.frustumCulled = false; this.mesh.castShadow = !mat.isMeshBasicMaterial;
     this.minU = Math.min(...items.map((i) => i.u0)); this.maxU = Math.max(...items.map((i) => i.u1));
     items.forEach((it, i) => this.mesh.setColorAt(i, _c.setRGB(...it.tint)));
   }

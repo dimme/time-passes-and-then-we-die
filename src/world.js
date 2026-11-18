@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clamp, smooth } from './util.js';
+import { shared } from './textures.js';
 
 // ---------- terrain shape (pure functions, shared with gameplay) ----------
 export const ISLAND = 240;       // half-width of the island (m)
@@ -25,71 +26,120 @@ function hills(x, z) {
 }
 const iceBumps = (x, z) => 3 * Math.sin(x * 0.03) * Math.cos(z * 0.025) + 1.5 * Math.sin(x * 0.11 + z * 0.07);
 
+const SKY_FRAG = `
+  uniform vec3 top, hor, sunCol, sunDir; uniform float sunSize, cloud, time, sunBright; varying vec3 vDir;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+  float fbm(vec2 p){ float a=0.5, s=0.0; for(int i=0;i<6;i++){ s+=a*noise(p); p=p*2.03+vec2(17.0,5.0); a*=0.5; } return s; }
+  void main(){
+    vec3 d = normalize(vDir);
+    float h = max(d.y, 0.0), mu = dot(d, sunDir), ang = acos(clamp(mu, -1.0, 1.0));
+    // atmosphere: deep zenith, bright hazy horizon, warm forward scattering around the sun
+    vec3 col = mix(hor, top, 1.0 - exp(-h * 3.4));
+    col = mix(col, hor * 1.12, exp(-h * 14.0) * 0.6);
+    float mie = pow(max(mu, 0.0), 6.0) * 0.22 + pow(max(mu, 0.0), 90.0) * 0.5;
+    col += sunCol * mie * (0.35 + 0.65 * exp(-h * 2.0));
+    // sun
+    float disc = 1.0 - smoothstep(sunSize * 0.96, sunSize * 1.03 + 0.0015, ang);
+    float corona = exp(-max(ang - sunSize, 0.0) / (0.03 + sunSize * 0.5));
+    col += sunCol * corona * 0.35;
+    float gran = 0.75 + 0.5 * fbm(d.xy * 14.0 + d.z * 9.0 + time * 0.03);
+    float limb = mix(1.0, 0.45 + 0.55 * sqrt(max(1.0 - pow(ang / max(sunSize, 1e-3), 2.0), 0.0)), smoothstep(0.06, 0.3, sunSize));
+    vec3 sunSurf = sunCol * sunBright * mix(1.0, gran, smoothstep(0.06, 0.3, sunSize)) * limb;
+    // clouds, lit from the sun's side
+    float cl = 0.0; vec3 cc = vec3(1.0);
+    if (cloud > 0.01 && d.y > 0.0) {
+      vec2 p = d.xz / (d.y + 0.14) * 1.15 + vec2(time * 0.004, time * 0.0015);
+      float n = fbm(p), n2 = fbm(p + sunDir.xz * 0.12);
+      float th = 1.0 - cloud * 0.78;
+      cl = smoothstep(th, th + 0.32, n * 1.3) * smoothstep(0.0, 0.16, d.y);
+      float lit = clamp(0.5 + (n - n2) * 5.0, 0.0, 1.0);
+      vec3 base = mix(hor, top, 0.35);
+      vec3 shade = base * 0.55, bright = mix(vec3(dot(base + sunCol, vec3(0.33)) * 0.9), sunCol, 0.45) * (0.75 + 0.9 * length(sunCol) * 0.4);
+      cc = mix(shade, bright, lit * (0.55 + 0.45 * smoothstep(0.2, 0.9, n * 1.3)));
+      cc = mix(cc, hor, exp(-d.y * 7.0) * 0.8);
+      cc += sunCol * pow(max(mu, 0.0), 24.0) * 0.6 * (1.0 - cl * 0.5);
+    }
+    col = mix(col, sunSurf, disc * (1.0 - cl * 0.92));
+    col = mix(col, cc, cl * 0.94);
+    if (d.y < 0.0) col = mix(col, hor, smoothstep(0.0, -0.04, d.y) * (1.0 - disc));
+    gl_FragColor = vec4(col, 1.0);
+  }`;
+
+const WATER_FRAG = `
+  uniform vec3 top, hor, sunCol, sunDir, waterCol, fogCol; uniform float time, fogD, sunI;
+  varying vec3 vWorld;
+  float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+  float wave(vec2 p){
+    return sin(dot(p, vec2(0.31, 0.17)) + time * 1.1) * 0.5 + sin(dot(p, vec2(-0.22, 0.61)) + time * 1.6) * 0.28
+      + noise(p * 0.55 + time * 0.25) * 0.9 + noise(p * 1.9 - time * 0.45) * 0.35 + noise(p * 5.3 + time * 0.8) * 0.12;
+  }
+  void main(){
+    vec2 p = vWorld.xz; float dist = length(cameraPosition - vWorld);
+    float e = 0.12 + dist * 0.004, w0 = wave(p), amp = 0.5 / (1.0 + dist * 0.03);
+    vec3 n = normalize(vec3((w0 - wave(p + vec2(e, 0.0))) / e * amp, 1.0, (w0 - wave(p + vec2(0.0, e))) / e * amp));
+    vec3 V = normalize(cameraPosition - vWorld);
+    float fres = 0.03 + 0.97 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
+    vec3 R = reflect(-V, n); R.y = abs(R.y);
+    vec3 sky = mix(hor, top, 1.0 - exp(-R.y * 3.4));
+    float sd = max(dot(R, sunDir), 0.0);
+    vec3 spec = sunCol * (pow(sd, 500.0) * 20.0 * smoothstep(0.4, 1.2, sunI) + pow(sd, 60.0) * 0.5) * min(sunI, 2.5) * 0.5;
+    vec3 body = waterCol * (0.18 + 0.32 * min(sunI, 2.5) * 0.4 + 0.25 * length(hor) * 0.5);
+    vec3 col = mix(body, sky, fres) + spec;
+    float f = 1.0 - exp(-fogD * fogD * dist * dist);
+    gl_FragColor = vec4(mix(col, fogCol, f), 1.0);
+  }`;
+
 export class World {
-  constructor(scene) {
-    this.scene = scene;
-    this.hill = 1;
-    this.ice = -60;
-    this.sea = 0;
+  constructor(scene, renderer) {
+    this.scene = scene; this.renderer = renderer;
+    this.hill = 1; this.ice = -60; this.sea = 0; this.night = 0;
     this.shapeVersion = 0;   // bumps whenever ground heights change
+    const T = shared();
 
     // --- sky ---
     this.skyU = {
       top: { value: new THREE.Color() }, hor: { value: new THREE.Color() },
       sunCol: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3(0, 1, 0) },
-      sunSize: { value: 0.035 }, cloud: { value: 0.4 }, time: { value: 0 },
+      sunSize: { value: 0.035 }, cloud: { value: 0.4 }, time: { value: 0 }, sunBright: { value: 30 },
     };
-    const sky = new THREE.Mesh(
-      new THREE.SphereGeometry(5000, 32, 20),
-      new THREE.ShaderMaterial({
-        uniforms: this.skyU, side: THREE.BackSide, depthWrite: false, fog: false,
-        vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-        fragmentShader: `
-          uniform vec3 top, hor, sunCol, sunDir; uniform float sunSize, cloud, time; varying vec3 vDir;
-          float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
-          float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
-            return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
-          float fbm(vec2 p){ float a=0.5, s=0.0; for(int i=0;i<5;i++){ s+=a*noise(p); p*=2.03; a*=0.5; } return s; }
-          void main(){
-            vec3 d = normalize(vDir);
-            float h = max(d.y, 0.0);
-            vec3 col = mix(hor, top, pow(h, 0.55));
-            float ang = acos(clamp(dot(d, sunDir), -1.0, 1.0));
-            float disc = 1.0 - smoothstep(sunSize*0.94, sunSize*1.04 + 0.002, ang);
-            float halo = exp(-max(ang - sunSize, 0.0) / (0.06 + sunSize*0.6));
-            col += sunCol * halo * 0.45;
-            float gran = 0.82 + 0.36 * fbm(d.xy * 9.0 + d.z * 5.0 + time * 0.02);
-            vec3 sunSurf = mix(sunCol * 1.5, sunCol * gran * 1.3, smoothstep(0.08, 0.4, sunSize));
-            col = mix(col, sunSurf, disc);
-            if (cloud > 0.01 && d.y > 0.0) {
-              vec2 p = d.xz / (d.y + 0.12) * 1.3 + vec2(time * 0.006, 0.0);
-              float c = smoothstep(1.0 - cloud * 0.75, 1.25 - cloud * 0.75, fbm(p) * 1.25) * smoothstep(0.0, 0.2, d.y);
-              vec3 cc = mix(hor, vec3(1.0), 0.55) * (0.55 + 0.45 * clamp(length(top + hor) * 0.6, 0.0, 1.0));
-              col = mix(col, cc, c * 0.8 * (1.0 - disc * 0.5));
-            }
-            if (d.y < 0.0) col = mix(col, hor, smoothstep(0.0, -0.05, d.y) * (1.0 - disc));
-            gl_FragColor = vec4(col, 1.0);
-            #include <colorspace_fragment>
-          }`,
-      }),
-    );
+    this.sunDir = this.skyU.sunDir.value;
+    const skyMat = new THREE.ShaderMaterial({
+      uniforms: this.skyU, side: THREE.BackSide, depthWrite: false, fog: false,
+      vertexShader: `varying vec3 vDir; void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: SKY_FRAG,
+    });
+    const skyGeo = new THREE.SphereGeometry(5000, 48, 24);
+    const sky = new THREE.Mesh(skyGeo, skyMat);
     sky.frustumCulled = false; sky.renderOrder = -10;
     this.sky = sky; scene.add(sky);
+    // the same sky, rendered into a small cube map so surfaces can reflect it
+    this.pmrem = new THREE.PMREMGenerator(renderer);
+    this.envScene = new THREE.Scene();
+    const sky2 = new THREE.Mesh(skyGeo, skyMat); sky2.scale.setScalar(0.01); sky2.frustumCulled = false; this.envScene.add(sky2);
+    this.envRT = null; this.envU = -9; this.envT = -9;
 
     // --- lights ---
-    this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    this.sunLight = new THREE.DirectionalLight(0xffffff, 2);
-    scene.add(this.hemi, this.sunLight, this.sunLight.target);
+    this.hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+    const sun = this.sunLight = new THREE.DirectionalLight(0xffffff, 2);
+    sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+    const sc = sun.shadow.camera; sc.left = sc.bottom = -190; sc.right = sc.top = 190; sc.near = 10; sc.far = 2600;
+    sun.shadow.bias = -0.0002; sun.shadow.normalBias = 0.7;
+    scene.add(this.hemi, sun, sun.target);
     scene.fog = new THREE.FogExp2(0xffffff, 0.002);
 
     // --- terrain ---
     const W = 2000, D = 2400, SX = 200, SZ = 240;
     const g = new THREE.PlaneGeometry(W, D, SX, SZ); g.rotateX(-Math.PI / 2);
-    const n = g.attributes.position.count, p = g.attributes.position.array;
+    const n = g.attributes.position.count, p = g.attributes.position.array, uv = g.attributes.uv.array;
     this.tBase = new Float32Array(n); this.tHill = new Float32Array(n);
     const col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
       const x = p[i * 3], z = p[i * 3 + 2];
+      uv[i * 2] = x / 9; uv[i * 2 + 1] = z / 9;
       const b = landBase(x); this.tBase[i] = b; this.tHill[i] = hills(x, z);
       let t = 0.86 + 0.28 * (0.5 + 0.5 * Math.sin(x * 0.13 + Math.sin(z * 0.11) * 2) * Math.cos(z * 0.09 + x * 0.02));
       if (b < 2.6 && b > -2) t *= 1.18;      // beaches
@@ -98,31 +148,38 @@ export class World {
       col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = t;
     }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    this.terrainMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    this.terrain = new THREE.Mesh(g, this.terrainMat);
+    this.terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: T.groundMap, normalMap: T.groundNormal, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.96, metalness: 0 });
+    this.terrain = new THREE.Mesh(g, this.terrainMat); this.terrain.receiveShadow = true;
     scene.add(this.terrain);
     // endless floor under everything so the horizon is never empty
-    this.floor = new THREE.Mesh(new THREE.CircleGeometry(6000, 24).rotateX(-Math.PI / 2), this.terrainMat.clone());
-    this.floor.material.vertexColors = false;
+    this.floor = new THREE.Mesh(new THREE.CircleGeometry(6000, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 1 }));
     this.floor.position.y = BED - 0.5; scene.add(this.floor);
     this._applyHill(1);
 
     // --- water ---
-    this.waterMat = new THREE.MeshLambertMaterial({ color: 0x2f6f8f, transparent: true, opacity: 0.88 });
-    this.water = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000).rotateX(-Math.PI / 2), this.waterMat);
+    this.waterU = {
+      top: this.skyU.top, hor: this.skyU.hor, sunCol: this.skyU.sunCol, sunDir: this.skyU.sunDir, time: this.skyU.time,
+      waterCol: { value: new THREE.Color() }, fogCol: { value: scene.fog.color }, fogD: { value: 0.002 }, sunI: { value: 2 },
+    };
+    this.water = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000).rotateX(-Math.PI / 2), new THREE.ShaderMaterial({
+      uniforms: this.waterU, fog: false,
+      vertexShader: `varying vec3 vWorld; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+      fragmentShader: WATER_FRAG,
+    }));
     scene.add(this.water);
 
     // --- ice sheet ---
-    const ig = new THREE.PlaneGeometry(2400, 2400, 80, 80); ig.rotateX(-Math.PI / 2);
-    const ip = ig.attributes.position.array;
-    for (let i = 0; i < ig.attributes.position.count; i++) ip[i * 3 + 1] = iceBumps(ip[i * 3], ip[i * 3 + 2]);
+    const ig = new THREE.PlaneGeometry(2400, 2400, 160, 160); ig.rotateX(-Math.PI / 2);
+    const ip = ig.attributes.position.array, iuv = ig.attributes.uv.array;
+    for (let i = 0; i < ig.attributes.position.count; i++) { ip[i * 3 + 1] = iceBumps(ip[i * 3], ip[i * 3 + 2]); iuv[i * 2] = ip[i * 3] / 14; iuv[i * 2 + 1] = ip[i * 3 + 2] / 14; }
     ig.computeVertexNormals();
-    this.iceMesh = new THREE.Mesh(ig, new THREE.MeshLambertMaterial({ color: 0xeaf4fb, flatShading: true }));
-    const skirt = new THREE.Mesh(new THREE.CircleGeometry(6000, 24).rotateX(-Math.PI / 2), this.iceMesh.material);
+    const iceMat = new THREE.MeshStandardMaterial({ color: 0xe6f1fa, roughness: 0.55, metalness: 0, normalMap: T.iceNormal, normalScale: new THREE.Vector2(1.4, 1.4), map: T.groundMap });
+    this.iceMesh = new THREE.Mesh(ig, iceMat); this.iceMesh.receiveShadow = true;
+    const skirt = new THREE.Mesh(new THREE.CircleGeometry(6000, 24).rotateX(-Math.PI / 2), iceMat);
     skirt.position.y = -3.2; this.iceMesh.add(skirt);
     scene.add(this.iceMesh);
 
-    // --- weather particles ---
+    // --- weather particles: soft flakes / ash / embers, and streaks when it is really coming down ---
     const PN = 5000; this.PN = PN;
     const pp = new Float32Array(PN * 3);
     for (let i = 0; i < PN; i++) { pp[i * 3] = (Math.random() - 0.5) * 90; pp[i * 3 + 1] = Math.random() * 50 - 10; pp[i * 3 + 2] = (Math.random() - 0.5) * 90; }
@@ -134,6 +191,10 @@ export class World {
     this.pMat = new THREE.PointsMaterial({ size: 0.25, map: new THREE.CanvasTexture(dot), transparent: true, opacity: 0.85, depthWrite: false, fog: false });
     this.particles = new THREE.Points(pg, this.pMat); this.particles.frustumCulled = false;
     scene.add(this.particles);
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PN * 6), 3));
+    this.streakMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.32, depthWrite: false, fog: false });
+    this.streaks = new THREE.LineSegments(sg, this.streakMat); this.streaks.frustumCulled = false;
+    scene.add(this.streaks);
 
     this._c = new THREE.Color();
   }
@@ -153,48 +214,72 @@ export class World {
     this.terrain.geometry.computeVertexNormals();
   }
 
-  update(env, dt, time, camera) {
-    const c = this._c, set = (col, a, m = 1) => col.setRGB(a[0] * m, a[1] * m, a[2] * m, THREE.SRGBColorSpace);
+  update(env, dt, time, camera, u) {
+    const set = (col, a, m = 1) => col.setRGB(a[0] * m, a[1] * m, a[2] * m, THREE.SRGBColorSpace);
     if (Math.abs(env.hill - this.hill) > 0.004 || (env.hill !== this.hill && (env.hill === 0 || env.hill === 1))) this._applyHill(env.hill);
     if (Math.abs(env.ice - this.ice) > 0.01) { this.ice = env.ice; this.shapeVersion++; }
     this.sea = env.sea;
+    this.night = clamp(1 - env.sunI / 1.1, 0, 1);
 
-    const u = this.skyU;
-    set(u.top.value, env.top); set(u.hor.value, env.hor); set(u.sunCol.value, env.sun);
-    u.sunSize.value = env.sunSize; u.cloud.value = env.cloud; u.time.value = time;
-    const az = 0.7; u.sunDir.value.set(Math.cos(env.sunEl) * Math.sin(az), Math.sin(env.sunEl), Math.cos(env.sunEl) * Math.cos(az));
+    const su = this.skyU;
+    set(su.top.value, env.top); set(su.hor.value, env.hor); set(su.sunCol.value, env.sun);
+    su.sunSize.value = env.sunSize; su.cloud.value = env.cloud; su.time.value = time;
+    su.sunBright.value = (2.2 + 26 * (1 - smooth((env.sunSize - 0.04) / 0.3))) * clamp(env.sunI / 2, 0.15, 1.6);
+    const az = -0.45; su.sunDir.value.set(Math.cos(env.sunEl) * Math.sin(az), Math.sin(env.sunEl), Math.cos(env.sunEl) * Math.cos(az));
     this.sky.position.copy(camera.position);
 
     set(this.scene.fog.color, env.hor); this.scene.fog.density = env.fogD;
     set(this.hemi.color, [0.5 + env.hor[0] * 0.5, 0.5 + env.hor[1] * 0.5, 0.5 + env.hor[2] * 0.5]);
-    set(this.hemi.groundColor, env.ground, 0.6); this.hemi.intensity = env.amb * 1.1;
-    set(this.sunLight.color, env.sun); this.sunLight.intensity = env.sunI;
-    this.sunLight.position.copy(camera.position).addScaledVector(u.sunDir.value, 100);
-    this.sunLight.target.position.copy(camera.position);
+    set(this.hemi.groundColor, env.ground, 0.6); this.hemi.intensity = env.amb * 0.35;
+    this.scene.environmentIntensity = env.amb * 0.9;
+    const sun = this.sunLight;
+    set(sun.color, env.sun); sun.intensity = env.sunI * 1.5;
+    const cast = env.sunI > 0.45; if (cast !== sun.castShadow) sun.castShadow = cast;
+    const cx = Math.round(camera.position.x / 6) * 6, cz = Math.round(camera.position.z / 6) * 6;   // snap so shadows do not crawl
+    sun.target.position.set(cx, camera.position.y - 1.7, cz);
+    sun.position.copy(sun.target.position).addScaledVector(su.sunDir.value, 1300);
+
+    // refresh the reflected sky now and then (cheap, but not free)
+    if (this.renderer && ((Math.abs(u - this.envU) > 0.0004 && time - this.envT > 0.25) || time - this.envT > 6)) {
+      this.envU = u; this.envT = time;
+      const bright = su.sunBright.value; su.sunBright.value = Math.min(bright, 6);   // keep the blurred reflection free of fireflies
+      const rt = this.pmrem.fromScene(this.envScene, 0, 0.1, 200);
+      su.sunBright.value = bright;
+      this.scene.environment = rt.texture;
+      if (this.envRT) this.envRT.dispose(); this.envRT = rt;
+    }
 
     set(this.terrainMat.color, env.ground); set(this.terrainMat.emissive, env.lava);
     set(this.floor.material.color, env.ground, 0.72); set(this.floor.material.emissive, env.lava);
-    set(this.waterMat.color, env.water);
+    set(this.waterU.waterCol.value, env.water); this.waterU.fogD.value = env.fogD; this.waterU.sunI.value = env.sunI;
     this.water.position.y = env.sea; this.water.visible = env.sea > BED - 0.4;
     this.iceMesh.position.y = env.ice; this.iceMesh.visible = env.ice > -50;
 
     // particles
     const count = Math.floor(clamp(env.precip, 0, 1) * this.PN);
-    this.particles.visible = count > 0;
+    const rain = Math.abs(env.pVy) > 14;
+    this.particles.visible = count > 0 && !rain; this.streaks.visible = count > 0 && rain;
     if (count > 0) {
-      this.particles.geometry.setDrawRange(0, count);
-      set(this.pMat.color, env.pCol); this.pMat.size = env.pSize;
       const a = this.particles.geometry.attributes.position.array, cp = camera.position;
       const vy = env.pVy * dt, wx = (1.5 + Math.abs(env.pVy) * 0.08) * dt;
       for (let i = 0; i < count; i++) {
         const j = i * 3;
         a[j] += wx + Math.sin(time * 1.3 + i) * 0.01; a[j + 1] += vy * (0.7 + (i % 7) * 0.08);
-        let dx = a[j] - cp.x, dy = a[j + 1] - cp.y, dz = a[j + 2] - cp.z;
+        const dx = a[j] - cp.x, dy = a[j + 1] - cp.y, dz = a[j + 2] - cp.z;
         if (dx > 45) a[j] -= 90; else if (dx < -45) a[j] += 90;
         if (dy > 40) a[j + 1] -= 50; else if (dy < -10) a[j + 1] += 50;
         if (dz > 45) a[j + 2] -= 90; else if (dz < -45) a[j + 2] += 90;
       }
-      this.particles.geometry.attributes.position.needsUpdate = true;
+      if (rain) {
+        const s = this.streaks.geometry.attributes.position.array, len = Math.abs(env.pVy) * 0.03;
+        for (let i = 0; i < count; i++) { const j = i * 3, k = i * 6; s[k] = a[j]; s[k + 1] = a[j + 1]; s[k + 2] = a[j + 2]; s[k + 3] = a[j] + len * 0.12; s[k + 4] = a[j + 1] + len; s[k + 5] = a[j + 2]; }
+        this.streaks.geometry.setDrawRange(0, count * 2); this.streaks.geometry.attributes.position.needsUpdate = true;
+        set(this.streakMat.color, env.pCol);
+      } else {
+        this.particles.geometry.setDrawRange(0, count);
+        set(this.pMat.color, env.pCol); this.pMat.size = env.pSize;
+        this.particles.geometry.attributes.position.needsUpdate = true;
+      }
     }
   }
 }

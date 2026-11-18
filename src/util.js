@@ -60,7 +60,13 @@ export function merge(geos) {
   return out;
 }
 
-export const vcMat = (opts = {}) => new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, ...opts });
+export const vcMat = (opts = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.85, metalness: 0, ...opts });
+
+/** Mark everything under an object as casting and receiving shadows. */
+export function shadowed(obj, cast = true, receive = true) {
+  obj.traverse((o) => { if (o.isMesh && !(o.material && (o.material.isMeshBasicMaterial || o.material.transparent))) { o.castShadow = cast; o.receiveShadow = receive; } });
+  return obj;
+}
 
 /** Triangular prism (gable roof) sitting on y=0, ridge along z. */
 export function prismGeo(w, h, d) {
