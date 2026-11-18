@@ -1,0 +1,75 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; user-select: none; -webkit-user-select: none; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+
+#glow { position: fixed; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 60% 35%, #fff 0%, #fff3c8 35%, #ffb24a 100%); }
+#endtext { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; color: #3a1a00; pointer-events: none; opacity: 0; padding: 0 24px 140px; }
+#endtext h2 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(26px, 4.5vw, 54px); margin: 0 0 12px; }
+#endtext p { font-size: clamp(14px, 1.6vw, 19px); line-height: 1.6; margin: 0; }
+
+#hud { position: fixed; left: 24px; top: 20px; max-width: min(520px, calc(100vw - 48px)); pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,.85), 0 0 14px rgba(0,0,0,.55); }
+#yearrow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+#year { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(40px, 6.2vw, 78px); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+#yearsub { font-size: clamp(13px, 1.5vw, 19px); opacity: .9; letter-spacing: .06em; text-transform: uppercase; }
+#era { margin-top: 8px; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; filter: brightness(1.35) saturate(1.2); }
+#caption { margin-top: 10px; padding: 10px 14px; background: rgba(8,10,14,.5); border-left: 3px solid rgba(255,255,255,.7);
+  border-radius: 0 6px 6px 0; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); text-shadow: none; }
+#caption.flash { animation: flash .7s ease-out; }
+@keyframes flash { from { background: rgba(255,255,255,.3); } to { background: rgba(8,10,14,.5); } }
+#ev-title { font-family: Georgia, serif; font-size: clamp(17px, 2vw, 23px); margin-bottom: 4px; }
+#ev-here { font-size: clamp(12.5px, 1.25vw, 15px); line-height: 1.45; }
+#ev-world { font-size: clamp(11.5px, 1.1vw, 13.5px); line-height: 1.45; margin-top: 6px; opacity: .78; font-style: italic; }
+#place { position: fixed; right: 20px; top: 22px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .75;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9); pointer-events: none; }
+#crosshair { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(255,255,255,.6);
+  box-shadow: 0 0 2px #000; pointer-events: none; }
+
+#bottom { position: fixed; left: 0; right: 0; bottom: 0; padding: 26px 24px 12px;
+  background: linear-gradient(to top, rgba(0,0,0,.82) 0%, rgba(0,0,0,.6) 60%, rgba(0,0,0,0) 100%); }
+#buttons { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+button { font: inherit; font-size: 13px; color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.4);
+  padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+button:hover { background: rgba(255,255,255,.25); }
+button.on { background: #fff; color: #000; }
+#keys { font-size: 11.5px; opacity: .65; margin-left: 6px; }
+
+#track { position: relative; height: 26px; cursor: ew-resize; touch-action: none; }
+#bands { position: absolute; left: 0; right: 0; top: 8px; height: 10px; border-radius: 5px; overflow: hidden; opacity: .9; }
+.band { position: absolute; top: 0; bottom: 0; box-shadow: inset -1px 0 0 rgba(0,0,0,.45); }
+.tick { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(0,0,0,.4); }
+#fill { position: absolute; left: 0; top: 8px; height: 10px; border-radius: 5px 0 0 5px; background: rgba(0,0,0,.42); pointer-events: none; }
+#handle { position: absolute; top: 0; width: 4px; height: 26px; margin-left: -2px; background: #fff; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 12px rgba(255,255,255,.9); pointer-events: none; }
+#handle::after { content: ''; position: absolute; left: -6px; top: -7px; border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.nowmark { position: absolute; top: -13px; transform: translateX(-50%); font-size: 9px; letter-spacing: .12em; text-transform: uppercase; opacity: .8; pointer-events: none; }
+.nowmark::after { content: ''; position: absolute; left: 50%; top: 12px; width: 1px; height: 22px; background: rgba(255,255,255,.75); }
+#labels { position: relative; height: 26px; margin-top: 2px; }
+.label { position: absolute; top: 0; font-size: 9.5px; line-height: 1.15; letter-spacing: .03em; text-align: center; opacity: .78; padding: 0 2px; overflow: hidden; max-height: 24px; }
+.label.narrow { display: none; }
+
+#truescale { position: relative; height: 5px; margin-top: 8px; background: rgba(255,255,255,.2); border-radius: 3px; }
+#ts-dino { position: absolute; left: 0; top: 0; bottom: 0; background: #5d8a3a; border-radius: 3px 0 0 3px; }
+#ts-now { position: absolute; top: -3px; bottom: -3px; width: 1px; background: #fff; }
+#ts-marker { position: absolute; top: -4px; width: 9px; height: 13px; margin-left: -4.5px; border-radius: 3px; background: #ffd84a; box-shadow: 0 0 8px #ffd84a; }
+#ts-text { margin-top: 7px; font-size: 11.5px; opacity: .8; }
+#ts-text b { color: #ffd84a; font-weight: 600; }
+
+#intro { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.72), rgba(0,0,0,.93)); transition: opacity .9s; z-index: 10; }
+#intro.gone { opacity: 0; pointer-events: none; }
+.card { max-width: 560px; text-align: center; }
+.card h1 { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; font-size: clamp(34px, 6vw, 64px); line-height: 1.05; margin: 0 0 22px; }
+.card p { font-size: 17px; line-height: 1.55; margin: 0 0 14px; }
+.card p.small { font-size: 14px; opacity: .78; }
+#begin { margin-top: 12px; font-size: 16px; padding: 11px 34px; background: #fff; color: #000; border: 0; }
+#begin:hover { background: #ffd84a; }
+
+@media (max-width: 760px) {
+  #hud { left: 12px; top: 10px; } #place, #keys, #labels { display: none; }
+  #bottom { padding: 18px 12px 8px; } #ts-text { font-size: 10px; }
+  #caption { padding: 7px 10px; }
+}
