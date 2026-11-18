@@ -41,22 +41,17 @@ export const cone = (r, h, color, x = 0, y = 0, z = 0, seg = 6, rx = 0, ry = 0, 
 export const ball = (r, color, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, detail = 0) =>
   part(new THREE.IcosahedronGeometry(r, detail), color, x, y, z, 0, 0, 0, sx, sy, sz);
 
-/** Merge non-indexed geometries that carry position / normal / color. */
+/** Merge non-indexed geometries; keeps whichever of position / normal / color / uv they all carry. */
 export function merge(geos) {
   let n = 0;
   for (const g of geos) n += g.attributes.position.count;
-  const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
-  let o = 0;
-  for (const g of geos) {
-    pos.set(g.attributes.position.array, o);
-    nor.set(g.attributes.normal.array, o);
-    col.set(g.attributes.color.array, o);
-    o += g.attributes.position.count * 3;
-  }
   const out = new THREE.BufferGeometry();
-  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  out.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  for (const [name, size] of [['position', 3], ['normal', 3], ['color', 3], ['uv', 2]]) {
+    if (!geos.every((g) => g.attributes[name])) continue;
+    const arr = new Float32Array(n * size); let o = 0;
+    for (const g of geos) { arr.set(g.attributes[name].array, o); o += g.attributes.position.count * size; }
+    out.setAttribute(name, new THREE.BufferAttribute(arr, size));
+  }
   return out;
 }
 

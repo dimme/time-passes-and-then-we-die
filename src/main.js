@@ -79,7 +79,7 @@ function frame(nowMs) {
 
   envAt(u, env);
   world.update(env, dt, time, camera, u);
-  flora.update(u);
+  flora.update(u, time, env, camera);
   fauna.update(u, time);
   city.update(u, time);
   player.update(dt);
