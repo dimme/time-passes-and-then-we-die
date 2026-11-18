@@ -234,7 +234,7 @@ export class World {
     this.scene.environmentIntensity = env.amb * 0.9;
     const sun = this.sunLight;
     set(sun.color, env.sun); sun.intensity = env.sunI * 1.5;
-    const cast = env.sunI > 0.45; if (cast !== sun.castShadow) sun.castShadow = cast;
+    const cast = env.sunI > 0.45 && this.shadows !== false; if (cast !== sun.castShadow) sun.castShadow = cast;
     const cx = Math.round(camera.position.x / 6) * 6, cz = Math.round(camera.position.z / 6) * 6;   // snap so shadows do not crawl
     sun.target.position.set(cx, camera.position.y - 1.7, cz);
     sun.position.copy(sun.target.position).addScaledVector(su.sunDir.value, 1300);

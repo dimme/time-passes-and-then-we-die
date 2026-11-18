@@ -11,6 +11,7 @@
 <body>
   <canvas id="view"></canvas>
   <div id="glow"></div>
+  <div id="fatal"></div>
   <div id="endtext">
     <h2>The Sun has swallowed the Earth.</h2>
     <p>Everything that ever happened here fit inside a sliver of that line too thin to draw.<br>Yours is happening now.</p>
@@ -33,6 +34,7 @@
       <button id="play">▶ Let time pass</button>
       <button id="now">Return to now</button>
       <button id="mute">Sound: on</button>
+      <button id="quality" title="Lower this if the game runs slowly">Quality: Medium</button>
       <span id="keys">WASD walk · Shift run · mouse look · drag the line, scroll, or hold Q / E to move through time</span>
     </div>
     <div id="track">
@@ -56,7 +58,8 @@
       <p class="small">Walk around with <b>WASD</b> and the mouse. Drag the line at the bottom of the screen
         (or scroll, or hold <b>Q</b> / <b>E</b>) to move through time — from the first dinosaurs to the day the Sun swallows the Earth.</p>
       <p class="small">On a phone: left thumb walks, right thumb looks. Sound on is recommended. Notice how little of the line is ours.</p>
-      <button id="begin">Begin</button>
+      <button id="begin" disabled>Loading…</button>
+      <div id="loadstatus">Starting…</div>
     </div>
   </div>
   <script type="module" src="src/main.js"></script>

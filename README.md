@@ -23,7 +23,12 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | Let time pass by itself | `Space` |
 | Return to now | `N` |
 | Sound on / off | `M` |
+| Quality | the **Quality** button cycles Low / Medium / High; or add `?q=low` to the address |
 | Touch | left thumb walks, right thumb looks, drag the timeline |
+
+If it runs slowly or the picture does not appear, open it with `?q=low` (for example
+`http://localhost:8000/?q=low`). Problems are reported on the page itself, and load timings are
+printed to the browser console.
 
 ## What you walk through
 

@@ -67,6 +67,12 @@ button.on { background: #fff; color: #000; }
 .card p.small { font-size: 14px; opacity: .78; }
 #begin { margin-top: 12px; font-size: 16px; padding: 11px 34px; background: #fff; color: #000; border: 0; }
 #begin:hover { background: #ffd84a; }
+#begin:disabled { background: rgba(255,255,255,.25); color: rgba(255,255,255,.8); cursor: wait; }
+#loadstatus { margin-top: 12px; min-height: 18px; font-size: 12.5px; opacity: .7; font-style: italic; }
+#fatal { display: none; position: fixed; left: 50%; top: 18%; transform: translateX(-50%); z-index: 20; width: min(640px, calc(100vw - 32px));
+  background: rgba(40,8,8,.94); border: 1px solid #c0504a; border-radius: 8px; padding: 16px 18px; font-size: 14px; line-height: 1.45; user-select: text; -webkit-user-select: text; }
+#fatal pre { white-space: pre-wrap; word-break: break-word; font-size: 11.5px; opacity: .85; max-height: 200px; overflow: auto; margin: 10px 0 0; }
+#fatal a { color: #ffd84a; }
 
 @media (max-width: 760px) {
   #hud { left: 12px; top: 10px; } #place, #keys, #labels { display: none; }

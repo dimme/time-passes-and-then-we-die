@@ -11,86 +11,177 @@ import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js';
 
-const canvas = document.getElementById('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, 1, 0.3, 12000);
+const $ = (id) => document.getElementById(id);
+const canvas = $('view'), beginBtn = $('begin'), statusEl = $('loadstatus');
 
-const world = new World(scene, renderer);
-const flora = buildFlora(world, scene);
-const fauna = buildFauna(world, scene);
-const city = buildCity(world, scene);
-const player = new Player(camera, canvas, world, city);
+// ---------- quality levels ----------
+const LEVELS = {
+  low: { ratio: 1, shadow: 0, post: false, grass: 0.35, label: 'Low' },
+  medium: { ratio: 1.5, shadow: 2048, post: true, grass: 0.7, label: 'Medium' },
+  high: { ratio: 2, shadow: 4096, post: true, grass: 1, label: 'High' },
+};
+const store = { get: (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
+const asked = new URLSearchParams(location.search).get('q') || store.get('quality');
+let quality = LEVELS[asked] ? asked : 'medium';
+let Q = LEVELS[quality];
 
-// HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping
-const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
-const composer = new EffectComposer(renderer, rt);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.7, 1.0);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
-
-let uTarget = yearToU(NOW), u = uTarget, playing = false;
-const setU = (v) => { uTarget = Math.max(0, Math.min(1, v)); };
-const ui = new UI({
-  onScrub: (v) => { setU(v); stop(); },
-  onPlay: () => { playing = !playing; if (playing && uTarget >= 0.999) { uTarget = u = 0; } ui.setPlaying(playing); },
-  onNow: () => { stop(); setU(yearToU(NOW)); },
-});
-function stop() { if (playing) { playing = false; ui.setPlaying(false); } }
-
-// scrub with the wheel or Q / E so you never have to let go of the mouse-look
-addEventListener('wheel', (e) => { e.preventDefault(); stop(); setU(uTarget + Math.sign(e.deltaY) * Math.min(120, Math.abs(e.deltaY)) * 0.00004); }, { passive: false });
-addEventListener('keydown', (e) => {
-  if (e.code === 'Space') { e.preventDefault(); document.getElementById('play').click(); }
-  if (e.code === 'KeyN') document.getElementById('now').click();
-  if (e.code === 'KeyM') document.getElementById('mute').click();
-});
-
-const sound = new Sound();
-const muteBtn = document.getElementById('mute');
-const wake = () => sound.start();          // browsers only allow audio after a gesture
-addEventListener('pointerdown', wake); addEventListener('keydown', wake);
-muteBtn.addEventListener('click', () => { sound.setMuted(!sound.muted); muteBtn.textContent = sound.muted ? 'Sound: off' : 'Sound: on'; });
-const intro = document.getElementById('intro');
-document.getElementById('begin').addEventListener('click', () => { intro.classList.add('gone'); });
-
-function resize() {
-  renderer.setSize(innerWidth, innerHeight, false);
-  composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight);
-  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+// ---------- anything that goes wrong is shown on screen, not just in the console ----------
+function fatal(msg, detail) {
+  const el = $('fatal'); el.style.display = 'block';
+  el.innerHTML = `<b>${msg}</b>${detail ? `<pre>${String(detail).replace(/</g, '&lt;').slice(0, 1200)}</pre>` : ''}<p>Try <a href="?q=low">low quality</a>, or a different browser.</p>`;
+  console.error(msg, detail || '');
 }
-addEventListener('resize', resize); resize();
+addEventListener('error', (e) => fatal('Something broke while running the game.', e.error && e.error.stack ? e.error.stack : e.message));
+addEventListener('unhandledrejection', (e) => fatal('Something broke while loading the game.', e.reason && e.reason.stack ? e.reason.stack : e.reason));
+const pause = () => new Promise((r) => setTimeout(r, 20));   // let the browser paint between heavy steps
 
-const env = {};
-let last = performance.now(), time = 0;
-function frame(nowMs) {
-  const dt = Math.min(0.1, (nowMs - last) / 1000); last = nowMs; time += dt;
-  const k = player.keys, fast = k.has('ShiftLeft') || k.has('ShiftRight') ? 4 : 1;
-  if (k.has('KeyE') || k.has('Period')) { stop(); setU(uTarget + dt * 0.012 * fast); }
-  if (k.has('KeyQ') || k.has('Comma')) { stop(); setU(uTarget - dt * 0.012 * fast); }
-  if (playing) { setU(uTarget + dt / 150); if (uTarget >= 1) stop(); }
-  u += (uTarget - u) * Math.min(1, dt * 12);
-  if (Math.abs(uTarget - u) < 1e-7) u = uTarget;
+async function boot() {
+  const t0 = performance.now(), timings = {};
+  const mark = (label) => { timings[label] = Math.round(performance.now() - t0); };
+  const step = async (label, fn) => { statusEl.textContent = label + '…'; await pause(); const t = performance.now(); const v = await fn(); timings[label] = Math.round(performance.now() - t); return v; };
 
-  envAt(u, env);
-  world.update(env, dt, time, camera, u);
-  flora.update(u, time, env, camera);
-  fauna.update(u, time);
-  city.update(u, time);
-  player.update(dt);
-  world.sky.position.copy(camera.position);
-  ui.update(u, env.glow);
-  sound.update(u, dt);
-  bloom.strength = env.bloom; renderer.toneMappingExposure = env.exposure;
-  composer.render();
+  let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: !Q.post, powerPreference: 'high-performance' });
+  } catch (err) { fatal('This browser could not start WebGL, which the game needs.', err); return; }
+  const gl = renderer.getContext();
+  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.ratio));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.3, 12000);
+
+  // if the GPU drops us (usually out of memory), come back once at the lowest setting
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    if (quality !== 'low' && !sessionStorage.getItem('ctxlost')) { sessionStorage.setItem('ctxlost', '1'); store.set('quality', 'low'); location.search = '?q=low'; }
+    else fatal('The browser lost its graphics context.', 'The GPU ran out of memory or was reset. Reload the page to try again.');
+  });
+
+  mark('@renderer');
+  const world = await step('Shaping the land and sky', () => new World(scene, renderer));
+  const flora = await step('Growing 235 million years of plants', () => buildFlora(world, scene));
+  const fauna = await step('Raising the animals and the people', () => buildFauna(world, scene));
+  const city = await step('Building and demolishing Manhattan', () => buildCity(world, scene));
+  mark('@built');
+  const player = new Player(camera, canvas, world, city);
+
+  // HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping → anti-aliasing.
+  // Multisampled float targets are not available everywhere, so ask before relying on them.
+  let post = Q.post, composer = null, bloom = null, fxaa = null;
+  const floatOK = renderer.capabilities.isWebGL2 && (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
+  if (floatOK) {
+    let msaa = 0;
+    if (quality === 'high') { try { const s = gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA16F, gl.SAMPLES); if (s && Array.from(s).includes(4)) msaa = 4; } catch (_) { msaa = 0; } }
+    composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: msaa }));
+    composer.addPass(new RenderPass(scene, camera));
+    bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.7, 1.0); composer.addPass(bloom);
+    composer.addPass(new OutputPass());
+    if (!msaa) { fxaa = new ShaderPass(FXAAShader); composer.addPass(fxaa); }
+  } else post = false;
+
+  function applyQuality(name, remember) {
+    quality = name; Q = LEVELS[name]; if (remember) store.set('quality', name);
+    post = Q.post && !!composer;
+    world.shadows = Q.shadow > 0;
+    const sun = world.sunLight;
+    if (Q.shadow && sun.shadow.mapSize.x !== Q.shadow) { sun.shadow.mapSize.set(Q.shadow, Q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+    renderer.setPixelRatio(Math.min(devicePixelRatio, Q.ratio));
+    $('quality').textContent = 'Quality: ' + Q.label;
+    resize();
+  }
+  function resize() {
+    renderer.setSize(innerWidth, innerHeight, false);
+    if (composer) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(innerWidth, innerHeight); }
+    if (fxaa) fxaa.material.uniforms.resolution.value.set(1 / (innerWidth * renderer.getPixelRatio()), 1 / (innerHeight * renderer.getPixelRatio()));
+    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  }
+  addEventListener('resize', resize);
+  applyQuality(quality, false);
+  $('quality').addEventListener('click', () => { const order = ['low', 'medium', 'high']; autoTune = false; applyQuality(order[(order.indexOf(quality) + 1) % 3], true); });
+
+  let uTarget = yearToU(NOW), u = uTarget, playing = false;
+  const setU = (v) => { uTarget = Math.max(0, Math.min(1, v)); };
+  const ui = new UI({
+    onScrub: (v) => { setU(v); stop(); },
+    onPlay: () => { playing = !playing; if (playing && uTarget >= 0.999) { uTarget = u = 0; } ui.setPlaying(playing); },
+    onNow: () => { stop(); setU(yearToU(NOW)); },
+  });
+  function stop() { if (playing) { playing = false; ui.setPlaying(false); } }
+
+  // scrub with the wheel or Q / E so you never have to let go of the mouse-look
+  addEventListener('wheel', (e) => { e.preventDefault(); stop(); setU(uTarget + Math.sign(e.deltaY) * Math.min(120, Math.abs(e.deltaY)) * 0.00004); }, { passive: false });
+  addEventListener('keydown', (e) => {
+    if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
+    if (e.code === 'KeyN') $('now').click();
+    if (e.code === 'KeyM') $('mute').click();
+  });
+
+  const sound = new Sound();
+  const wake = () => sound.start();          // browsers only allow audio after a gesture
+  addEventListener('pointerdown', wake); addEventListener('keydown', wake);
+  $('mute').addEventListener('click', () => { sound.setMuted(!sound.muted); $('mute').textContent = sound.muted ? 'Sound: off' : 'Sound: on'; });
+  beginBtn.addEventListener('click', () => { $('intro').classList.add('gone'); });
+
+  const env = {};
+  mark('@wired');
+  const draw = () => { if (post) { bloom.strength = env.bloom; composer.render(); } else renderer.render(scene, camera); };
+  const simulate = (dt, time) => {
+    envAt(u, env); env.grass *= Q.grass;
+    world.update(env, dt, time, camera, u);
+    flora.update(u, time, env, camera);
+    fauna.update(u, time);
+    city.update(u, time);
+    player.update(dt);
+    world.sky.position.copy(camera.position);
+    renderer.toneMappingExposure = env.exposure;
+  };
+
+  // warm up: compile the shaders for the opening scene before showing it, instead of freezing on the first frame
+  await step('Compiling shaders', async () => { simulate(0, 0); if (renderer.compileAsync) await renderer.compileAsync(scene, camera); });
+  await step('Drawing the first frame', () => { simulate(0.016, 0.016); draw(); });
+  // some browsers silently draw nothing through the post-processing chain; if the picture is pure black, bypass it
+  if (post) {
+    const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight, px = new Uint8Array(4 * 16 * 16); let sum = 0;
+    for (const [fx, fy] of [[0.5, 0.8], [0.3, 0.5], [0.7, 0.3]]) { gl.readPixels(Math.floor(w * fx), Math.floor(h * fy), 16, 16, gl.RGBA, gl.UNSIGNED_BYTE, px); for (let i = 0; i < px.length; i += 4) sum += px[i] + px[i + 1] + px[i + 2]; }
+    if (sum === 0) { console.warn('Post-processing produced a black frame; falling back to direct rendering.'); composer = null; post = false; draw(); }
+  }
+  timings.total = Math.round(performance.now() - t0);
+  console.info('Load timings (ms):', timings, '| quality:', quality, '| post-processing:', post);
+  statusEl.textContent = ''; beginBtn.disabled = false; beginBtn.textContent = 'Begin';
+
+  let last = performance.now(), time = 0.016, slow = 0, frames = 0, autoTune = !asked, failed = false;
+  function frame(nowMs) {
+    if (failed) return;
+    requestAnimationFrame(frame);
+    const raw = (nowMs - last) / 1000, dt = Math.min(0.1, Math.max(0, raw)); last = nowMs; time += dt;
+    const k = player.keys, fast = k.has('ShiftLeft') || k.has('ShiftRight') ? 4 : 1;
+    if (k.has('KeyE') || k.has('Period')) { stop(); setU(uTarget + dt * 0.012 * fast); }
+    if (k.has('KeyQ') || k.has('Comma')) { stop(); setU(uTarget - dt * 0.012 * fast); }
+    if (playing) { setU(uTarget + dt / 150); if (uTarget >= 1) stop(); }
+    u += (uTarget - u) * Math.min(1, dt * 12);
+    if (Math.abs(uTarget - u) < 1e-7) u = uTarget;
+    try {
+      simulate(dt, time);
+      ui.update(u, env.glow);
+      sound.update(u, dt);
+      draw();
+    } catch (err) {
+      if (post) { console.warn('Post-processing failed; falling back to direct rendering.', err); composer = null; post = false; return; }
+      failed = true; fatal('The 3D view stopped working.', err && err.stack ? err.stack : err);
+    }
+    // if nobody chose a quality and the machine is struggling, step down by itself
+    if (autoTune && document.visibilityState === 'visible' && ++frames > 40) {
+      slow = raw > 0.045 ? slow + 1 : Math.max(0, slow - 2);
+      if (slow > 90 && quality !== 'low') { slow = 0; frames = 0; applyQuality(quality === 'high' ? 'medium' : 'low', false); }
+    }
+  }
   requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
 
-// handy for poking at the world from the console
-window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, player, renderer, city, sound, fauna, THREE };
+  // handy for poking at the world from the console
+  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
+}
+boot().catch((err) => fatal('The game could not start.', err && err.stack ? err.stack : err));
