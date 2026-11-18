@@ -204,7 +204,8 @@ export const M = {
   earth: surface((g, hg, S) => { const n = tileNoise(S, 6, 5, 31), a = g.createImageData(S, S), b = hg.createImageData(S, S); for (let i = 0; i < S * S; i++) { const v = 150 + n[i] * 105; a.data.set([v, v, v, 255], i * 4); b.data.set([n[i] * 255, 0, 0, 255], i * 4); } g.putImageData(a, 0, 0); hg.putImageData(b, 0, 0); }, [4, 4], { bump: 6, mat: { roughness: 1 } }),
 };
 M.lit.onBeforeCompile = (s) => { s.fragmentShader = s.fragmentShader.replace('#include <color_fragment>', '').replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= vColor.rgb;'); };
-M.lit.userData.cast = false; M.glow.userData.cast = false;
+M.lamp = new THREE.MeshBasicMaterial({ vertexColors: true });      // street-lamp glass: brightens at night
+M.lit.userData.cast = false; M.glow.userData.cast = false; M.lamp.userData.cast = false;
 
 /** Railings, fences and lattice steelwork: one alpha-tested strip; the lower half is balusters, the upper half a braced truss. */
 let _grille;
@@ -225,7 +226,7 @@ M.grille = () => {
 export function conform(obj, hill) {
   obj.traverse((m) => { const d = m.geometry && m.geometry.userData.lift; if (!d) return; const p = m.geometry.attributes.position; for (let i = 0; i < d.l.length; i++) p.setY(i, d.y[i] + d.l[i] * hill); p.needsUpdate = true; m.geometry.computeBoundingSphere(); });
 }
-export function setNight(n) { for (const m of NIGHT) m.emissiveIntensity = n * 1.6; M.lit.emissiveIntensity = n * 1.3; }
+export function setNight(n) { for (const m of NIGHT) m.emissiveIntensity = n * 1.6; M.lit.emissiveIntensity = n * 1.3; M.lamp.color.setRGB(1, 0.92, 0.75).multiplyScalar(0.35 + n * 5); }
 export const groundNormal = () => shared().groundNormal;
 
 // ---------- geometry accumulator ----------
@@ -261,10 +262,12 @@ export class Kit {
     const b = this.bucket(mat), c = lin(col), [A, B] = P, D = P[P.length - 1];
     _a.set(B[0] - A[0], B[1] - A[1], B[2] - A[2]).cross(_b.set(D[0] - A[0], D[1] - A[1], D[2] - A[2])).normalize();
     const nx = _a.x, ny = _a.y, nz = _a.z, ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
-    const i = P.map((p) => {
+    const lf = this.lf, i = P.map((p) => {
       const u = ay > 0.9 ? p[0] : ax > az ? p[2] : p[0], w = ay > 0.9 ? p[2] : ay > 0.25 ? p[1] / Math.sqrt(1 - ny * ny) : p[1];
+      if (p[5] !== undefined) this.lf = p[5];      // a sixth number pins that corner to the land on its own
       return this.v(b, p[0], p[1], p[2], nx, ny, nz, c, p[3] ?? u / b.tile[0], p[4] ?? w / b.tile[1]);
     });
+    this.lf = lf;
     b.i.push(i[0], i[1], i[2]); if (i.length > 3) b.i.push(i[0], i[2], i[3]);
   }
   /** Axis-aligned box standing on y, centred on x, z. skip lists faces to leave out: l r (x), b t (y), k f (back, front). */
@@ -342,6 +345,8 @@ export class Kit {
     const i = P.map((p) => this.v(b, p[0], p[1], p[2], _a.x, _a.y, _a.z, tint, (u + p[3]) / G, (w + p[4]) / G, (a + p[3]) / LIT, (a + p[4]) / LIT));
     b.i.push(i[0], i[1], i[2]);
   }
+  /** The same, as parts for an instanced Scatter. */
+  parts() { return this.build().children.map((m) => ({ geo: m.geometry, mat: m.material, cast: m.castShadow })); }
   /** One mesh per material used. */
   build() {
     const g = new THREE.Group();
