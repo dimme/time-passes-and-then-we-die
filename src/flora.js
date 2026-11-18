@@ -161,7 +161,7 @@ function frond(b, base, ang, L, w, rise, droop, segs = 6) {
   }
 }
 
-function makeKinds() {
+export function makeKinds() {
   const T = shared(), r = rng(555);
   const bark = new THREE.MeshStandardMaterial({ map: T.barkMap, normalMap: T.barkNormal, color: 0x6a5140, roughness: 0.95 });
   const palmBark = new THREE.MeshStandardMaterial({ map: T.barkMap, normalMap: T.barkNormal, color: 0x8a7558, roughness: 0.95 });

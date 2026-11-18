@@ -146,7 +146,7 @@ const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
 
 // ---------- building types: each returns { obj, fw, fd } ----------
 const pick = (r, a) => a[Math.floor(r() * a.length)];
-const TYPES = {
+export const TYPES = {
   dutch(r) {
     const w = 6.5 + r() * 2.5, d = 8 + r() * 4, h = 4.2 + r() * 2;
     return { obj: grp(slab(w, h, d, 'dutch', r), at(new THREE.Mesh(prismGeo(w + 0.5, 3.6, d + 0.4), PLAIN.tile), 0, h, 0), at(new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.6, 0.8), PLAIN.brick), 0, h + 2.6, d * 0.3)), fw: w, fd: d };

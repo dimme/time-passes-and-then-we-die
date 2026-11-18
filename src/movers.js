@@ -1,0 +1,64 @@
+// Instanced things that travel along the street grid (people, carts, cars) or through the air and rivers.
+import * as THREE from 'three';
+import { yearToU } from './timeline.js';
+import { LAND, ISLAND } from './world.js';
+
+const H = Math.PI / 2;
+/** Streets that cross the island stop this far from its centre line. */
+export const CROSS_SPAN = ISLAND - 6;
+// =====================================================================================
+// Things that move in straight lanes
+// =====================================================================================
+const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1, 1, 1), _c = new THREE.Color();
+const UP = new THREE.Vector3(0, 1, 0), ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+export class Movers {
+  /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, legs?, skin?, s } */
+  constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0 } = {}) {
+    this.world = world; this.items = items; this.span = span; this.crossSpan = crossSpan || span; this.ground = ground; this.bob = bob;
+    this.meshes = parts.map(({ geo, mat, tint = true, tintKey = 'tint', cast = true }) => {
+      const m = new THREE.InstancedMesh(geo, mat, items.length); m.frustumCulled = false; m.castShadow = cast; m.receiveShadow = true;
+      items.forEach((it, i) => m.setColorAt(i, tint ? _c.setRGB(...(it[tintKey] || it.tint)) : _c.setRGB(1, 1, 1)));
+      return m;
+    });
+    for (let k = 1; k < this.meshes.length; k++) this.meshes[k].instanceMatrix = this.meshes[0].instanceMatrix;
+    this.minU = Math.min(...items.map((i) => i.u0)); this.maxU = Math.max(...items.map((i) => i.u1));
+  }
+  update(u, t) {
+    const on = !(u < this.minU || u > this.maxU);
+    for (const m of this.meshes) m.visible = on;
+    if (!on) return;
+    const w = this.world, first = this.meshes[0], flooded = this.ground && w.sea > LAND - 0.25;   // nothing drives or walks through a flooded street
+    for (let i = 0; i < this.items.length; i++) {
+      const it = this.items[i];
+      if (flooded || u < it.u0 || u >= it.u1) { first.setMatrixAt(i, ZERO); continue; }
+      const span = it.axis === 'z' ? this.span : this.crossSpan, L = span * 2;   // cross streets end at the shore
+      const along = ((((it.off + it.v * t) % L) + L) % L) - span;
+      const x = it.axis === 'z' ? it.lane : along, z = it.axis === 'z' ? along : it.lane;
+      let y = this.ground ? Math.max(w.heightAt(x, z), w.sea - 0.15) + it.alt : it.alt;
+      if (this.bob) y += Math.abs(Math.cos(along * 2.6)) * this.bob;
+      _q.setFromAxisAngle(UP, it.axis === 'z' ? (it.v > 0 ? -H : H) : (it.v > 0 ? 0 : Math.PI));
+      first.setMatrixAt(i, _m.compose(_p.set(x, y, z), _q, _s.setScalar(it.s || 1)));
+    }
+    first.instanceMatrix.needsUpdate = true;
+  }
+}
+
+
+/** Helpers for laying out traffic: `lanes` places n travellers on the avenue / cross-street grid. */
+export function traffic(r) {
+  const Y = yearToU;
+  const SKINS = [[0.96, 0.78, 0.66], [0.88, 0.68, 0.54], [0.74, 0.54, 0.4], [0.55, 0.38, 0.27], [0.4, 0.27, 0.19], [0.94, 0.8, 0.7]].map((c) => c.map((v) => v ** 2.2));   // linear
+  const lanes = (n, from, to, { jf = 0, jt = 0, v = [8, 14], off = 4, alt = 0, tint, legs, cross = 0.3, s } = {}) => {
+    const items = [];
+    for (let i = 0; i < n; i++) {
+      const dir = r() < 0.5 ? -1 : 1, axis = r() < cross ? 'x' : 'z';
+      const base = axis === 'z' ? Math.round(r() * 4 - 2) * 100 : Math.round(r() * 14 - 7) * 60;
+      const o = typeof off === 'function' ? off(axis) : off;
+      items.push({ lane: base + dir * o * (axis === 'z' ? -1 : 1), alt: typeof alt === 'function' ? alt() : alt, off: r() * 960, v: dir * (v[0] + r() * (v[1] - v[0])), axis, u0: Y(from + (i / n) * jf), u1: Y(to + r() * jt),
+        tint: tint ? tint() : [1, 1, 1], legs: legs ? legs() : undefined, skin: SKINS[Math.floor(r() * SKINS.length)], s: typeof s === 'function' ? s() : s });
+    }
+    return items;
+  };
+  const cloth = (pal) => () => { const c = new THREE.Color(pal[Math.floor(r() * pal.length)]); return [c.r, c.g, c.b]; };
+  return { lanes, cloth, SKINS };
+}
