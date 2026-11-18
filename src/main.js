@@ -6,6 +6,7 @@ import { buildFauna } from './fauna.js';
 import { buildCity } from './city.js';
 import { Player } from './controls.js';
 import { UI } from './ui.js';
+import { Sound } from './audio.js';
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -33,8 +34,14 @@ addEventListener('wheel', (e) => { e.preventDefault(); stop(); setU(uTarget + Ma
 addEventListener('keydown', (e) => {
   if (e.code === 'Space') { e.preventDefault(); document.getElementById('play').click(); }
   if (e.code === 'KeyN') document.getElementById('now').click();
+  if (e.code === 'KeyM') document.getElementById('mute').click();
 });
 
+const sound = new Sound();
+const muteBtn = document.getElementById('mute');
+const wake = () => sound.start();          // browsers only allow audio after a gesture
+addEventListener('pointerdown', wake); addEventListener('keydown', wake);
+muteBtn.addEventListener('click', () => { sound.setMuted(!sound.muted); muteBtn.textContent = sound.muted ? 'Sound: off' : 'Sound: on'; });
 const intro = document.getElementById('intro');
 document.getElementById('begin').addEventListener('click', () => { intro.classList.add('gone'); });
 
@@ -63,10 +70,11 @@ function frame(nowMs) {
   player.update(dt);
   world.sky.position.copy(camera.position);
   ui.update(u, env.glow);
+  sound.update(u, dt);
   renderer.render(scene, camera);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
 // handy for poking at the world from the console
-window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, player, renderer, city };
+window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, player, renderer, city, sound };

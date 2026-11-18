@@ -22,6 +22,7 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | Move through time | drag the timeline, scroll the wheel, or hold `Q` / `E` (`Shift` = faster) |
 | Let time pass by itself | `Space` |
 | Return to now | `N` |
+| Sound on / off | `M` |
 | Touch | left thumb walks, right thumb looks, drag the timeline |
 
 ## What you walk through
@@ -58,10 +59,13 @@ same span at true scale, where all of human existence is a fraction of a pixel.
 - `src/flora.js`, `src/fauna.js` — instanced plants, animals, people, vehicles and ships, each with its own lifespan.
 - `src/city.js` — every building lot has a generated history (Dutch house → brick house →
   tenement → tower → megatower → ruin), plus hand-made landmarks.
+- `src/audio.js` — every sound is synthesised with Web Audio: ambient beds (wind, insects, water, ice howl,
+  traffic, rain, drones) and random events (birds, roars, mammoths, drums, bells, hooves, horns, sirens,
+  flying traffic, chimes, thunder), each with its own loudness curve over the timeline.
 - `src/controls.js`, `src/ui.js`, `src/main.js` — walking, the HUD and timeline, the loop.
 
 Rendering uses [three.js](https://threejs.org) (MIT), vendored in `vendor/`. All geometry
-and textures are generated in code; there are no asset files.
+textures and sounds are generated in code; there are no asset files.
 
 Dates for the deep past and far future are rounded scientific estimates; everything after
 about 2100 is imagination.
