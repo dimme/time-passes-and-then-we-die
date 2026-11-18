@@ -93,4 +93,4 @@ function frame(nowMs) {
 requestAnimationFrame(frame);
 
 // handy for poking at the world from the console
-window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, player, renderer, city, sound, fauna };
+window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, player, renderer, city, sound, fauna, THREE };

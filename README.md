@@ -56,7 +56,9 @@ same span at true scale, where all of human existence is a fraction of a pixel.
   environment keyframes (sky, sun, fog, sea level, ice, terrain, weather) that are
   interpolated as you scrub.
 - `src/world.js` — sky shader, terrain, rivers, ice sheet, weather particles.
-- `src/flora.js`, `src/fauna.js` — instanced plants, animals, people, vehicles and ships, each with its own lifespan.
+- `src/flora.js` — instanced trees, shrubs, rocks and ground cover, each with its own lifespan.
+- `src/fauna.js` — animals (swept bodies with scale / fur / feather textures, jointed walking legs, jaws,
+  swaying tails, flapping two-part wings), pedestrians that walk and dress for their century, vehicles and ships.
 - `src/city.js` — every building lot has a generated history (Dutch house → brick house →
   tenement → tower → megatower → ruin), plus hand-made landmarks.
 - `src/audio.js` — every sound is synthesised with Web Audio: ambient beds (wind, insects, water, ice howl,

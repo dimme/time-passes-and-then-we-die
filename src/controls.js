@@ -65,6 +65,7 @@ export class Player {
     this.city.collide(this.pos);
     const ground = Math.max(this.world.surfaceAt(this.pos.x, this.pos.z), this.world.sea - 0.9) + EYE;
     this.pos.y += (ground - this.pos.y) * Math.min(1, dt * 8);
+    if (this.fly) this.pos.y = this.fly;   // debug: hover at a fixed height
     this.camera.position.set(this.pos.x, this.pos.y, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
   }

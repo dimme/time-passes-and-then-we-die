@@ -46,7 +46,7 @@ export function merge(geos) {
   let n = 0;
   for (const g of geos) n += g.attributes.position.count;
   const out = new THREE.BufferGeometry();
-  for (const [name, size] of [['position', 3], ['normal', 3], ['color', 3], ['uv', 2]]) {
+  for (const [name, size] of [['position', 3], ['normal', 3], ['color', 3], ['uv', 2], ['aLimb', 2]]) {
     if (!geos.every((g) => g.attributes[name])) continue;
     const arr = new Float32Array(n * size); let o = 0;
     for (const g of geos) { arr.set(g.attributes[name].array, o); o += g.attributes.position.count * size; }

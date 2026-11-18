@@ -4,6 +4,7 @@ import { yearToU } from './timeline.js';
 import { LAND } from './world.js';
 import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js';
 import { Scatter } from './flora.js';
+import { staticPerson } from './fauna.js';
 
 const Y = yearToU;
 const GROW = 0.0035;
@@ -268,7 +269,7 @@ function campfire(light = true) {
   if (light) { const l = new THREE.PointLight(0xff8a3a, 260, 45, 1.6); l.position.y = 1.5; g.add(l); g.userData.tick = (t) => { flame.scale.set(1 + Math.sin(t * 13) * 0.15, 1 + Math.sin(t * 17 + 1) * 0.25, 1 + Math.cos(t * 11) * 0.15); l.intensity = 230 + Math.sin(t * 19) * 40 + Math.sin(t * 7) * 30; }; }
   return g;
 }
-const figureGeo = (c, x, z, ry = 0) => [cyl(0.2, 0.26, 1.05, c, x, 0.6, z, 6), ball(0.17, 0xb07850, x, 1.3, z)];
+const figureGeo = (c, x, z) => [staticPerson('native', c, c, [0.62, 0.43, 0.3]).rotateY(Math.atan2(z, -x)).translate(x, 0, z)];
 function lenapeVillage(r) {
   const p = [];
   const dome = (x, z, s, sz = 1) => { p.push(part(new THREE.SphereGeometry(2.6, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), 0x7a5c3c, x, 0, z, 0, r() * 6, 0, s, s, s * sz), box(0.9 * s, 1.3 * s, 0.3, 0x1c140e, x + 2.45 * s, 0.65 * s, z)); };
