@@ -146,7 +146,8 @@ const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
 
 // ---------- building types: each returns { obj, fw, fd } ----------
 const pick = (r, a) => a[Math.floor(r() * a.length)];
-export const TYPES = {
+export { TYPES } from './city-types.js';
+const OLD_TYPES = {
   dutch(r) {
     const w = 6.5 + r() * 2.5, d = 8 + r() * 4, h = 4.2 + r() * 2;
     return { obj: grp(slab(w, h, d, 'dutch', r), at(new THREE.Mesh(prismGeo(w + 0.5, 3.6, d + 0.4), PLAIN.tile), 0, h, 0), at(new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.6, 0.8), PLAIN.brick), 0, h + 2.6, d * 0.3)), fw: w, fd: d };
@@ -320,7 +321,7 @@ export function buildCity(world, scene) {
       const r = rng(c * 7919 + (row + 20) * 104729 + i * 31 + j * 17 + 5);
       for (const [a, b, type] of planLot(r, Math.hypot(x, z - 40))) {
         if (cut && a >= cut) break;
-        addOcc(TYPES[type](r), x + (a < 1811 ? (r() - 0.5) * 5 : 0), z + (a < 1811 ? (r() - 0.5) * 3 : 0), a, cut ? Math.min(b, cut) : b);
+        addOcc(OLD_TYPES[type](r), x + (a < 1811 ? (r() - 0.5) * 5 : 0), z + (a < 1811 ? (r() - 0.5) * 3 : 0), a, cut ? Math.min(b, cut) : b);
       }
     }
   }
