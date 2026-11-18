@@ -22,7 +22,7 @@ const FEET = {
     b.skin(mass(toe[0] - a * 1.5, a * 0.55, z, a * 1.1, a * 0.6, a * 0.95), f);
     for (const k of [-1.5, -0.5, 0.5, 1.5]) {
       const x = toe[0] - a * (0.45 + 0.25 * Math.abs(k)), zz = z + k * a * 0.5;
-      b.skin(mass(x, a * 0.4, zz, a * 0.55, a * 0.4, a * 0.3), f); b.detail(cone(a * 0.12, a * 0.45, x + a * 0.4, a * 0.4, zz, -1.9), f, NAIL);
+      b.skin(mass(x, a * 0.4, zz, a * 0.55, a * 0.4, a * 0.3, 0, 0, 1, 0.5), f); b.detail(cone(a * 0.12, a * 0.45, x + a * 0.4, a * 0.4, zz, -1.9), f, NAIL);
     }
   },
   pillar: padFoot,
@@ -196,7 +196,7 @@ export function mammals(M) {
     const top = (x) => (x > 0.3 ? sh - (x - 1) ** 2 * 0.45 * k : rump + (sh - 0.2 * k - rump) * ((x + 1.5) / 1.8) ** 0.8);   // the line of the back
     const st = (x, w, up, down) => { const t = top(x), bot = 1.2 * k + Math.abs(x - 0.2) * 0.04; return [X(x), bot + (t - bot) * (down / (up + down)), 0, (t - bot) * (up / (up + down)), (t - bot) * (down / (up + down)), w * k]; };
     return quadruped({
-      color: C, tex: shag ? SHAG : WRINKLE, tile: shag ? 1.3 : 1.2, rough: 1, back: 0.9, belly: 1.05, gait: { duty: 0.68, stride: 1.5 * k, bob: 0.02 }, wag: 0.1, nod: 0.015, headRef: [1, 0, 0],
+      color: C, tex: shag ? SHAG : WRINKLE, tile: shag ? 1.3 : 1.2, rough: 1, back: 0.9, belly: 1.05, gait: { duty: 0.68, stride: 1.15 * k, bob: 0.02 }, wag: 0.1, nod: 0.015, headRef: [1, 0, 0],
       body: [0, 2 * k], tailJ: [[X(-1.55), rump - 0.25], [X(-1.68), rump - 0.8], [X(-1.72), rump - 1.3]], neckJ: [[X(1.35), sh - 0.5], [X(1.7), sh - 0.35]], nose: [X(2.15), 2.2 * k],
       torso: [[X(-1.55), rump - 0.45, 0, 0.32 * k, 0.45 * k, 0.4 * k], st(-1.3, 0.68, 1, 1.1), st(-0.7, 0.82, 1, 1.1), st(0, 0.88, 1, 1.15), st(0.6, 0.86, 1, 1.1), st(1.0, 0.76, 1, 1.05), st(1.35, 0.6, 1, 1.1), [X(1.6), 2.2 * k, 0, 0.4 * k, 0.5 * k, 0.42 * k]],
       neck: [[X(1.3), sh - 0.55, 0, 0.55 * k, 0.65 * k, 0.5 * k], [X(1.7), sh - 0.4, 0, 0.5 * k, 0.55 * k, 0.46 * k]],
@@ -204,9 +204,9 @@ export function mammals(M) {
       tail: [[X(-1.53), rump - 0.22, 0, 0.07], [X(-1.68), rump - 0.8, 0, 0.05], [X(-1.72), rump - 1.25, 0, 0.07], [X(-1.72), rump - 1.45, 0, 0.02]], tailTint: hair,
       eye: [X(1.98) + 0.07, crown - 0.62 * k, 0.37 * k, 0.035],
       fore: { z: 0.5 * k, J: [[X(1.1), 2.0 * k], [X(1.1) - 0.15 * k, 1.45 * k], [X(1.1) - 0.1 * k, 0.55 * k], [X(1.1) - 0.1 * k, 0.24 * k]], toe: [X(1.1) + 0.17 * k, 0], foot: ['pillar', 0.27 * k], top: [0, 0.3 * k, -0.18 * k, 0.34 * k, 0.38 * k, 0.22 * k], swap: shag,
-        R: [[0.36 * k, 0.4 * k, 0.3 * k], [0.26 * k, 0.3 * k, 0.24 * k], [0.22 * k, 0.22 * k, 0.21 * k], [0.24 * k, 0.24 * k, 0.24 * k]], M: [null, null, null], cap: 0.2, lift: 0.2, fold: 0.6, toeOff: 0.3, curl: 0.35 },
+        R: [[0.36 * k, 0.4 * k, 0.3 * k], [0.26 * k, 0.3 * k, 0.24 * k], [0.22 * k, 0.22 * k, 0.21 * k], [0.24 * k, 0.24 * k, 0.24 * k]], M: [null, null, null], cap: 0.2, lift: 0.2, fold: 0.6, toeOff: 0.3, curl: 0.35, reach: -0.1 * k },
       hind: { z: 0.5 * k, mode: 'lock', J: [[X(-1.05), 1.75 * k], [X(-1.05) + 0.15 * k, 1.1 * k], [X(-1.05) - 0.05 * k, 0.45 * k], [X(-1.05) - 0.03 * k, 0.24 * k]], toe: [X(-1.05) + 0.22 * k, 0], foot: ['pillar', 0.26 * k], top: [0, 0.3 * k, -0.18 * k, 0.38 * k, 0.42 * k, 0.24 * k], swap: shag,
-        R: [[0.42 * k, 0.46 * k, 0.32 * k], [0.3 * k, 0.3 * k, 0.25 * k], [0.22 * k, 0.23 * k, 0.21 * k], [0.24 * k, 0.24 * k, 0.24 * k]], M: [[0.5, 0.36 * k, 0.4 * k, 0.29 * k], null, null], cap: 0.2, lift: 0.18, fold: 0.35, toeOff: 0.3, curl: 0.3 },
+        R: [[0.42 * k, 0.46 * k, 0.32 * k], [0.3 * k, 0.3 * k, 0.25 * k], [0.22 * k, 0.23 * k, 0.21 * k], [0.24 * k, 0.24 * k, 0.24 * k]], M: [[0.5, 0.36 * k, 0.4 * k, 0.29 * k], null, null], cap: 0.2, lift: 0.18, fold: 0.35, toeOff: 0.3, curl: 0.3, reach: -0.13 * k },
       coat: (x, y, z, ny) => 1 - Math.max(0, ny) * 0.12 - (y < 0.5 * k ? 0.15 : 0),
       extra: (b) => {
         const trunk = b.run('trunk', 'head', [[X(2.12) + 0.06, 2.1 * k], [X(2.2) + 0.06, 1.65 * k], [X(2.25) + 0.06, 1.2 * k], [X(2.28) + 0.06, 0.8 * k], [X(2.36) + 0.06, 0.48 * k], [X(2.55) + 0.06, 0.4 * k]]);

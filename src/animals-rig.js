@@ -60,8 +60,8 @@ export function put(g, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy =
   return g;
 }
 /** An ellipsoid of muscle / bone under the skin, or (painted) an eye, a nail… */
-export function mass(x, y, z, sx, sy, sz, rz = 0, ry = 0, tile = 1) {
-  const g = new THREE.SphereGeometry(1, 14, 10), uv = g.attributes.uv, k = Math.max(1, Math.round((Math.max(sx, sy, sz) * 4) / tile));
+export function mass(x, y, z, sx, sy, sz, rz = 0, ry = 0, tile = 1, fine = 1) {
+  const g = new THREE.SphereGeometry(1, Math.round(14 * fine), Math.round(10 * fine)), uv = g.attributes.uv, k = Math.max(1, Math.round((Math.max(sx, sy, sz) * 4) / tile));
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * k, uv.getY(i) * k * 0.5);
   return put(g, x, y, z, 0, ry, rz, sx, sy, sz);
 }
