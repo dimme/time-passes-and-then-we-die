@@ -1,86 +1,132 @@
 // Vehicles: carts, cars, pods, flying traffic and ships.
-import * as THREE from 'three';
-import { box, cyl, cone, part, merge, vcMat } from './util.js';
 import { yearToU } from './timeline.js';
-import { paintGeo, hex } from './organic.js';
 import { species } from './animals.js';
 import { Movers, traffic, CROSS_SPAN } from './movers.js';
+import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js';
+import { carParts } from './vehicles-cars.js';
+import { shipParts } from './vehicles-ships.js';
 
-const H = Math.PI / 2;
-// =====================================================================================
-// Vehicles
-// =====================================================================================
-const paint = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.32, metalness: 0.55 });
-const matte = (o = {}) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, ...o });
-const glassy = () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.08, metalness: 0.85 });
-const white = (g) => part(g.index ? g.toNonIndexed() : g, 0xffffff);
-function extrude(pts, depth, bevel = 0.06) {
-  const sh = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
-  const g = new THREE.ExtrudeGeometry(sh, { depth: depth - bevel * 2, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 4 });
-  g.translate(0, 0, -(depth - bevel * 2) / 2); return g;
-}
-const wheel = (x, z, r = 0.34, w = 0.24) => [cyl(r, r, w, 0x141414, x, r, z, 14, H, 0, 0), cyl(r * 0.55, r * 0.55, w + 0.02, 0x8a8e92, x, r, z, 10, H, 0, 0)];
+export { carParts, shipParts };
 
+const PI = Math.PI;
+// =====================================================================================
+// Horse and wagon
+// =====================================================================================
+const C = {
+  coat: fin(0x6a4428, 0.85), plain: fin(0xffffff, 0.7), leather: fin(0x1e150f, 0.55), wood: fin(0x7a5a36, 0.85), plank: fin(0x8f7450, 0.9), green: fin(0x34503a, 0.7), wheel: fin(0x8a3220, 0.7),
+  iron: fin(0x26262a, 0.5, 0.7), sack: fin(0xb09a6c, 0.95), cask: fin(0x6e4a28, 0.8), coatCloth: fin(0x2a2c34, 0.9), trousers: fin(0x5a4a38, 0.9), skin: fin(0xc89a78, 0.8), hat: fin(0x1a1614, 0.9),
+};
 export function cartParts(M) {
-  const horse = M.horse().obj; horse.updateMatrixWorld(true);
-  const hg = []; horse.traverse((o) => { if (o.isMesh) { const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const c = g.attributes.color, b = hex(0x6a4428); for (let i = 0; i < c.count; i++) { const dark = o.material.map ? 1 : 0; c.setXYZ(i, c.getX(i) * (dark ? b[0] : 1), c.getY(i) * (dark ? b[1] : 1), c.getZ(i) * (dark ? b[2] : 1)); } g.translate(2.6, 0, 0); hg.push(g); } });
-  const wood = [box(2.5, 0.12, 1.4, 0x6a4c2c, -0.6, 0.95, 0), box(2.5, 0.5, 0.06, 0x5a3e24, -0.6, 1.25, 0.7), box(2.5, 0.5, 0.06, 0x5a3e24, -0.6, 1.25, -0.7), box(0.06, 0.5, 1.4, 0x5a3e24, -1.85, 1.25, 0), box(1.6, 0.7, 1.2, 0x9a8a68, -0.8, 1.6, 0),
-    box(2.2, 0.06, 0.06, 0x3a2a1c, 1.5, 1.0, 0.5), box(2.2, 0.06, 0.06, 0x3a2a1c, 1.5, 1.0, -0.5)];
-  for (const z of [0.78, -0.78]) for (const x of [0.1, -1.4]) { wood.push(part(new THREE.TorusGeometry(0.55, 0.05, 6, 16), 0x2a2018, x, 0.6, z)); for (let k = 0; k < 4; k++) wood.push(box(1.05, 0.04, 0.04, 0x3a2a1c, x, 0.6, z, 0, 0, (k * Math.PI) / 4)); }
-  return [{ geo: merge([...hg, ...wood]), mat: matte({ roughness: 0.9 }), tint: false }];
-}
-export function carParts(style) {
-  if (style === 'old') {
-    const body = white(extrude([[-1.9, 0.5], [-1.9, 1.0], [-1.75, 1.85], [0.2, 1.85], [0.3, 1.15], [1.75, 1.05], [1.85, 0.5]], 1.5, 0.04));
-    const trim = merge([...wheel(1.2, 0.8, 0.42, 0.14), ...wheel(1.2, -0.8, 0.42, 0.14), ...wheel(-1.2, 0.8, 0.42, 0.14), ...wheel(-1.2, -0.8, 0.42, 0.14),
-      box(1.0, 0.06, 0.34, 0x101010, 1.2, 0.9, 0.82), box(1.0, 0.06, 0.34, 0x101010, 1.2, 0.9, -0.82), box(1.0, 0.06, 0.34, 0x101010, -1.2, 0.9, 0.82), box(1.0, 0.06, 0.34, 0x101010, -1.2, 0.9, -0.82),
-      box(0.08, 0.5, 1.0, 0xb0a070, 1.88, 0.85, 0), cyl(0.12, 0.12, 0.1, 0xfff4c0, 1.9, 1.0, 0.55, 10, 0, 0, H), cyl(0.12, 0.12, 0.1, 0xfff4c0, 1.9, 1.0, -0.55, 10, 0, 0, H)]);
-    const glass = merge([box(1.3, 0.55, 1.53, 0x1c2228, -0.75, 1.5, 0), box(0.04, 0.55, 1.3, 0x1c2228, 0.27, 1.5, 0)]);
-    return [{ geo: body, mat: paint() }, { geo: trim, mat: matte(), tint: false }, { geo: glass, mat: glassy(), tint: false }];
+  const bag = new Bag(), horse = M.horse().obj, hx = 2.8; horse.updateMatrixWorld(true);
+  horse.traverse((o) => { if (o.isMesh) bag.add(o.geometry, o.material.map ? C.coat : C.plain, at(hx, 0, 0).multiply(o.matrixWorld), true); });
+  // measure the horse where the harness sits: back, belly (on the centre line, clear of the legs) and half-width
+  const P = bag.p.slice(), probe = (x) => {
+    let top = 0, bot = 9, w = 0;
+    for (let i = 0; i < P.length; i += 3) if (Math.abs(P[i] - hx - x) < 0.09) { top = Math.max(top, P[i + 1]); if (Math.abs(P[i + 2]) < 0.07) bot = Math.min(bot, P[i + 1]); }
+    for (let i = 0; i < P.length; i += 3) if (Math.abs(P[i] - hx - x) < 0.09 && P[i + 1] > (top + bot) / 2) w = Math.max(w, Math.abs(P[i + 2]));
+    return { top, bot, w, mid: (top + bot) / 2, h: (top - bot) / 2 };
+  };
+  let nose = [0, 0, 0]; for (let i = 0; i < P.length; i += 3) if (P[i] > nose[0]) nose = [P[i], P[i + 1], 0];
+  const girth = probe(0.12), neck = probe(0.55), band = (g, x, w, t, tilt = 0) => revolve(bag, [[-w, 1], [-w, 1 + t / g.h], [w, 1 + t / g.h], [w, 1]], C.leather, at(hx + x, g.mid, 0, 0, 0, tilt, 1, g.h, g.w + 0.005), 14);
+  band(girth, 0.12, 0.035, 0.02); band(neck, 0.55, 0.05, 0.06, -0.25); bag.box(C.leather, 0.3, 0.03, 0.26, hx + 0.12, girth.top + 0.01, 0);
+  for (const s of [1, -1]) {
+    bag.rod(C.wood, [0.45, 0.72, s * 0.5], [hx + 0.75, girth.mid + 0.08, s * (girth.w + 0.07)], 0.032, 6, 0.024);
+    bag.rod(C.leather, [hx + 0.5, neck.mid - 0.1, s * (neck.w + 0.03)], [0.5, 0.68, s * 0.42], 0.012, 4);
+    bag.rod(C.leather, nose.map((v, k) => (k === 0 ? v - 0.12 : k === 1 ? v + 0.02 : s * 0.07)), [hx + 0.5, neck.top + 0.06, s * 0.1], 0.008, 3);
+    bag.rod(C.leather, [hx + 0.5, neck.top + 0.06, s * 0.1], [0.5, 1.93, s * 0.09], 0.008, 3);
+    bag.rod(C.leather, [hx + 0.12, girth.mid + 0.1, s * (girth.w + 0.03)], [hx + 0.12, girth.mid + 0.1, s * (girth.w + 0.09)], 0.03, 5);
   }
-  if (style === 'pod') {
-    const body = white(new THREE.SphereGeometry(1, 24, 14).scale(2.1, 0.72, 0.95).translate(0, 0.92, 0));
-    const glass = part(new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI * 0.42).scale(1.75, 0.76, 0.9), 0x14202a, 0.1, 0.95, 0);
-    const trim = merge([...wheel(1.2, 0.78, 0.3, 0.2), ...wheel(1.2, -0.78, 0.3, 0.2), ...wheel(-1.2, 0.78, 0.3, 0.2), ...wheel(-1.2, -0.78, 0.3, 0.2), box(0.06, 0.08, 1.5, 0xc8f4ff, 2.05, 0.9, 0), box(0.06, 0.08, 1.5, 0xff3040, -2.05, 0.9, 0)]);
-    return [{ geo: body, mat: paint() }, { geo: trim, mat: matte(), tint: false }, { geo: glass, mat: glassy(), tint: false }];
+  // running gear
+  for (const [x, r] of [[-1.6, 0.62], [0.15, 0.47]]) {
+    for (const s of [1, -1]) spokedWheel(bag, x, s * 0.8, r, 0.07, 12, { tyre: C.iron, rim: C.wheel, hub: C.wheel, hubR: 0.085, spokeR: 0.022, depth: 0.08 });
+    bag.rod(C.iron, [x, r, -0.8], [x, r, 0.8], 0.035, 6); bag.box(C.wheel, 0.14, 0.98 - r - 0.03, 1.16, x, (0.98 + r + 0.03) / 2, 0);
   }
-  const body = white(extrude([[-2.2, 0.32], [-2.22, 0.78], [-1.95, 0.95], [-1.3, 1.0], [-0.8, 1.42], [0.5, 1.42], [1.15, 1.0], [2.0, 0.9], [2.2, 0.68], [2.2, 0.32]], 1.78));
-  const glass = part(extrude([[-1.22, 1.0], [-0.76, 1.37], [0.47, 1.37], [1.06, 1.0]], 1.81, 0.02), 0x10161c);
-  const trim = merge([...wheel(1.35, 0.82), ...wheel(1.35, -0.82), ...wheel(-1.35, 0.82), ...wheel(-1.35, -0.82),
-    box(0.05, 0.12, 0.4, 0xfff6d8, 2.2, 0.72, 0.6), box(0.05, 0.12, 0.4, 0xfff6d8, 2.2, 0.72, -0.6), box(0.05, 0.12, 0.4, 0xc01818, -2.22, 0.8, 0.6), box(0.05, 0.12, 0.4, 0xc01818, -2.22, 0.8, -0.6), box(0.06, 0.2, 1.7, 0x1a1a1a, 2.21, 0.42, 0), box(0.06, 0.2, 1.7, 0x1a1a1a, -2.21, 0.42, 0)]);
-  return [{ geo: body, mat: paint() }, { geo: trim, mat: matte(), tint: false }, { geo: glass, mat: glassy(), tint: false }];
+  bag.rod(C.wheel, [-1.6, 0.62, 0], [0.15, 0.5, 0], 0.04, 5); bag.box(C.wheel, 0.08, 0.06, 1.0, 0.5, 0.7, 0);
+  // box, seat and footboard
+  bag.box(C.plank, 2.74, 0.06, 1.2, -0.85, 1.0, 0);
+  for (const s of [1, -1]) {
+    bag.box(C.green, 2.74, 0.44, 0.045, -0.85, 1.24, s * 0.63, s * 0.14);
+    for (const x of [-2.0, -0.85, 0.3]) bag.box(C.iron, 0.05, 0.5, 0.03, x, 1.22, s * 0.665, s * 0.14);
+    bag.box(C.wood, 0.05, 0.3, 0.05, 0.1, 1.58, s * 0.5);
+  }
+  bag.box(C.green, 0.045, 0.44, 1.26, 0.52, 1.24, 0); bag.box(C.green, 0.045, 0.44, 1.26, -2.22, 1.24, 0, 0, 0, 0.1);
+  bag.box(C.wood, 0.42, 0.05, 1.2, 0.1, 1.74, 0); bag.box(C.wood, 0.04, 0.22, 1.2, -0.1, 1.9, 0, 0, 0, 0.15); bag.box(C.wood, 0.4, 0.04, 1.1, 0.7, 1.28, 0, 0, 0, 0.7);
+  // load: casks, sacks and a crate
+  const cask = [[-0.42, 0], [-0.42, 0.23], [-0.3, 0.27], [-0.24, 0.285], [-0.04, 0.3], [0.04, 0.3], [0.24, 0.285], [0.3, 0.27], [0.42, 0.23], [0.42, 0]];
+  for (const [x, z] of [[-1.85, 0.27], [-1.85, -0.27], [-1.28, 0.25]]) revolve(bag, cask, (i) => (i === 2 || i === 4 || i === 6 ? C.iron : C.cask), at(x, 1.45, z, 0, 0, PI / 2), 10);
+  for (const [x, y, z, a] of [[-1.2, 1.17, -0.28, 0.3], [-0.65, 1.17, 0.2, -0.5], [-0.7, 1.19, -0.3, 1.2], [-0.72, 1.43, -0.05, 0.4]]) bag.ball(C.sack, x, y, z, 0.36, 0.15, 0.24, 0, a, 0);
+  bag.box(C.wood, 0.5, 0.42, 0.55, -0.2, 1.24, 0.22);
+  // driver
+  const fig = { ref: [0, 0, 1], sub: 2 };
+  sweep(bag, [[0.08, 1.8, 0, 0.9], [0.1, 2.05, 0, 1.05], [0.14, 2.3, 0, 0.85], [0.15, 2.36, 0, 0.4]], oval(0.1, 0.18), C.coatCloth, fig);
+  bag.ball(C.skin, 0.17, 2.48, 0, 0.1, 0.115, 0.095); bag.cyl(C.hat, 0.2, 0.2, 0.02, 0.17, 2.56, 0, 12); bag.cyl(C.hat, 0.095, 0.11, 0.12, 0.17, 2.62, 0, 10);
+  for (const s of [1, -1]) {
+    sweep(bag, [[0.08, 1.83, s * 0.09], [0.47, 1.82, s * 0.11], [0.68, 1.42, s * 0.11]], oval(0.07, 0.07, 6), C.trousers, fig); bag.ball(C.hat, 0.75, 1.36, s * 0.11, 0.13, 0.06, 0.055, 0, 0, 0.7);
+    sweep(bag, [[0.13, 2.26, s * 0.2], [0.2, 2.02, s * 0.23], [0.46, 1.94, s * 0.1]], oval(0.048, 0.048, 6), C.coatCloth, fig); bag.ball(C.skin, 0.5, 1.93, s * 0.09, 0.05);
+  }
+  return [{ geo: bag.geo(), mat: vehicleMat(), tint: false }];
 }
+
+// =====================================================================================
+// Flying cars
+// =====================================================================================
+const A = {
+  dark: fin(0x2a2e36, 0.28, 0.8), trim: fin(0x101216, 0.4, 0.6), glass: fin(0x18242e, 0.04, 1), white: fin(0xf4f8ff, 0.22, 0.25), pearl: fin(0xc8d4e4, 0.2, 0.7), gold: fin(0x6a4c1a, 0.05, 1),
+  nose: fin(0xfff4dc, 0.3, 0, 3), tail: fin(0xff1408, 0.3, 0, 2.2), lift: fin(0x1c9cff, 0.3, 0, 2.6), port: fin(0xff1408, 0.3, 0, 2.5), star: fin(0x10ff40, 0.3, 0, 2.5), halo: fin(0x58a8ff, 0.3, 0, 2.2), sun: fin(0xffc060, 0.3, 0, 2.6),
+};
+/** Loft a streamlined body from curves over x: centre height, height above and below it, half-width; p squares off the section. */
+function fuselage(bag, xs, d, f, n = 8) {
+  const yc = curve(d.y), up = curve(d.up), down = curve(d.down), w = curve(d.w), e = 2 / (d.p || 2.4);
+  loft(bag, xs, (x) => Array.from({ length: n + 1 }, (_, k) => { const a = -PI / 2 + (k / n) * PI, s = Math.sin(a); return [yc(x) + (s > 0 ? up(x) : down(x)) * Math.sign(s) * Math.abs(s) ** e, w(x) * Math.abs(Math.cos(a)) ** e]; }), f, { crease: 0.3 });
+}
+const xsOf = (a, b, n) => Array.from({ length: n + 1 }, (_, k) => a + (b - a) * (0.5 - 0.5 * Math.cos((k / n) * PI)));
+/** bright: the white craft of the far future; otherwise a dark four-fan air car. Hangs around y = 0. */
 export function flyerParts(bright) {
-  const body = part(new THREE.SphereGeometry(1, 20, 12).scale(2.7, 0.42, 1.05), bright ? 0xf4f8ff : 0x2a2e36);
-  const canopy = part(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.45).scale(1.2, 0.5, 0.75), 0x0c1218, 0.4, 0.15, 0);
-  const lights = merge([paintGeo(box(0.15, 0.14, 1.5, 0xffffff, -2.6, 0, 0), 6, 0.4, 0.6), paintGeo(box(0.15, 0.14, 1.2, 0xffffff, 2.6, 0, 0), 5, 5, 4), paintGeo(box(3.2, 0.05, 0.08, 0xffffff, 0, -0.38, 0.6), 0.6, 3, 4), paintGeo(box(3.2, 0.05, 0.08, 0xffffff, 0, -0.38, -0.6), 0.6, 3, 4)]);
-  return [{ geo: merge([body, canopy]), mat: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.25, metalness: 0.8 }), tint: false }, { geo: lights, mat: new THREE.MeshBasicMaterial({ vertexColors: true }), tint: false, cast: false }];
-}
-export function shipParts(kind) {
-  const hull = (l, w, h, c) => [box(l, h, w, c, 0, h / 2 - 0.5, 0), cone(w / 2, l * 0.2, c, l * 0.6, h / 2 - 0.5, 0, 4, 0, Math.PI / 4, -H)];
-  let p;
-  if (kind === 'sail') {
-    p = [...hull(22, 6, 4, 0x5a3a22), box(22.4, 0.5, 6.3, 0x3a2616, 0, 3.6, 0)];
-    for (const x of [-6, 1, 8]) { p.push(cyl(0.2, 0.25, 22, 0x4a3420, x, 14, 0, 8)); p.push(box(0.3, 7, 9, 0xf0e8d8, x + 0.4, 18, 0)); p.push(box(0.3, 6, 11, 0xe8e0cc, x + 0.4, 10, 0)); p.push(box(0.15, 0.15, 11.4, 0x4a3420, x, 13.2, 0), box(0.15, 0.15, 9.4, 0x4a3420, x, 21.6, 0)); }
-  } else if (kind === 'steam') p = [...hull(50, 9, 6, 0x2a2a2e), box(30, 4, 7, 0xe8e4dc, -2, 7.5, 0), box(22, 2.5, 6, 0xe8e4dc, -2, 10.7, 0), cyl(1.4, 1.4, 8, 0xb03020, 2, 14, 0, 14), cyl(1.4, 1.4, 8, 0xb03020, -8, 14, 0, 14), cyl(1.45, 1.45, 1.2, 0x1a1a1a, 2, 17.6, 0, 14), cyl(1.45, 1.45, 1.2, 0x1a1a1a, -8, 17.6, 0, 14)];
-  else {
-    p = [...hull(90, 14, 8, 0x7a2a22), box(10, 14, 12, 0xf0f0f0, -36, 14, 0)];
-    const cols = [0x2a6a9a, 0xb0542a, 0x3a8a4a, 0xc8a83a, 0x8a8a8a];
-    for (let i = 0; i < 9; i++) for (let j = 0; j < 2; j++) p.push(box(6.5, 3, 11, cols[(i * 3 + j) % 5], -24 + i * 7, 9 + j * 3.1, 0));
+  const bag = new Bag();
+  if (bright) {
+    const xs = xsOf(-3.3, 3.3, 30);
+    fuselage(bag, xs, { p: 1.8, y: [[-3.3, 0.22], [0, 0], [3.3, -0.1]], up: [[-3.3, 0.04], [-2.2, 0.3], [-0.4, 0.62], [0.8, 0.6], [2.2, 0.3], [3.3, 0.03]], down: [[-3.3, 0.04], [-1.5, 0.3], [0.8, 0.34], [3.3, 0.03]],
+      w: [[-3.3, 0.5], [-2.7, 1.0], [-1.3, 1.5], [0.1, 1.42], [1.6, 0.95], [2.6, 0.5], [3.2, 0.16], [3.3, 0.05]] },
+    (i, k) => { const x = xs[i]; return k === 3 || k === 4 ? A.halo : k >= 6 && x > -0.9 && x < 1.9 ? A.gold : k === 0 && x > -2.2 && x < 1.6 ? A.sun : k < 3 ? A.pearl : A.white; });
+    for (const s of [1, -1]) {
+      revolve(bag, [[0.5, 0.05], [0.3, 0.26], [-0.25, 0.3], [-0.5, 0.26], [-0.44, 0.2], [-0.3, 0.19], [-0.3, 0]], (i) => (i < 3 ? A.white : i === 3 ? A.pearl : A.sun), at(-2.9, 0.22, s * 0.62), 12);
+      sweep(bag, [[-2.2, 0.3, s * 1.25, 1], [-2.7, 0.75, s * 1.6, 0.7], [-3.1, 1.15, s * 1.85, 0.3]], oval(0.03, 0.3, 6), A.white, { ref: [1, 0, 0], sub: 2 });
+      bag.ball(s > 0 ? A.star : A.port, -3.12, 1.17, s * 1.86, 0.05);
+    }
+    return [{ geo: bag.geo(), mat: vehicleMat(), tint: false }];
   }
-  return [{ geo: merge(p), mat: vcMat({ roughness: 0.7 }), tint: false }];
+  const xs = xsOf(-2.75, 2.75, 28);
+  fuselage(bag, xs, { p: 2.6, y: [[-2.75, 0.28], [0, 0.04], [2.75, -0.12]], up: [[-2.75, 0.1], [-1.8, 0.4], [-0.5, 0.66], [0.5, 0.7], [1.4, 0.52], [2.2, 0.28], [2.75, 0.06]], down: [[-2.75, 0.1], [-1.5, 0.36], [0.5, 0.42], [1.8, 0.34], [2.75, 0.06]],
+    w: [[-2.75, 0.3], [-2.3, 0.64], [-1.2, 0.92], [0.3, 1.0], [1.6, 0.86], [2.3, 0.55], [2.66, 0.25], [2.75, 0.1]] },
+  (i, k) => { const x = xs[i]; return x > 2.6 && k > 1 && k < 6 ? A.nose : x < -2.62 ? A.tail : k >= 5 && x > -0.7 && x < 1.75 ? A.glass : k === 0 && Math.abs(x) < 1.9 ? A.lift : k < 2 ? A.trim : A.dark; });
+  const duct = [[0.12, 0.92], [0.07, 1.06], [-0.1, 1.08], [-0.16, 1.0], [-0.1, 0.9], [0.06, 0.88], [0.12, 0.92]];
+  for (const s of [1, -1]) for (const [x, y, z, r] of [[1.3, -0.08, 1.5, 0.46], [-1.6, 0.14, 1.68, 0.62]]) {
+    revolve(bag, duct, (i) => (i > 2 && i < 5 ? A.trim : A.dark), at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14);
+    revolve(bag, [[0, 0.9], [0, 0.16], [0.04, 0.12], [0.1, 0]], (i, j) => (i === 0 && j % 2 ? A.dark : A.trim), at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14, { flip: true });
+    revolve(bag, [[-0.05, 0.9], [-0.05, 0]], A.lift, at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14);
+    sweep(bag, [[x + 0.1, y + 0.1, s * 0.6, 1.2], [x, y + 0.02, s * (z - r * 0.9), 0.8]], oval(0.26, 0.05, 6), A.dark, { sub: 2, caps: false });
+    bag.ball(s > 0 ? A.star : A.port, x, y + 0.02, s * (z + r * 1.07), 0.05);
+  }
+  for (const s of [1, -1]) sweep(bag, [[-1.9, 0.5, s * 0.35, 1], [-2.35, 0.95, s * 0.7, 0.75], [-2.7, 1.3, s * 0.95, 0.4]], oval(0.03, 0.3, 6), A.dark, { ref: [1, 0, 0], sub: 2 });
+  return [{ geo: bag.geo(), mat: vehicleMat(), tint: false }];
 }
 
-
+// =====================================================================================
+// Traffic through the ages
+// =====================================================================================
 export function buildVehicles(world, scene, r) {
   const { lanes, cloth } = traffic(r), Y = yearToU, movers = [];
   const mk = (parts, items, opts = {}) => { const m = new Movers(world, parts, items, { crossSpan: opts.ground === false ? 0 : CROSS_SPAN, ...opts }); movers.push(m); scene.add(...m.meshes); return m; };
   // wheels
   mk(cartParts(species()), lanes(26, 1640, 1905, { jf: 200, jt: 22, v: [2, 3.5], off: (ax) => (ax === 'z' ? 3 : 1.8) }), { bob: 0.03 });
   const lane = (ax) => (ax === 'z' ? 1.8 + Math.floor(r() * 2) * 3 : 1.8);
-  mk(carParts('old'), lanes(40, 1903, 1946, { jf: 25, jt: 12, v: [6, 10], off: lane, alt: 0.05, tint: cloth([0x101010, 0x141414, 0x1a1210, 0x10141c, 0x3a1410]) }));
-  mk(carParts(), lanes(90, 1940, 2060, { jf: 40, jt: 40, v: [9, 15], off: lane, alt: 0.05, tint: cloth([0xf2c018, 0xf2c018, 0xf2c018, 0xe8e8e8, 0x202428, 0x8a1a1a, 0x2a4a7a, 0x9aa0a8, 0x3a5a3a]) }));
-  mk(carParts('pod'), lanes(60, 2035, 2170, { jf: 40, jt: 30, v: [10, 14], off: lane, alt: 0.05, tint: cloth([0xffffff, 0xe0f0ff, 0xd0d8e0]) }));
+  const cars = (style, n, from, to, jf, jt, v, pal) => mk(carParts(style), lanes(n, from, to, { jf, jt, v, off: lane, alt: 0.02, tint: cloth(pal) }));
+  cars('old', 40, 1903, 1944, 25, 10, [6, 10], [0x101010, 0x141414, 0x1a1210, 0x10141c, 0x3a1410, 0x1c2a20]);
+  cars('fifties', 60, 1936, 1968, 14, 12, [8, 13], [0x18181a, 0x5e1418, 0x24463a, 0x86b0a4, 0xd6d0b8, 0x26385a, 0x74848e, 0x8a2a20, 0xc8b070]);
+  cars('cab', 26, 1962, 2030, 10, 14, [9, 15], [0xf2c018]);
+  cars('sedan', 48, 1962, 2018, 14, 14, [9, 15], [0xe8e8e8, 0x202428, 0x8a1a1a, 0x2a4a7a, 0x9aa0a8, 0x3a5a3a, 0x6a5a40, 0x70202a, 0xb8b094]);
+  cars('suv', 60, 1998, 2060, 20, 40, [9, 15], [0xf0f0f0, 0x16181c, 0x9aa0a8, 0x50565e, 0x1e3a66, 0x8a1a1a, 0xf0f0f0, 0x2a3a34]);
+  cars('pod', 60, 2035, 2170, 40, 30, [10, 14], [0xffffff, 0xe0f0ff, 0xd0d8e0]);
   // the sky fills up
   mk(flyerParts(false), lanes(170, 2140, 2850, { jf: 120, jt: 130, v: [25, 50], off: () => r() * 16 - 8, alt: () => 25 + Math.floor(r() * 7) * 28 + r() * 4, cross: 0.45 }), { ground: false });
   mk(flyerParts(true), lanes(40, 2960, 9200, { jf: 40, jt: 600, v: [30, 60], off: () => r() * 80 - 40, alt: () => 60 + r() * 250, cross: 0.5 }), { ground: false });
