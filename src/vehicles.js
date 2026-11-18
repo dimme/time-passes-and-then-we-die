@@ -102,8 +102,8 @@ export function flyerParts(bright) {
   const duct = [[0.12, 0.92], [0.07, 1.06], [-0.1, 1.08], [-0.16, 1.0], [-0.1, 0.9], [0.06, 0.88], [0.12, 0.92]];
   for (const s of [1, -1]) for (const [x, y, z, r] of [[1.3, -0.08, 1.5, 0.46], [-1.6, 0.14, 1.68, 0.62]]) {
     revolve(bag, duct, (i) => (i > 2 && i < 5 ? A.trim : A.dark), at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14);
-    revolve(bag, [[0, 0.9], [0, 0.16], [0.04, 0.12], [0.1, 0]], (i, j) => (i === 0 && j % 2 ? A.dark : A.trim), at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14, { flip: true });
-    revolve(bag, [[-0.05, 0.9], [-0.05, 0]], A.lift, at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14);
+    revolve(bag, [[0, 0.9], [0, 0.16], [0.04, 0.12], [0.1, 0]], (i, j) => (i === 0 && j % 2 ? A.dark : A.trim), at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14);
+    revolve(bag, [[-0.05, 0.9], [-0.05, 0]], A.lift, at(x, y, s * z, 0, 0, PI / 2, r, r, r), 14, { flip: true });
     sweep(bag, [[x + 0.1, y + 0.1, s * 0.6, 1.2], [x, y + 0.02, s * (z - r * 0.9), 0.8]], oval(0.26, 0.05, 6), A.dark, { sub: 2, caps: false });
     bag.ball(s > 0 ? A.star : A.port, x, y + 0.02, s * (z + r * 1.07), 0.05);
   }
@@ -131,14 +131,14 @@ export function buildVehicles(world, scene, r) {
   mk(flyerParts(false), lanes(170, 2140, 2850, { jf: 120, jt: 130, v: [25, 50], off: () => r() * 16 - 8, alt: () => 25 + Math.floor(r() * 7) * 28 + r() * 4, cross: 0.45 }), { ground: false });
   mk(flyerParts(true), lanes(40, 2960, 9200, { jf: 40, jt: 600, v: [30, 60], off: () => r() * 80 - 40, alt: () => 60 + r() * 250, cross: 0.5 }), { ground: false });
   // ships on both rivers
-  const river = (n, from, to, v, jt = 30) => Array.from({ length: n }, (_, i) => {
+  const river = (n, from, to, v = 3, jt = 30) => Array.from({ length: n }, (_, i) => {
     const dir = i % 2 ? 1 : -1;
     return { lane: (i % 2 ? 1 : -1) * (360 + r() * 140), alt: 0, off: r() * 3000, v: dir * (v + r() * 2), axis: 'z', u0: Y(from + i * 6), u1: Y(to + r() * jt), tint: [1, 1, 1] };
   });
   const shipOpts = { span: 1500, ground: false };
   const fleets = [
     mk(shipParts('sail'), [...river(1, 1524, 1525, 3, 0), ...river(1, 1609, 1611, 3, 0), ...river(8, 1624, 1880)], shipOpts),
-    mk(shipParts('steam'), river(6, 1838, 1960), shipOpts),
+    mk(shipParts('steam'), river(6, 1838, 1960, 6), shipOpts),
     mk(shipParts('cargo'), river(5, 1955, 2150, 5), shipOpts),
   ];
 

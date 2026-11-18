@@ -106,8 +106,8 @@ export function skin(bag, P, f, { wrap = false, flip = false, crease = 0.72, bot
     const l = (Math.hypot(...n) || 1) * sgn; return [n[0] / l, n[1] / l, n[2] / l];
   };
   for (let i = 0; i < ni - 1; i++) for (let j = 0; j < qj; j++) {
-    const fi = fn(i, j); if (!fi) continue;
-    const k = i * qj + j, j1 = (j + 1) % nj;
+    const k = i * qj + j, j1 = (j + 1) % nj, fi = N[k][0] || N[k][1] || N[k][2] ? fn(i, j) : null;   // collapsed quads are dropped
+    if (!fi) continue;
     for (const sgn of both ? [1, -1] : [flip ? -1 : 1]) {
       const c = [[i, j], [i + 1, j], [i, j1], [i + 1, j1]].map(([a, b], o) => [P[a][b], normal(a, o < 2 ? j : j + 1, k, sgn)]);
       for (const o of sgn > 0 ? [0, 1, 2, 1, 3, 2] : [0, 2, 1, 1, 2, 3]) bag.vert(c[o][0], c[o][1], fi);
