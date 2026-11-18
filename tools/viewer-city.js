@@ -20,7 +20,7 @@ scene.environment = new THREE.PMREMGenerator(renderer).fromScene(env, 0, 0.1, 10
 const sun = new THREE.DirectionalLight(0xfff2dc, night ? 0.15 : 3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.05;
 scene.add(sun, sun.target, new THREE.HemisphereLight(0xffffff, 0x556655, night ? 0.05 : 0.35));
 const ground = new THREE.Mesh(new THREE.CircleGeometry(3000, 48).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x74806a, roughness: 1 })); ground.receiveShadow = true; scene.add(ground);
-setNight(night ? 1 : 0);
+
 
 const parts = (list) => { const g = new THREE.Group(); for (const p of list) { const m = new THREE.Mesh(p.geo, p.mat); m.castShadow = p.cast; m.receiveShadow = true; g.add(m); } return g; };
 const make = {
@@ -32,6 +32,7 @@ const make = {
 const label = document.getElementById('label');
 let obj;
 try { obj = make[kind][name](); } catch (err) { label.textContent = 'ERROR: ' + (err.stack || err); console.error(err); }
+setNight(night ? 1 : 0);
 if (!obj) window.viewerReady = true;
 else {
   scene.add(obj); if (obj.userData.tick) obj.userData.tick(1.3);

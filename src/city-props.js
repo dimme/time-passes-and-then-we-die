@@ -11,7 +11,8 @@ const BLOB = new THREE.IcosahedronGeometry(1, 1), HEMI = new THREE.SphereGeometr
 const FIGURE = vcMat({ flatShading: false });
 /** Standing figures at [x, z] spots, each turned towards (0, 0), settled on the land. */
 function figures(r, spots, cols, lift) {
-  return new THREE.Mesh(merge(spots.map(([x, z]) => { const c = pick(r, cols); return staticPerson('native', c, c, [0.62, 0.43, 0.3]).rotateY(Math.atan2(z, -x)).translate(x, lift ? lift(x, z) : 0, z); })), FIGURE);
+  const m = new THREE.Mesh(merge(spots.map(([x, z]) => { const c = pick(r, cols); return staticPerson('native', c, c, [0.62, 0.43, 0.3]).rotateY(Math.atan2(z, -x)).translate(x, lift ? lift(x, z) : 0, z); })), FIGURE);
+  m.castShadow = m.receiveShadow = true; return m;
 }
 const group = (k, ...more) => { const g = k.build(); g.add(...more); return g; };
 
