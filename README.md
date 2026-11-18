@@ -64,7 +64,11 @@ same span at true scale, where all of human existence is a fraction of a pixel.
   flying traffic, chimes, thunder), each with its own loudness curve over the timeline.
 - `src/controls.js`, `src/ui.js`, `src/main.js` — walking, the HUD and timeline, the loop.
 
-Rendering uses [three.js](https://threejs.org) (MIT), vendored in `vendor/`. All geometry
+- `src/textures.js` — procedural noise, normal maps and shared ground / rock / bark detail textures.
+
+Rendering uses [three.js](https://threejs.org) (MIT), vendored in `vendor/`, with a sun shadow map,
+physically based materials, an HDR pipeline (bloom + filmic tone mapping), a sky that is baked into an
+environment map for reflections, reflective water, leaf-card vegetation with wind, and animated animals. All geometry
 textures and sounds are generated in code; there are no asset files.
 
 Dates for the deep past and far future are rounded scientific estimates; everything after
