@@ -93,7 +93,7 @@ export function makeKinds() {
   const bark = solid({ map: T.barkMap, normalMap: T.barkNormal, color: 0x6a5140 }), greyBark = solid({ map: T.barkMap, normalMap: T.barkNormal, color: 0x7d756a });
   const armour = solid({ map: X.armour, color: 0xb8a48c }), fibre = solid({ map: X.armour, color: 0xa08468 }), palmBark = solid({ map: X.palm });
   const rockMat = solid({ map: X.rock, normalMap: T.rockNormal, normalScale: new THREE.Vector2(1.5, 1.5), vertexColors: true, roughness: 0.92 });
-  const L = { oak: leafMat(X.oak), tulip: leafMat(X.tulip, { sway: 0.014 }), elm: leafMat(X.elm, { sway: 0.016 }), conifer: leafMat(X.conifer, { sway: 0.006 }), frond: leafMat(X.frond, { sway: 0.018, roughness: 0.7 }) };
+  const L = { oak: leafMat(X.oak), tulip: leafMat(X.tulip, { sway: 0.014 }), elm: leafMat(X.elm, { sway: 0.016 }), conifer: leafMat(X.conifer, { sway: 0.006 }), frond: leafMat(X.frond, { sway: 0.018 }) };
   const parts = (wood, woodMat, leaves, mat) => [{ geo: wood.build(), mat: woodMat, tint: false }, { geo: leaves.build(), mat }];
 
   /** Broadleaf tree: a branching skeleton with leaf sprays on its twigs; several individuals per species. */
@@ -184,7 +184,7 @@ class GroundCover {
   constructor(world, scene, tex) {
     this.world = world;
     const r = rng(31);
-    this.mat = leafMat(tex, { sway: 0.09, fadeR: 46, cells: 8, ownColour: true, roughness: 0.9 });
+    this.mat = leafMat(tex, { sway: 0.09, fadeR: 46, cells: 8, ownColour: true });
     const b = new Builder(), up = [0, 1, 0];
     for (let k = 0; k < 3; k++) { const a = (k / 3) * Math.PI, dx = Math.cos(a) * 0.45, dz = Math.sin(a) * 0.45; b.quad([[-dx, 0, -dz], up, 0, 0], [[dx, 0, dz], up, 1, 0], [[dx, 0.7, dz], up, 1, 1], [[-dx, 0.7, -dz], up, 0, 1]); }
     const N = this.N = 14000, R = this.R = 46, geo = b.build();
@@ -202,7 +202,7 @@ class GroundCover {
     // grasses and flowering herbs only spread after the dinosaurs; before that the ground is ferns and horsetails
     const mix = u < GRASS_U ? COVER.ferns : COVER.grass;
     if (mix !== this.mix) { this.mix = mix; for (let i = 0; i < this.N; i++) this.cells.array[i] = mix[(((this.rnd[i] * 977) % 1) * 10) | 0]; this.cells.needsUpdate = true; }
-    this.mat.color.setRGB(Math.min(1, env.ground[0] * 1.3 + 0.02), Math.min(1, env.ground[1] * 1.25 + 0.02), Math.min(1, env.ground[2] * 1.1), THREE.SRGBColorSpace);
+    this.mat.color.setRGB(env.ground[0] * 0.95, env.ground[1] * 0.9, env.ground[2] * 0.85, THREE.SRGBColorSpace);
     const w = this.world, D = this.R * 2, cx = camera.position.x, cz = camera.position.z;
     const all = w.shapeVersion !== this.lastV || Math.abs(env.sea - this.lastSea) > 0.3; if (all) { this.lastV = w.shapeVersion; this.lastSea = env.sea; }
     let dirty = false;

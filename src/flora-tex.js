@@ -279,8 +279,8 @@ function rockTex() {
  * cells (the map is an atlas of this many columns, picked per instance by the `aCell` attribute);
  * ownColour (reddish, tan and lilac texels — flowers, seed heads — keep their colour instead of taking the tint).
  */
-export function leafMat(map, { sway = 0.012, fadeR = 0, cells = 0, ownColour = false, roughness = 0.9 } = {}) {
-  const m = new THREE.MeshStandardMaterial({ map, alphaTest: 0.4, side: THREE.DoubleSide, roughness, metalness: 0, vertexColors: true, envMapIntensity: 0.35 });
+export function leafMat(map, { sway = 0.012, fadeR = 0, cells = 0, ownColour = false } = {}) {
+  const m = new THREE.MeshStandardMaterial({ map, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1, metalness: 0, vertexColors: true });
   m.alphaToCoverage = true;
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = windTime;
@@ -298,6 +298,11 @@ export function leafMat(map, { sway = 0.012, fadeR = 0, cells = 0, ownColour = f
     if (cells) sh.vertexShader = sh.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>\n vMapUv.x = (vMapUv.x + aCell) / ${cells.toFixed(1)};`);
     // foliage carries soft "volume" normals; do not flip them on back faces
     sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0'));
+    // leaves are translucent, so light wraps round to faces turned from the sun; and matt, because a leaf seen
+    // from behind keeps its outward normal, which would make the specular term flare white
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <lights_physical_pars_fragment>', THREE.ShaderChunk.lights_physical_pars_fragment.replace('saturate( dot( geometryNormal, directLight.direction ) )', 'saturate( dot( geometryNormal, directLight.direction ) * 0.7 + 0.3 )'))
+      .replace('totalDiffuse + totalSpecular + totalEmissiveRadiance', 'totalDiffuse');
     if (ownColour) sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
       diffuseColor.rgb = mix(diffuseColor.rgb, sampledDiffuseColor.rgb, smoothstep(0.02, 0.1, max(sampledDiffuseColor.r, sampledDiffuseColor.b) - sampledDiffuseColor.g));`);
   };

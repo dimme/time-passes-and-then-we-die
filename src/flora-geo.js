@@ -138,10 +138,9 @@ export function boulder(r, { planes = 10, sx = 1.3, sy = 0.9, sz = 1.05, depth =
   for (let i = 0; i < planes; i++) cuts.push([norm(r() - 0.5, (r() - 0.35) * 0.9, r() - 0.5), 1 - depth * (0.25 + r() * 0.75)]);
   const f = [r() * 6, r() * 6, r() * 6];
   for (let i = 0; i < p.count; i++) {
-    const d = norm(p.getX(i), p.getY(i), p.getZ(i)); let rho = 1, w = 1, nn = [...d], min = 1;
-    const hits = cuts.map(([cn, h]) => { const k = dot(d, cn); return k > 0.05 ? h / k : 9; });
-    for (const h of hits) min = Math.min(min, h);
-    w = Math.exp(-(1 - min) / 0.03); rho = w; nn = [d[0] * w, d[1] * w, d[2] * w];
+    const d = norm(p.getX(i), p.getY(i), p.getZ(i)), hits = cuts.map(([cn, h]) => { const k = dot(d, cn); return k > 0.05 ? h / k : 9; }), min = Math.min(1, ...hits);
+    // soft minimum of the ball and the cutting planes: flat faces, rounded edges, and normals to match
+    let w = Math.exp(-(1 - min) / 0.03), rho = w; const nn = [d[0] * w, d[1] * w, d[2] * w];
     hits.forEach((h, j) => { const wj = Math.exp(-(h - min) / 0.03); w += wj; rho += h * wj; for (let k = 0; k < 3; k++) nn[k] += cuts[j][0][k] * wj; });
     rho = (rho / w) * (1 + lump * (Math.sin(d[0] * 5 + f[0]) * Math.cos(d[2] * 4 + f[1]) + 0.5 * Math.sin(d[1] * 9 + f[2])));
     const y = Math.max(-0.12, d[1] * rho * sy + sy * 0.5);
