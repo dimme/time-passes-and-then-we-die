@@ -23,7 +23,7 @@ const STYLES = {
   castiron: { kind: 'smooth', wall: '#d9d2c0', cw: 1.9, ch: 4.1, ww: 0.7, wh: 0.7, wy: 0.15, frame: '#77705f', sash: true, mun: [2, 1], arch: 0.07, archCol: '#c2baa6', cols: '#e6dfcd', band: '#c9c1ad' },
   factory: { kind: 'brick', wall: '#8e4e3a', cw: 3.4, ch: 4.2, ww: 0.68, wh: 0.6, wy: 0.22, frame: '#2a2e30', mun: [4, 5], arch: 0.06, archCol: '#6e3a2a', sill: '#a09080', glass: '#5a6c74' },
   deco: { kind: 'stone', wall: '#d2c6aa', cw: 2.2, ch: 3.6, ww: 0.56, wh: 0.56, wy: 0.25, frame: '#4c4a44', sash: true, piers: '#ddd1b6', spandrel: '#8f866f' },
-  decobrick: { kind: 'brick', wall: '#b38058', mortar: '#c9b9a0', cw: 2.2, ch: 3.6, ww: 0.56, wh: 0.56, wy: 0.25, frame: '#40342c', sash: true, piers: '#bd8a62', spandrel: '#6a5644' },
+  decobrick: { kind: 'brick', wall: '#a67c5c', mortar: '#c9b9a0', cw: 2.2, ch: 3.6, ww: 0.56, wh: 0.56, wy: 0.25, frame: '#40342c', sash: true, piers: '#b08a68', spandrel: '#6a5644' },
   decodark: { kind: 'brick', wall: '#5a4a44', mortar: '#7a6a60', cw: 2.2, ch: 3.6, ww: 0.56, wh: 0.56, wy: 0.25, frame: '#b8a070', sash: true, piers: '#66544c', spandrel: '#2c2826' },
   glass: { kind: 'metal', curtain: true, grid: 8, wall: '#b4bcc2', cw: 1.5, ch: 3.8, ww: 0.93, wh: 0.66, wy: 0.3, glass: '#7ea6c2', spandrel: '#4f7690', lit: 'office' },
   dark: { kind: 'metal', curtain: true, grid: 8, wall: '#16191c', cw: 1.5, ch: 3.8, ww: 0.95, wh: 0.68, wy: 0.28, glass: '#4a5c6c', spandrel: '#262e36', lit: 'office' },
@@ -121,7 +121,7 @@ function facade(st, seed) {
   if (st.panels) for (let i = 0; i < 60; i++) { const x = Math.floor(r() * G * 2) * C / 2, y = r() * S; shade(x, y, 2, 40 + r() * 200, -0.5); shade(r() * S, Math.floor(r() * G * 4) * C / 4, 30 + r() * 160, 2, 0.08); }
   if (st.kind === 'metal' && !st.curtain) for (let cx = 0; cx < G; cx++) { shade(cx * C + C * (1 - st.ww) / 2 - 2, 0, 2, S, -0.3); shade(cx * C, 0, 2, S, 0.2); }
   for (let i = 0; i < (st.holes || 0); i++) {
-    const x = r() * S, y = r() * S, a = 14 + r() * 50, b = 14 + r() * 70, moss = r() < 0.6;
+    const x = r() * S, y = r() * S, a = 8 + r() * 26, b = 8 + r() * 36, moss = r() < 0.75;
     for (const [g, c] of [[col, moss ? `rgba(${50 + r() * 30},${85 + r() * 30},40,0.8)` : '#141412'], [hgt, grey(moss ? 0.7 : 0.1)], [orm, 'rgb(0,255,0)']]) { g.fillStyle = c; g.beginPath(); g.ellipse(x, y, a, b, r() * 3, 0, 7); g.fill(); }
   }
   const hd = hgt.getImageData(0, 0, S, S).data, h = new Float32Array(S * S); for (let i = 0; i < S * S; i++) h[i] = hd[i * 4] / 255;
@@ -217,7 +217,7 @@ M.grille = () => {
     g.fillRect(0, 66, 64, 7); g.fillRect(0, 108, 64, 4); g.fillRect(0, 122, 64, 5);
     g.fillRect(0, 2, 64, 7); g.fillRect(0, 53, 64, 7); g.fillRect(0, 2, 5, 58); g.lineWidth = 5; g.beginPath(); g.moveTo(0, 6); g.lineTo(64, 56); g.moveTo(64, 6); g.lineTo(0, 56); g.stroke();
     const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.anisotropy = 8;
-    _grille = vc({ map: t, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.5 }); _grille.userData = { uv: 1 };
+    _grille = vc({ map: t, alphaTest: 0.3, side: THREE.DoubleSide, roughness: 0.6, metalness: 0.15 }); _grille.userData = { uv: 1 };
   }
   return _grille;
 };

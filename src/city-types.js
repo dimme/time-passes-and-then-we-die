@@ -120,7 +120,7 @@ function fireEscape(k, F, f, i0, n = f.nf) {
   }
   const y = f.y0 + F.wy * f.fh - 0.4; for (const z of [0.55, 0.95]) k.rod(M.trim, IRON, 0.04, [xl + 0.35, y, z], [xl + 0.35, y - 2.1, z]);   // the drop ladder
 }
-const BLOB = new THREE.IcosahedronGeometry(1, 1);
+const BLOB = new THREE.IcosahedronGeometry(1, 1), TUFT = new THREE.IcosahedronGeometry(1, 0);      // foliage near the street, and high up where nobody can tell
 /** Painted walls of one rectangular stage of a tower, y0..y1 on a w × d plan centred at x, z; fn(f, width, i) can dress each wall in its own frame. */
 export function stage(k, F, w, d, x, z, y0, y1, tint, fn) { around(k, w, d, x, y0, z, (fw, i) => { const f = k.wall(F, -fw / 2, fw / 2, 0, y1 - y0, 0, tint); if (fn) fn(f, fw, i); }); }
 /** Vertical piers standing proud of a wall at every `step` bays, running `over` past its top as finials. */
@@ -288,7 +288,7 @@ export const TYPES = {
           k.box(M.trim, mul(wc, [0.8, 0.8, 0.8]), fw, g, 0.1, 0, 0, 0.02, 'kb'); k.box(M.trim, wc, fw + 0.1, 0.16, 0.2, 0, g - 0.08, 0.07, 'k');
           const db = i === 0 ? (door > 0 ? f.n - 1 : 0) : -1, dx = f.x0 + (db + 0.5) * f.bw;
           for (let q = 0; q < f.n; q++) if (q !== db) glaze(k, f.x0 + (q + 0.5) * f.bw, 0.35, 0.95, 0.8, 0.075, r() < 0.3 ? LAMP : DARK, 2, 1, 0x1c1814);
-          relief(k, F, f, 3, wc, wc, { hood: true, skip: (q, fl) => q === db && fl === 0 });
+          relief(k, F, f, 2, wc, wc, { hood: true, skip: (q, fl) => q === db && fl === 0 });
           if (db >= 0) {
             for (const s of [-1, 1]) k.box(M.trim, wc, 0.3, 3.1, 0.3, dx + s * 0.85, g, 0.15, 'kb');
             k.box(M.trim, wc, 2.3, 0.4, 0.5, dx, g + 3.1, 0.25, 'k'); k.box(M.trim, wc, 1.4, 3.1, 0.06, dx, g, 0.03, 'kb');
@@ -302,19 +302,19 @@ export const TYPES = {
         } else if (ci) {
           // iron columns carry the front: all glass between them at street level, an entablature at every floor
           const top = g - 0.7;
-          for (let q = 0; q <= f.n; q++) { const x = f.x0 + q * f.bw; k.cyl(M.trim, trimC, 0.15, 0.17, top - 0.5, x, 0.5, 0.02, 8, true); k.box(M.trim, trimC, 0.42, 0.5, 0.42, x, 0, 0.02, 'kb'); k.box(M.trim, trimC, 0.44, 0.22, 0.44, x, top - 0.22, 0.02, 'k'); }
+          for (let q = 0; q <= f.n; q++) { const x = f.x0 + q * f.bw; k.cyl(M.trim, trimC, 0.15, 0.17, top - 0.5, x, 0.5, 0.02, 6, true); k.box(M.trim, trimC, 0.42, 0.5, 0.42, x, 0, 0.02, 'kb'); k.box(M.trim, trimC, 0.44, 0.22, 0.44, x, top - 0.22, 0.02, 'k'); }
           k.box(M.trim, trimC, fw, 0.7, 0.36, 0, top, -0.02, 'k'); k.box(M.trim, trimC, fw + 0.1, 0.14, 0.6, 0, g - 0.14, 0.08, 'k');
           k.box(M.trim, 0x2a2e2a, fw, 0.5, 0.1, 0, 0, -0.2, 'kb'); k.quad(M.lit, r() < 0.7 ? SHOP : DARK, [-fw / 2, 0.5, -0.22], [fw / 2, 0.5, -0.22], [fw / 2, top, -0.22], [-fw / 2, top, -0.22]);
           for (let q = 0; q < f.n; q++) k.box(M.trim, 0x2a2e2a, 0.06, top, 0.08, f.x0 + (q + 0.5) * f.bw, 0, -0.18, 'kb');
           for (let fl = 1; fl <= f.nf; fl++) k.box(M.trim, trimC, fw + 0.06, 0.42, fl === f.nf ? 0.1 : 0.24, 0, g + fl * f.fh - 0.21, fl === f.nf ? 0.05 : 0.12, 'k');
-          for (let fl = 0; fl < Math.min(2, f.nf); fl++) for (let q = 0; q <= f.n; q++) k.cyl(M.trim, trimC, 0.13, 0.15, f.fh - 0.5, f.x0 + q * f.bw, g + fl * f.fh + 0.2, 0.03, 6, true);
+          for (let fl = 0; fl < Math.min(1, f.nf); fl++) for (let q = 0; q <= f.n; q++) k.cyl(M.trim, trimC, 0.13, 0.15, f.fh - 0.5, f.x0 + q * f.bw, g + fl * f.fh + 0.2, 0.03, 6, true);
         } else {
           if (fw < 9) shop(k, r, -fw / 2, fw / 2, g, { pier: trimC, door: i === 0 ? door : 0 });
           else { const m = (r() - 0.5) * 2; shop(k, r, -fw / 2, m, g, { pier: trimC }); shop(k, r, m, fw / 2, g, { pier: trimC }); }
-          relief(k, F, f, 3, trimC, kind === 'tenementarch' ? null : trimC);
-          if (i === 0 && f.n >= 3) fireEscape(k, F, f, door > 0 ? 0 : f.n - 2);
+          relief(k, F, f, 2, trimC, kind === 'tenementarch' ? null : trimC);
+          if (i === 0 && f.n >= 3 && (b + nb) % 2) fireEscape(k, F, f, door > 0 ? 0 : f.n - 2);
         }
-        cornice(k, -fw / 2, fw / 2, H + 0.75, corn, ci ? 1.25 : bs ? 0.9 : 0.8 + r() * 0.4, Math.max(2, Math.round(fw / (ci ? 1.9 : 1.2))));
+        cornice(k, -fw / 2, fw / 2, H + 0.75, corn, ci ? 1.25 : bs ? 0.9 : 0.8 + r() * 0.4, Math.max(2, Math.round(fw / (ci ? 1.9 : 1.7))));
         if (ci && i === 0) k.quad(M.trim, corn, [-fw * 0.22, H + 0.75, 0.3], [fw * 0.22, H + 0.75, 0.3], [0, H + 0.75 + fw * 0.09, 0.3]);
       });
       flatRoof(k, w, d, cx, H, zc, wc, 0.75);
@@ -338,7 +338,7 @@ export const TYPES = {
       // wagon doors under iron lintels, one of them behind a loading dock
       for (let q = i === 0 ? 0 : 1; q < f.n; q += 2 + (f.n > 5)) {
         const x = -fw / 2 + (q + 0.5) * f.bw, dw = f.bw - 0.9;
-        k.box(M.plank(), pick(r, [0x3a4a3a, 0x5a2a20, 0x4a4036, 0x2c3440]), dw, 3.5, 0.08, x, 0, 0.06, 'kb'); k.box(M.trim, IRON, dw + 0.4, 0.3, 0.2, x, 3.5, 0.1, 'k'); k.box(M.trim, IRON, 0.05, 3.5, 0.03, x, 0, 0.11, 'kb');
+        k.box(M.trim, pick(r, [0x3a4a3a, 0x5a2a20, 0x4a4036, 0x2c3440]), dw, 3.5, 0.08, x, 0, 0.06, 'kb'); k.box(M.trim, IRON, dw + 0.4, 0.3, 0.2, x, 3.5, 0.1, 'k'); k.box(M.trim, IRON, 0.05, 3.5, 0.03, x, 0, 0.11, 'kb');
       }
       if (i === 0) {
         const x = dock * (fw / 2 - f.bw * 1.5), L = f.bw * 2.4;
@@ -349,7 +349,7 @@ export const TYPES = {
     });
     if (shed) {
       // north-light roof: glazed faces to one side, slates to the other; the gable walls follow the saw teeth
-      const n = 5, tw = W / n, rise = 2.3, zf = d / 2, RM = M.slate(), rc = lin(0x4a4c52);
+      const n = 5, tw = W / n, rise = 2.3, zf = d / 2, RM = M.trim, rc = lin(0x3c3e44);
       for (let q = 0; q < n; q++) {
         const x0 = -W / 2 + q * tw, x1 = x0 + tw, xs = x0 + 0.55;
         k.at(0, H, zc, 0, () => {
@@ -532,7 +532,7 @@ export const TYPES = {
         const y1 = i === n - 1 ? g + Math.round((H - g) / F.ch) * F.ch : y + Math.max(3, Math.round(((H - g) * (0.3 + 0.7 * ((i + 1) / n)) + g - y) / F.ch)) * F.ch, z = -D / 2 + d / 2;
         stage(k, F, W, d, 0, z, y, y1, tint); flatRoof(k, W, d, 0, y1, z, frame, 1.1, 0x6f8a52, frame);
         const zt = z + d / 2 - 1.3; k.box(M.trim, 0x3f7a36, W - 1.2, 0.5, 1.6, 0, y1, zt, 'b');
-        for (let q = 0; q < 7; q++) { const x = (q - 3) * (W - 3) / 6 + (r() - 0.5), tree = r() < 0.4; if (tree) k.cyl(M.trim, 0x4a3a28, 0.07, 0.1, 1.8, x, y1 + 0.4, zt, 5, true); k.geo(M.trim, pick(r, [0x3a6a30, 0x4a7a38, 0x2f5a2c]), BLOB, x, y1 + (tree ? 2.8 : 0.9), zt, 0, q, 0, tree ? 1.3 : 0.8, tree ? 1.2 : 0.6, tree ? 1.3 : 0.8); }
+        for (let q = 0; q < 7; q++) { const x = (q - 3) * (W - 3) / 6 + (r() - 0.5), tree = r() < 0.4; if (tree) k.cyl(M.trim, 0x4a3a28, 0.07, 0.1, 1.8, x, y1 + 0.4, zt, 5, true); k.geo(M.trim, pick(r, [0x3a6a30, 0x4a7a38, 0x2f5a2c]), TUFT, x, y1 + (tree ? 2.8 : 0.9), zt, 0, q, 0, tree ? 1.3 : 0.8, tree ? 1.2 : 0.6, tree ? 1.3 : 0.8); }
         y = y1; d -= 2.6 + r() * 1.5;
       }
     }
@@ -582,7 +582,7 @@ export const TYPES = {
 
   /** 3000–10,000, the imagined garden age: white spires grown rather than built, ringed with hanging gardens. */
   spire(r) {
-    const k = new Kit(r), F = facadeOf('white'), H = 160 + r() * 300, R = 6 + r() * 2, kind = Math.floor(r() * 3), N = 20, M2 = 26, rings = [], white = 0xf2f6f6;
+    const k = new Kit(r), F = facadeOf('white'), H = 160 + r() * 300, R = 6 + r() * 2, kind = Math.floor(r() * 3), N = 16, M2 = 22, rings = [], white = 0xf2f6f6;
     const prof = (t) => (0.3 + 0.7 * (1 - t) ** 1.3 + 0.45 * Math.exp(-t * 22) + (kind === 1 ? 0.3 * Math.exp(-(((t - 0.87) / 0.06) ** 2)) : kind === 2 ? 0.5 * Math.max(0, (t - 0.8) / 0.2) ** 1.5 : 0)) * R;
     for (let j = 0; j <= M2; j++) { const t = (j / M2) ** 0.9, rad = prof(t); rings.push({ y: t * H, pts: Array.from({ length: N }, (_, i) => [Math.sin((i / N) * PI * 2) * rad, Math.cos((i / N) * PI * 2) * rad]) }); }
     k.skin(F, rings, WHITE, true);
@@ -590,10 +590,10 @@ export const TYPES = {
     for (const t of [0.2 + r() * 0.08, 0.42 + r() * 0.08, 0.63 + r() * 0.06]) {
       const y = t * H, a = prof(t), b = a + 4.5 + r() * 3.5;
       k.lathe(M.trim, white, [[a * 0.9, -4.5], [b * 0.8, -1.4], [b, -0.3], [b + 0.1, 0.5], [b - 0.5, 0.5]], 0, y, 0, N); k.cyl(M.trim, 0x4f9a48, b - 0.4, b - 0.4, 0.2, 0, y + 0.25, 0, N);
-      for (let q = 0; q < 9; q++) { const an = (q / 9) * PI * 2 + r(), rr = (a + b) / 2 + 0.3, tree = q % 3 === 0; k.geo(M.trim, pick(r, [0x3f8a3a, 0x58a84a, 0x2f7a3a, 0xc85a8a]), BLOB, Math.sin(an) * rr, y + (tree ? 2.4 : 0.9), Math.cos(an) * rr, 0, q, 0, tree ? 1.4 : 0.9, tree ? 1.9 : 0.7, tree ? 1.4 : 0.9); }
+      for (let q = 0; q < 9; q++) { const an = (q / 9) * PI * 2 + r(), rr = (a + b) / 2 + 0.3, tree = q % 3 === 0; k.geo(M.trim, pick(r, [0x3f8a3a, 0x58a84a, 0x2f7a3a, 0xc85a8a]), TUFT, Math.sin(an) * rr, y + (tree ? 2.4 : 0.9), Math.cos(an) * rr, 0, q, 0, tree ? 1.4 : 0.9, tree ? 1.9 : 0.7, tree ? 1.4 : 0.9); }
     }
     const top = prof(1);
-    if (kind === 2) { k.cyl(M.trim, 0x4f9a48, top - 0.3, top - 0.3, 0.3, 0, H - 0.8, 0, N); for (let q = 0; q < 7; q++) { const an = q * 0.9, rr = top * 0.6 * (q % 2 ? 1 : 0.45); k.geo(M.trim, pick(r, [0x3f8a3a, 0x58a84a, 0xe8c0d8]), BLOB, Math.sin(an) * rr, H + 1.6, Math.cos(an) * rr, 0, q, 0, 1.6, 2.2, 1.6); } }
+    if (kind === 2) { k.cyl(M.trim, 0x4f9a48, top - 0.3, top - 0.3, 0.3, 0, H - 0.8, 0, N); for (let q = 0; q < 7; q++) { const an = q * 0.9, rr = top * 0.6 * (q % 2 ? 1 : 0.45); k.geo(M.trim, pick(r, [0x3f8a3a, 0x58a84a, 0xe8c0d8]), TUFT, Math.sin(an) * rr, H + 1.6, Math.cos(an) * rr, 0, q, 0, 1.6, 2.2, 1.6); } }
     else { k.lathe(M.trim, white, [[top, 0], [top * 0.7, 3], [top * 0.3, 7], [0.12, 12 + H * 0.03]], 0, H, 0, N); k.geo(M.metal, 0xd8e8ea, new THREE.TorusGeometry(top * 2.2, 0.16, 6, 28), 0, H + 5, 0, PI / 2); }
     return finish(k, prof(0.02) * 2, prof(0.02) * 2);
   },

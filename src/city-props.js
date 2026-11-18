@@ -100,7 +100,7 @@ function cottage(k, r, F, w, d, h, rise, roof, tint, o = {}) {
 }
 /** Fort Amsterdam, 1626–1790: a square earthwork with four pointed bastions faced in stone, holding barracks, the governor's house and a church. */
 export function fort(r, lift) {
-  const k = new Kit(r, lift), S = 14, G = facadeOf('granite'), B = facadeOf('hollandbrick'), st = [0.86, 0.8, 0.7], sod = 0x64803f, earth = 0x7c6a4c, L = lift || (() => 0);
+  const k = new Kit(r, lift), S = 16, G = facadeOf('granite'), B = facadeOf('hollandbrick'), st = [0.86, 0.8, 0.7], sod = 0x64803f, earth = 0x7c6a4c, L = lift || (() => 0);
   const C = [[S - 7, S], [S - 7, S + 2.6], [S + 5.4, S + 5.4], [S + 2.6, S - 7], [S, S - 7]], out = [];
   for (let q = 0, P = C; q < 4; q++) { out.push(...P); P = P.map(([x, z]) => [z, -x]); }
   // rampart section, measured inwards from the foot of the scarp: [inset, height]
@@ -111,9 +111,9 @@ export function fort(r, lift) {
   // gatehouse through the north curtain
   k.on(0, -S + 2.5, PI, () => { k.box(G.side, st, 5.5, 5.2, 7.5, 0, 0, 0, 'b'); k.box(M.trim, 0xbdb5a2, 5.9, 0.3, 7.9, 0, 5.2, 0); for (const z of [3.76, -3.76]) { k.quad(M.trim, 0x2a2018, ...(z > 0 ? [[-1.3, 0, z], [1.3, 0, z], [1.3, 2.6, z], [-1.3, 2.6, z]] : [[1.3, 0, z], [-1.3, 0, z], [-1.3, 2.6, z], [1.3, 2.6, z]])); k.geo(M.trim, 0x2a2018, new THREE.CircleGeometry(1.3, 10, 0, PI), 0, 2.6, z, 0, z > 0 ? 0 : PI, 0); } });
   // inside: barracks along the west wall, the church of St Nicholas, the governor's house
-  k.on(-4.5, 1.5, PI / 2, () => cottage(k, r, B, 13, 5.2, 5.6, 2.6, M.tile(), WHITE));
-  k.on(4.5, 3, -PI / 2, () => { cottage(k, r, B, 11.5, 6.5, 6, 4.4, M.tile(), [1.15, 1.1, 1], { wh: 2.2, ww: 0.8, roof: 0x8a4a34 }); k.box(B.side, [1.15, 1.1, 1], 2.6, 10.5, 2.6, -5.4, 0, 0, 'b'); k.geo(M.shingle(), 0x5a4a40, new THREE.ConeGeometry(2.1, 4.2, 4), -5.4, 12.6, 0, 0, PI / 4, 0); k.cyl(M.trim, IRON, 0.03, 0.03, 1.4, -5.4, 14.6, 0, 4); });
-  k.on(3, -5.5, 0, () => cottage(k, r, B, 7.5, 5, 3.4, 2.4, M.tile(), [0.85, 0.7, 0.62]));
+  k.on(-5.5, 1, PI / 2, () => cottage(k, r, B, 11, 4.4, 5.2, 2.3, M.tile(), WHITE));
+  k.on(5.5, 3.5, -PI / 2, () => { cottage(k, r, B, 9, 5, 5, 3.6, M.tile(), [1.15, 1.1, 1], { wh: 2.2, ww: 0.8, roof: 0x8a4a34 }); k.box(B.side, [1.15, 1.1, 1], 2.2, 9, 2.2, -4.2, 0, 0, 'b'); k.geo(M.shingle(), 0x5a4a40, new THREE.ConeGeometry(1.8, 3.6, 4), -4.2, 10.8, 0, 0, PI / 4, 0); k.cyl(M.trim, IRON, 0.03, 0.03, 1.4, -4.2, 12.4, 0, 4); });
+  k.on(3.5, -6.5, 0, () => cottage(k, r, B, 6.5, 4.4, 3.2, 2.1, M.tile(), [0.85, 0.7, 0.62]));
   // the flag of the Dutch Republic on the south-east bastion, guns on the others
   k.on(S + 1.6, S + 1.6, 0, () => { k.cyl(M.trim, 0x5a4a3a, 0.06, 0.1, 13, 0, 3.4, 0, 6); [0xf08020, 0xf4f4f0, 0x2040a0].forEach((c, i) => k.sheet(M.trim, c, [0.08, 15.4 - i * 0.6, 0], [3.2, 15.3 - i * 0.6, 0.25], [3.2, 15.9 - i * 0.6, 0.25], [0.08, 16 - i * 0.6, 0])); });
   for (const [x, z, ry] of [[-S - 1.4, S + 1.4, -PI / 4], [-S - 1.4, -S - 1.4, (-3 * PI) / 4], [S + 1.4, -S - 1.4, (3 * PI) / 4]]) k.on(x, z, ry, () => { k.rod(M.trim, 0x1c1c1c, 0.3, [0, 4, -0.9], [0, 4.25, 1.3], 8); k.box(M.trim, WOOD, 0.7, 0.4, 1.5, 0, 3.4, 0); for (const s of [-1, 1]) k.geo(M.trim, WOOD, new THREE.CylinderGeometry(0.4, 0.4, 0.1, 10), s * 0.42, 3.8, 0.2, 0, 0, PI / 2); });

@@ -95,10 +95,10 @@ export function buildCity(world, scene) {
     else if (!lanes) g.fillRect(253, 0, 6, 256);
     return canvasTex(c);
   };
-  const zebra = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#2f2f33'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#d6d6ce'; g.fillRect(24, 0, 80, 128); for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(40,40,44,0.35)'; g.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 6, 1 + Math.random() * 3); } return canvasTex(c); })();
+  const zebra = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#2f2f33'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#d6d6ce'; g.fillRect(24, 0, 80, 128); const rr = rng(8); for (let i = 0; i < 260; i++) { g.fillStyle = 'rgba(40,40,44,0.3)'; g.fillRect(rr() * 128, rr() * 128, 1 + rr() * 2, 1 + rr()); } return canvasTex(c); })();
   const ave = { p: [], n: [], uv: [] }, cross = { p: [], n: [], uv: [] }, plain = { p: [], n: [], uv: [] }, zeb = { p: [], n: [], uv: [] }, old = { p: [], n: [], uv: [] };
-  for (let k = -2; k <= 2; k++) { quad(ave, k * 100 - 6.5, -500, k * 100 + 6.5, 500, 0.03, 0, 0, 1, 1000 / 12); quad(old, k * 100 - 6.5, -500, k * 100 + 6.5, 500, 0.03, 0, 0, 13 / 5, 200); }
-  for (let k = -8; k <= 8; k++) { quad(cross, -240, k * 60 - 3.5, 240, k * 60 + 3.5, 0.04, 0, 0, 1, 480 / 8, true); quad(old, -240, k * 60 - 3.5, 240, k * 60 + 3.5, 0.04, 0, 0, 96, 7 / 5); }
+  for (let k = -2; k <= 2; k++) { quad(ave, k * 100 - 6.5, -500, k * 100 + 6.5, 500, 0.03, 0, 0, 1, 1000 / 12); quad(old, k * 100 - 6.5, -500, k * 100 + 6.5, 500, 0.03, 0, 0, 13 / 1.6, 625); }
+  for (let k = -8; k <= 8; k++) { quad(cross, -240, k * 60 - 3.5, 240, k * 60 + 3.5, 0.04, 0, 0, 1, 480 / 8, true); quad(old, -240, k * 60 - 3.5, 240, k * 60 + 3.5, 0.04, 0, 0, 300, 7 / 1.6); }
   const iron = new Kit(), stop = 0xd6d6ce;      // manhole covers, drain gratings and stop lines
   for (let a = -2; a <= 2; a++) for (let k = -8; k <= 8; k++) {
     const x = a * 100, z = k * 60;
