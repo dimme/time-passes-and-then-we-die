@@ -257,7 +257,7 @@ class GroundCover {
     const n = Math.floor(Math.min(1, env.grass) * this.N);
     this.mesh.visible = n > 0; if (!n) return;
     this.mesh.count = n;
-    this.mat.color.setRGB(Math.min(1, env.ground[0] * 1.3 + 0.03), Math.min(1, env.ground[1] * 1.22 + 0.03), Math.min(1, env.ground[2] * 1.1), THREE.SRGBColorSpace);
+    this.mat.color.setRGB(Math.min(1, env.ground[0] * 1.18 + 0.02), Math.min(1, env.ground[1] * 1.1 + 0.02), Math.min(1, env.ground[2] * 1.0), THREE.SRGBColorSpace);
     const w = this.world, D = this.R * 2, cx = camera.position.x, cz = camera.position.z;
     const all = w.shapeVersion !== this.lastV || Math.abs(env.sea - this.lastSea) > 0.3; if (all) { this.lastV = w.shapeVersion; this.lastSea = env.sea; }
     let dirty = false;
@@ -329,6 +329,8 @@ export function buildFlora(world, scene) {
   add('shrub', 500, both(), (x, z) => [-9000 + r() * 3000, clear(x, z)], [0.6, 1.6]);
   // street trees
   add('broadleaf2', 260, () => [Math.round(r() * 4 - 2) * 100 + (r() < 0.5 ? -8.4 : 8.4), Math.round((r() * 2 - 1) * 40) * 12 + 6], span(1860, 2140, 120, 60), [0.45, 0.8]);
+  // the park by the starting corner
+  add('broadleaf', 16, () => { for (;;) { const x = (r() - 0.5) * 70, z = (r() - 0.5) * 40; if (Math.abs(x) > 7 || Math.abs(z) > 7) return [-50 + x, 30 + z]; } }, span(1733, 2160, 20, 30), [0.7, 1.2]);
   // far-shore city
   const cityTint = () => { const g = 0.45 + r() * 0.35; return [g * (1 + r() * 0.15), g, g * (0.9 + r() * 0.2)]; };
   add('lowrise', 420, shore, span(1700, 2930, 220, 60), [1, 1], cityTint, (it) => { it.rot = 0; it.sx = 12 + r() * 22; it.sy = 8 + r() * 22; });
