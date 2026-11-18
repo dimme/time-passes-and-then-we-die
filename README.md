@@ -61,17 +61,18 @@ same span at true scale, where all of human existence is a fraction of a pixel.
   environment keyframes (sky, sun, fog, sea level, ice, terrain, weather) that are
   interpolated as you scrub.
 - `src/world.js` — sky shader, terrain, rivers, ice sheet, weather particles.
-- `src/flora.js` — instanced trees, shrubs, rocks and ground cover, each with its own lifespan.
-- `src/fauna.js` — animals (swept bodies with scale / fur / feather textures, jointed walking legs, jaws,
-  swaying tails, flapping two-part wings), pedestrians that walk and dress for their century, vehicles and ships.
-- `src/city.js` — every building lot has a generated history (Dutch house → brick house →
-  tenement → tower → megatower → ruin), plus hand-made landmarks.
-- `src/audio.js` — every sound is synthesised with Web Audio: ambient beds (wind, insects, water, ice howl,
-  traffic, rain, drones) and random events (birds, roars, mammoths, drums, bells, hooves, horns, sirens,
-  flying traffic, chimes, thunder), each with its own loudness curve over the timeline.
-- `src/controls.js`, `src/ui.js`, `src/main.js` — walking, the HUD and timeline, the loop.
-
-- `src/textures.js` — procedural noise, normal maps and shared ground / rock / bark detail textures.
+- `src/flora*.js` — trees with real branch structure, conifers, ancient plants, shrubs, rocks and ground cover,
+  instanced and each with its own lifespan.
+- `src/animals*.js` — skinned, anatomically proportioned animals with jointed legs and a walking gait.
+- `src/people.js` — pedestrians with period clothing and an animated walk.
+- `src/vehicles*.js` — carts, cars by decade, pods, flying traffic and ships.
+- `src/city*.js` — every building lot has a generated history (Dutch house → brick house →
+  tenement → tower → megatower → ruin), plus landmarks, props, streets and street furniture.
+- `src/audio.js` — every sound is synthesised with Web Audio.
+- `src/controls.js`, `src/ui.js`, `src/main.js` — walking, the HUD and timeline, start-up and the loop.
+- `src/textures.js`, `src/organic.js`, `src/movers.js`, `src/util.js` — shared textures, geometry and instancing helpers.
+- `tools/viewer.html`, `tools/viewer-city.html` — developer viewers that show a single model from four angles
+  (for example `tools/viewer.html?m=animal:deer`).
 
 Rendering uses [three.js](https://threejs.org) (MIT), vendored in `vendor/`, with a sun shadow map,
 physically based materials, an HDR pipeline (bloom + filmic tone mapping), a sky that is baked into an
