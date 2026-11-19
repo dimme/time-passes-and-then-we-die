@@ -27,7 +27,7 @@ function hills(x, z) {
 const iceBumps = (x, z) => 3 * Math.sin(x * 0.03) * Math.cos(z * 0.025) + 1.5 * Math.sin(x * 0.11 + z * 0.07);
 
 const SKY_FRAG = `
-  uniform vec3 top, hor, sunCol, sunDir, moonDir; uniform float sunSize, cloud, time, sunBright, moonSize, moonHot; varying vec3 vDir;
+  uniform vec3 top, hor, sunCol, sunDir, moonDir, cloudCol; uniform float sunSize, cloud, cirrus, stars, flash, time, sunBright, moonSize, moonHot; varying vec3 vDir;
   float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
   float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
     return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
@@ -40,6 +40,13 @@ const SKY_FRAG = `
     col = mix(col, hor * 1.12, exp(-h * 14.0) * 0.6);
     float mie = pow(max(mu, 0.0), 6.0) * 0.22 + pow(max(mu, 0.0), 90.0) * 0.5;
     col += sunCol * mie * (0.35 + 0.65 * exp(-h * 2.0));
+    // stars, wherever the sky is dark enough to show them
+    if (stars > 0.01 && d.y > 0.0) {
+      vec3 sp = d * 190.0, sc = floor(sp);
+      float sh = fract(sin(dot(sc, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      float tw = 0.75 + 0.25 * sin(time * (1.5 + sh * 4.0) + sh * 40.0);
+      col += vec3(0.9, 0.95, 1.0) * stars * step(0.9955, sh) * smoothstep(0.42, 0.05, length(fract(sp) - 0.5)) * tw * smoothstep(0.0, 0.12, d.y) * (0.5 + fract(sh * 91.7));
+    }
     // sun
     float disc = 1.0 - smoothstep(sunSize * 0.96, sunSize * 1.03 + 0.0015, ang);
     float corona = exp(-max(ang - sunSize, 0.0) / (0.03 + sunSize * 0.5));
@@ -49,8 +56,15 @@ const SKY_FRAG = `
     vec3 sunSurf = sunCol * sunBright * mix(1.0, gran, smoothstep(0.06, 0.3, sunSize)) * limb;
     // clouds, lit from the sun's side
     float cl = 0.0; vec3 cc = vec3(1.0);
+    // high, thin ice cloud drawn out into streaks by the wind
+    if (cirrus > 0.01 && d.y > 0.0) {
+      vec2 q = d.xz / (d.y + 0.35) * vec2(0.55, 2.2) + vec2(time * 0.0015, 3.0);
+      float ci = smoothstep(0.5, 0.82, fbm(q * 1.6 + fbm(q * 0.7) * 0.8)) * smoothstep(0.02, 0.3, d.y) * cirrus;
+      col = mix(col, mix(vec3(1.0), sunCol, 0.3) * cloudCol * (0.8 + 0.4 * length(hor) * 0.5), ci * 0.42);
+    }
     if (cloud > 0.01 && d.y > 0.0) {
       vec2 p = d.xz / (d.y + 0.14) * 1.15 + vec2(time * 0.004, time * 0.0015);
+      p += (vec2(noise(p * 2.7), noise(p * 2.7 + 9.0)) - 0.5) * 0.22;   // billowing edges
       float n = fbm(p), n2 = fbm(p + sunDir.xz * 0.12);
       float th = 1.0 - cloud * 0.78;
       cl = smoothstep(th, th + 0.32, n * 1.3) * smoothstep(0.0, 0.16, d.y);
@@ -58,6 +72,7 @@ const SKY_FRAG = `
       vec3 base = mix(hor, top, 0.35);
       vec3 shade = base * 0.55, bright = mix(vec3(dot(base + sunCol, vec3(0.33)) * 0.9), sunCol, 0.45) * (0.75 + 0.9 * length(sunCol) * 0.4);
       cc = mix(shade, bright, lit * (0.55 + 0.45 * smoothstep(0.2, 0.9, n * 1.3)));
+      cc *= cloudCol; cc += vec3(0.85, 0.9, 1.0) * flash * (0.5 + n);
       cc = mix(cc, hor, exp(-d.y * 7.0) * 0.8);
       cc += sunCol * pow(max(mu, 0.0), 24.0) * 0.6 * (1.0 - cl * 0.5);
     }
@@ -118,6 +133,7 @@ export class World {
       sunCol: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3(0, 1, 0) },
       sunSize: { value: 0.035 }, cloud: { value: 0.4 }, time: { value: 0 }, sunBright: { value: 30 },
       moonDir: { value: new THREE.Vector3(0.55, 0.42, 0.72).normalize() }, moonSize: { value: 0.034 }, moonHot: { value: 0 },
+      cloudCol: { value: new THREE.Color(1, 1, 1) }, cirrus: { value: 0 }, stars: { value: 0 }, flash: { value: 0 },
     };
     this.sunDir = this.skyU.sunDir.value;
     const skyMat = new THREE.ShaderMaterial({
@@ -212,6 +228,37 @@ export class World {
     this._c = new THREE.Color();
   }
 
+  /** Shooting stars and falling rock: `rate` 0..1 sets how often one crosses the sky. */
+  updateMeteors(rate, dt, camera) {
+    if (!this.meteors) {
+      const g = new THREE.ConeGeometry(1, 1, 6, 1, true).rotateX(-Math.PI / 2).translate(0, 0, 0.5);   // tail trails behind along +z
+      this.meteors = Array.from({ length: 7 }, () => {
+        const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthWrite: false, fog: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+        m.visible = false; m.frustumCulled = false; m.userData = { life: 0, v: new THREE.Vector3() }; this.scene.add(m); return m;
+      });
+    }
+    for (const m of this.meteors) {
+      const d = m.userData;
+      if (d.life <= 0) {
+        m.visible = false;
+        if (rate > 0.02 && Math.random() < dt * rate * 0.5) {
+          const a = Math.random() * 6.283, r = 900 + Math.random() * 2600, big = Math.random() < 0.25 ? 2.5 : 1;
+          m.position.set(camera.position.x + Math.cos(a) * r, 900 + Math.random() * 1500, camera.position.z + Math.sin(a) * r);
+          const b = a + 1.6 + (Math.random() - 0.5) * 1.6;
+          d.v.set(Math.cos(b), -(0.25 + Math.random() * 0.5), Math.sin(b)).normalize().multiplyScalar(700 + Math.random() * 900);
+          d.life = d.span = 1.2 + Math.random() * 2.2; m.scale.set(9 * big, 9 * big, (260 + Math.random() * 500) * big);
+          m.lookAt(m.position.clone().sub(d.v)); m.visible = true;
+        }
+        continue;
+      }
+      if (rate <= 0.02) d.life = 0;   // none left hanging when the era changes
+      d.life -= dt; m.position.addScaledVector(d.v, dt);
+      const f = Math.sin(Math.PI * Math.max(0, d.life / d.span));
+      m.material.color.setRGB(5 * f, 2.6 * f, 0.9 * f);
+      if (m.position.y < 60) d.life = 0;
+    }
+  }
+
   heightAt(x, z) { return landBase(x) + this.hill * hills(x, z); }
   /** What the player (and objects that must stay on the surface) stand on. */
   surfaceAt(x, z) {
@@ -239,12 +286,21 @@ export class World {
     su.sunSize.value = env.sunSize; su.cloud.value = env.cloud; su.time.value = time;
     su.sunBright.value = (2.2 + 26 * (1 - smooth((env.sunSize - 0.04) / 0.3))) * clamp(env.sunI / 2, 0.15, 1.6);
     su.moonSize.value = env.moon; su.moonHot.value = env.moonHot;
+    set(su.cloudCol.value, env.cloudCol);
+    su.cirrus.value = env.cloud > 0.02 ? Math.min(0.7, env.cloud * 1.3) * (1 - smooth((env.cloud - 0.72) / 0.2)) : 0;
+    su.stars.value = clamp(1 - (env.top[0] + env.top[1] + env.top[2]) * 2.2, 0, 1) * (1 - env.cloud * 0.9);
+    // lightning in heavy rain
+    const raining = env.precip > 0.7 && env.pVy < -14;
+    if (raining && !(this.flashT > 0) && Math.random() < dt * 0.14) this.flashT = 0.22;
+    this.flashT = Math.max(0, (this.flashT || 0) - dt);
+    su.flash.value = this.flashT > 0 ? (Math.sin(this.flashT * 90) > -0.3 ? 1.6 : 0.2) : 0;
+    this.updateMeteors(env.meteor, dt, camera);
     const az = -0.45; su.sunDir.value.set(Math.cos(env.sunEl) * Math.sin(az), Math.sin(env.sunEl), Math.cos(env.sunEl) * Math.cos(az));
     this.sky.position.copy(camera.position);
 
     set(this.scene.fog.color, env.hor); this.scene.fog.density = env.fogD;
     set(this.hemi.color, [0.5 + env.hor[0] * 0.5, 0.5 + env.hor[1] * 0.5, 0.5 + env.hor[2] * 0.5]);
-    set(this.hemi.groundColor, env.ground, 0.6); this.hemi.intensity = env.amb * 0.35;
+    set(this.hemi.groundColor, env.ground, 0.6); this.hemi.intensity = env.amb * 0.35 + (this.flashT > 0 ? 2.2 : 0);
     this.scene.environmentIntensity = env.amb * 0.9;
     const sun = this.sunLight;
     set(sun.color, env.sun); sun.intensity = env.sunI * 1.5;

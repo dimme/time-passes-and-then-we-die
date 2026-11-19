@@ -262,7 +262,7 @@ class GroundCover {
     if (mix !== this.mix) { this.mix = mix; for (let i = 0; i < this.N; i++) this.cells.array[i] = mix[(((this.rnd[i] * 977) % 1) * 10) | 0]; this.cells.needsUpdate = true; }
     this.mat.color.setRGB(env.ground[0] * 0.95, env.ground[1] * 0.9, env.ground[2] * 0.85, THREE.SRGBColorSpace);
     const w = this.world, D = this.R * 2, cx = camera.position.x, cz = camera.position.z;
-    const all = w.shapeVersion !== this.lastV || Math.abs(env.sea - this.lastSea) > 0.3; if (all) { this.lastV = w.shapeVersion; this.lastSea = env.sea; }
+    const all = w.shapeVersion !== this.lastV || Math.abs(env.sea - this.lastSea) > 0.3; if (all) { this.lastV = w.shapeVersion; this.lastSea = env.sea; this.cell.fill(1e9); }   // tufts not in use right now must re-seat too, or they come back at their old height
     let dirty = false;
     for (let i = 0; i < n; i++) {
       const kx = Math.floor((cx + this.R - this.off[i * 2]) / D), kz = Math.floor((cz + this.R - this.off[i * 2 + 1]) / D);
