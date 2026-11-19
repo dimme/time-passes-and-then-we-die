@@ -11,44 +11,96 @@ const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quatern
 const UP = new THREE.Vector3(0, 1, 0);
 const GRASS_U = yearToU(-56e6);
 
-/** A field of instanced things, each alive for its own span of time. `parts` share one set of transforms. */
-// Fraction of plants drawn (lower quality levels thin the forest); bumping the version makes every field refresh.
-let density = 1, densityVersion = 0;
-export function setFloraDensity(v) { if (v !== density) { density = v; densityVersion++; } }
+// ---------- instanced fields ----------
+// A field is split into square cells so that whatever is behind the camera, or outside the sun's shadow
+// box, is not drawn at all; distant cells draw foliage with fewer leaf cards. Nothing is ever left out.
+const PER_CELL = 5;    // sparse fields get bigger cells, so culling never costs more draw calls than it saves
+const LOD = [[140, 1], [300, 0.62], [Infinity, 0.38]];   // [cell distance up to (m), fraction of leaf triangles drawn]
+const lodCache = new WeakMap();
+/** Versions of a foliage geometry that share its buffers but draw only a prefix of its (shuffled) triangles. */
+function lodsOf(geo) {
+  let l = lodCache.get(geo); if (l) return l;
+  const n = geo.index ? geo.index.count : geo.attributes.position.count, src = geo.index ? geo.index.array : null;
+  // shuffle in pairs of triangles (most leaf cards are two) so any prefix thins the crown evenly
+  const pairs = Math.floor(n / 6), order = Array.from({ length: pairs }, (_, k) => k), r = rng(n + 17);
+  for (let k = pairs - 1; k > 0; k--) { const q = Math.floor(r() * (k + 1)); [order[k], order[q]] = [order[q], order[k]]; }
+  const idx = new Uint32Array(n);
+  order.forEach((from, to) => { for (let v = 0; v < 6; v++) idx[to * 6 + v] = src ? src[from * 6 + v] : from * 6 + v; });
+  for (let v = pairs * 6; v < n; v++) idx[v] = src ? src[v] : v;
+  const index = new THREE.BufferAttribute(idx, 1);
+  if (!geo.boundingSphere) geo.computeBoundingSphere();
+  l = LOD.map(([, f]) => {
+    const g = new THREE.BufferGeometry();
+    for (const name in geo.attributes) g.setAttribute(name, geo.attributes[name]);
+    g.setIndex(index); g.setDrawRange(0, Math.floor((n * f) / 6) * 6); g.boundingSphere = geo.boundingSphere;
+    return g;
+  });
+  lodCache.set(geo, l); return l;
+}
 
+/** A field of instanced things, each alive for its own span of time. `parts` share one set of transforms. */
 export class Scatter {
-  /** `thin`: this field may be thinned out by setFloraDensity. */
-  constructor(world, parts, items, thin = false) {
-    this.world = world; this.items = items; this.thin = thin; this.lastD = -1;
-    this.meshes = parts.map(({ geo, mat, tint = true, cast = true }) => {
-      const m = new THREE.InstancedMesh(geo, mat, items.length);
-      m.frustumCulled = false; m.castShadow = cast; m.receiveShadow = true;
-      items.forEach((it, i) => m.setColorAt(i, tint ? _c.setRGB(it.tint[0], it.tint[1], it.tint[2]) : _c.setRGB(1, 1, 1)));
-      return m;
-    });
-    for (let k = 1; k < this.meshes.length; k++) this.meshes[k].instanceMatrix = this.meshes[0].instanceMatrix;
+  constructor(world, parts, items) {
+    this.world = world; this.items = items;
+    // reach of one instance from its own origin, for the cells' culling spheres
+    let reach = 0;
+    for (const { geo } of parts) { if (!geo.boundingSphere) geo.computeBoundingSphere(); reach = Math.max(reach, geo.boundingSphere.radius + geo.boundingSphere.center.length()); }
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const it of items) { x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z); }
+    const size = Math.min(260, Math.max(110, Math.sqrt(((x1 - x0 + 1) * (z1 - z0 + 1) * PER_CELL) / Math.max(1, items.length))));
+    const half = this.half = size * Math.SQRT1_2, byCell = new Map();
+    for (const it of items) {
+      const cx = Math.floor(it.x / size), cz = Math.floor(it.z / size), key = cx + ':' + cz;
+      let c = byCell.get(key); if (!c) byCell.set(key, c = { x: (cx + 0.5) * size, z: (cz + 0.5) * size, items: [], big: 0 });
+      c.items.push(it); c.big = Math.max(c.big, it.s * Math.max(1, it.sx || 1, it.sy || 1));
+    }
+    this.cells = [...byCell.values()]; this.meshes = [];
+    for (const c of this.cells) {
+      const sphere = new THREE.Sphere(new THREE.Vector3(c.x, 0, c.z), half + reach * c.big + 20);
+      c.lod = 0;
+      c.meshes = parts.map(({ geo, mat, tint = true, cast = true }) => {
+        const lods = mat.alphaTest > 0 ? lodsOf(geo) : null;
+        const m = new THREE.InstancedMesh(lods ? lods[0] : geo, mat, c.items.length);
+        m.boundingSphere = sphere; m.castShadow = cast; m.receiveShadow = true; m.userData.lods = lods;
+        c.items.forEach((it, i) => m.setColorAt(i, tint ? _c.setRGB(it.tint[0], it.tint[1], it.tint[2]) : _c.setRGB(1, 1, 1)));
+        return m;
+      });
+      for (let k = 1; k < c.meshes.length; k++) c.meshes[k].instanceMatrix = c.meshes[0].instanceMatrix;
+      this.meshes.push(...c.meshes);
+    }
     this.minU = Infinity; this.maxU = -Infinity;
     for (const it of items) { this.minU = Math.min(this.minU, it.u0); this.maxU = Math.max(this.maxU, it.u1); }
-    this.lastU = -9; this.lastV = -1;
+    this.lastU = -9; this.lastV = -1; this.on = true;
   }
-  update(u) {
+  /** camera is optional: with it, distant cells switch to lighter foliage. */
+  update(u, camera) {
     const on = !(u < this.minU - FADE || u > this.maxU + FADE);
-    for (const m of this.meshes) m.visible = on;
-    if (!on || (u === this.lastU && this.world.shapeVersion === this.lastV && densityVersion === this.lastD)) return;
-    this.lastU = u; this.lastV = this.world.shapeVersion; this.lastD = densityVersion;
-    const keep = this.thin ? density : 1;
-    const w = this.world, first = this.meshes[0];
-    for (let i = 0; i < this.items.length; i++) {
-      const it = this.items[i];
-      const f = it.s * smooth((u - it.u0) / FADE + (it.u0 <= 0 ? 1 : 0)) * smooth((it.u1 - u) / FADE + (it.u1 >= 1 ? 1 : 0));
-      if (f <= 0.001 || (keep < 1 && (i * 0.6180339887) % 1 >= keep)) { _m.makeScale(0, 0, 0); }
-      else {
-        _p.set(it.x, w.heightAt(it.x, it.z) - 0.1, it.z); _q.setFromAxisAngle(UP, it.rot);
-        _m.compose(_p, _q, _s.set(it.sx ? it.sx * f : f, it.sy ? it.sy * f : f, it.sx ? it.sx * f : f));
+    if (!on) { if (this.on) { this.on = false; for (const m of this.meshes) m.visible = false; } return; }
+    const w = this.world, refresh = !this.on || u !== this.lastU || w.shapeVersion !== this.lastV;
+    this.on = true; this.lastU = u; this.lastV = w.shapeVersion;
+    for (const c of this.cells) {
+      if (refresh) {
+        const first = c.meshes[0]; let alive = 0;
+        for (let i = 0; i < c.items.length; i++) {
+          const it = c.items[i];
+          const f = it.s * smooth((u - it.u0) / FADE + (it.u0 <= 0 ? 1 : 0)) * smooth((it.u1 - u) / FADE + (it.u1 >= 1 ? 1 : 0));
+          if (f <= 0.001) { _m.makeScale(0, 0, 0); }
+          else {
+            alive++;
+            _p.set(it.x, w.heightAt(it.x, it.z) - 0.1, it.z); _q.setFromAxisAngle(UP, it.rot);
+            _m.compose(_p, _q, _s.set(it.sx ? it.sx * f : f, it.sy ? it.sy * f : f, it.sx ? it.sx * f : f));
+          }
+          first.setMatrixAt(i, _m);
+        }
+        first.instanceMatrix.needsUpdate = true;
+        for (const m of c.meshes) m.visible = alive > 0;
       }
-      first.setMatrixAt(i, _m);
+      if (camera) {
+        const d = Math.hypot(camera.position.x - c.x, camera.position.z - c.z) - this.half;
+        const lod = d < LOD[0][0] ? 0 : d < LOD[1][0] ? 1 : 2;
+        if (lod !== c.lod) { c.lod = lod; for (const m of c.meshes) if (m.userData.lods) m.geometry = m.userData.lods[lod]; }
+      }
     }
-    first.instanceMatrix.needsUpdate = true;
   }
 }
 
@@ -250,7 +302,7 @@ export function buildFlora(world, scene) {
         if (extra) extra(it);
         items.push(it);
       }
-      const s = new Scatter(world, K[kind], items, kind !== 'lowrise'); sets.push(s); scene.add(...s.meshes);
+      const s = new Scatter(world, K[kind], items); sets.push(s); scene.add(...s.meshes);
     }
   }
   const both = () => () => (r() < 0.82 ? island() : shore());
@@ -309,5 +361,5 @@ export function buildFlora(world, scene) {
   add(DEAD, 350, both(), span(520e6, 1.0e9, 100e6, 150e6), [0.5, 1.3], grey);
 
   const cover = new GroundCover(world, scene, floraTextures().cover);
-  return { update(u, time, env, camera) { windTime.value = time; for (const s of sets) s.update(u); cover.update(u, env, camera); } };
+  return { update(u, time, env, camera) { windTime.value = time; for (const s of sets) s.update(u, camera); cover.update(u, env, camera); } };
 }

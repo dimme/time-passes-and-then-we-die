@@ -238,9 +238,14 @@ export class World {
     const cx = Math.round(camera.position.x / 6) * 6, cz = Math.round(camera.position.z / 6) * 6;   // snap so shadows do not crawl
     sun.target.position.set(cx, camera.position.y - 1.7, cz);
     sun.position.copy(sun.target.position).addScaledVector(su.sunDir.value, 1300);
+    // When frames are slow, redraw the shadow map only every other frame — but at once if the light, place or era changed.
+    this.avgDt = (this.avgDt || dt) * 0.95 + dt * 0.05; this.tick = (this.tick || 0) + 1;
+    const shadowKey = cx * 31 + cz * 17 + su.sunDir.value.y * 1e4 + u * 1e7;
+    sun.shadow.autoUpdate = false;
+    if (shadowKey !== this.shadowKey || this.avgDt < 0.02 || this.tick % 2 === 0) { sun.shadow.needsUpdate = true; this.shadowKey = shadowKey; }
 
     // refresh the reflected sky now and then (cheap, but not free)
-    if (this.renderer && ((Math.abs(u - this.envU) > 0.0004 && time - this.envT > 0.25) || time - this.envT > 6)) {
+    if (this.renderer && ((Math.abs(u - this.envU) > 0.0004 && time - this.envT > 0.4) || time - this.envT > 6)) {
       this.envU = u; this.envT = time;
       const bright = su.sunBright.value; su.sunBright.value = Math.min(bright, 6);   // keep the blurred reflection free of fireflies
       const rt = this.pmrem.fromScene(this.envScene, 0, 0.1, 200);

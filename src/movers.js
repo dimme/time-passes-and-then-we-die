@@ -10,35 +10,52 @@ export const CROSS_SPAN = ISLAND - 6;
 // Things that move in straight lanes
 // =====================================================================================
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1, 1, 1), _c = new THREE.Color();
-const UP = new THREE.Vector3(0, 1, 0), ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
+const UP = new THREE.Vector3(0, 1, 0), _sphere = new THREE.Sphere();
+const SHADOW_REACH = 70;   // travellers this close stay drawn even when behind the camera, so their shadows do not vanish
 export class Movers {
   /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, legs?, skin?, s } */
   constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0 } = {}) {
     this.world = world; this.items = items; this.span = span; this.crossSpan = crossSpan || span; this.ground = ground; this.bob = bob;
+    this.reach = 0; this.colors = [];
     this.meshes = parts.map(({ geo, mat, tint = true, tintKey = 'tint', cast = true }) => {
       const m = new THREE.InstancedMesh(geo, mat, items.length); m.frustumCulled = false; m.castShadow = cast; m.receiveShadow = true;
       items.forEach((it, i) => m.setColorAt(i, tint ? _c.setRGB(...(it[tintKey] || it.tint)) : _c.setRGB(1, 1, 1)));
+      this.colors.push(m.instanceColor.array.slice());   // per-traveller colours, re-packed each frame with the visible ones
+      if (!geo.boundingSphere) geo.computeBoundingSphere();
+      this.reach = Math.max(this.reach, geo.boundingSphere.radius + geo.boundingSphere.center.length());
       return m;
     });
+    this.reach *= Math.max(1, ...items.map((i) => i.s || 1));
     for (let k = 1; k < this.meshes.length; k++) this.meshes[k].instanceMatrix = this.meshes[0].instanceMatrix;
     this.minU = Math.min(...items.map((i) => i.u0)); this.maxU = Math.max(...items.map((i) => i.u1));
   }
-  update(u, t) {
+  /** view = { frustum, eye }: only travellers in sight (or near enough to cast a shadow into it) are sent to the GPU. */
+  update(u, t, view) {
     const on = !(u < this.minU || u > this.maxU);
     for (const m of this.meshes) m.visible = on;
     if (!on) return;
     const w = this.world, first = this.meshes[0], flooded = this.ground && w.sea > LAND - 0.25;   // nothing drives or walks through a flooded street
+    let k = 0;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
-      if (flooded || u < it.u0 || u >= it.u1) { first.setMatrixAt(i, ZERO); continue; }
+      if (flooded || u < it.u0 || u >= it.u1) continue;
       const span = it.axis === 'z' ? this.span : this.crossSpan, L = span * 2;   // cross streets end at the shore
       const along = ((((it.off + it.v * t) % L) + L) % L) - span;
       const x = it.axis === 'z' ? it.lane : along, z = it.axis === 'z' ? along : it.lane;
       let y = this.ground ? Math.max(w.heightAt(x, z), w.sea - 0.15) + it.alt : it.alt;
       if (this.bob) y += Math.abs(Math.cos(along * 2.6)) * this.bob;
+      _p.set(x, y, z);
+      if (view) {
+        _sphere.center.set(x, y + this.reach * 0.5, z); _sphere.radius = this.reach * 1.3 + 1;
+        const dx = x - view.eye.x, dz = z - view.eye.z;
+        if (dx * dx + dz * dz > SHADOW_REACH * SHADOW_REACH && !view.frustum.intersectsSphere(_sphere)) continue;
+      }
       _q.setFromAxisAngle(UP, it.axis === 'z' ? (it.v > 0 ? -H : H) : (it.v > 0 ? 0 : Math.PI));
-      first.setMatrixAt(i, _m.compose(_p.set(x, y, z), _q, _s.setScalar(it.s || 1)));
+      first.setMatrixAt(k, _m.compose(_p, _q, _s.setScalar(it.s || 1)));
+      for (let m = 0; m < this.meshes.length; m++) { const a = this.meshes[m].instanceColor.array, c = this.colors[m]; a[k * 3] = c[i * 3]; a[k * 3 + 1] = c[i * 3 + 1]; a[k * 3 + 2] = c[i * 3 + 2]; }
+      k++;
     }
+    for (const m of this.meshes) { m.count = k; m.visible = k > 0; m.instanceColor.needsUpdate = true; }
     first.instanceMatrix.needsUpdate = true;
   }
 }
