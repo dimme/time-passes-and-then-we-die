@@ -32,6 +32,17 @@ function landMask() {
   for (const [lat, ...spans] of LAND) for (const [a, b] of spans) { const y = (90 - lat) * 2; g.beginPath(); g.ellipse((a + b) / 2 * 2 + 360, y, (b - a) + 4, 13, 0, 0, 7); g.fill(); }
   const t = canvasTex(c, false); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; return t;
 }
+// ---------- where the continents were: data/plates.png holds one land mask per time below (see data/README.md) ----------
+const PLATE_MA = [0, 10, 20, 35, 50, 66, 80, 100, 120, 150, 175, 200, 225, 250, 275, 300, 330, 360, 400, 440, 480, 540, 600, 700, 750, 800, 900, 1000];
+/** Manhattan's own latitude and longitude at those times, carried along on its plate (the same model). */
+const HOME_PATH = [[40.71, -74.01], [39.06, -67.12], [37.29, -63.54], [36.61, -56.06], [36.83, -47.94], [38.87, -39.77], [38.3, -34.84], [38.54, -26.48], [36.38, -15.55],
+  [27.57, -7.2], [21.6, -8.95], [15.44, -10.1], [10.37, -9.17], [8.58, -6.26], [4.23, -7.01], [-3.63, -10.24], [-8.0, -16.54], [-31.17, -49.74], [-38.13, -71.74], [-21.65, -107.65], [-19.66, -130.83], [-20.76, -159.38], [-33.5, -173.7]];
+/** Position in the list of times for a year: whole part = the earlier frame, fraction = how far towards the next. */
+function plateFrame(year) {
+  const ma = Math.max(0, -year / 1e6); let i = 0;
+  while (i < PLATE_MA.length - 2 && PLATE_MA[i + 1] <= ma) i++;
+  return i + Math.min(1, Math.max(0, (ma - PLATE_MA[i]) / (PLATE_MA[i + 1] - PLATE_MA[i])));
+}
 /** Unit vector for a latitude / longitude in the globe's own frame (matches the shader). */
 const UP = new THREE.Vector3(0, 1, 0);
 const onGlobe = (lat, lon) => { const p = (lat * Math.PI) / 180, l = (lon * Math.PI) / 180; return new THREE.Vector3(Math.cos(p) * Math.cos(l), Math.sin(p), -Math.cos(p) * Math.sin(l)); };
@@ -46,27 +57,42 @@ const NOISE = `
 function earthMaterial(mask) {
   return new THREE.ShaderMaterial({
     uniforms: {
-      mask: { value: mask }, sea: { value: new THREE.Color() }, land: { value: new THREE.Color() }, lava: { value: new THREE.Color() }, cloudCol: { value: new THREE.Color() },
+      mask: { value: mask }, atlas: { value: null }, frameA: { value: 0 }, frameB: { value: 0 }, frameMix: { value: 0 }, lights: { value: 0 },
+      sea: { value: new THREE.Color() }, land: { value: new THREE.Color() }, lava: { value: new THREE.Color() }, cloudCol: { value: new THREE.Color() },
       sunDir: { value: new THREE.Vector3(1, 0, 0) }, site: { value: new THREE.Vector3(0, 1, 0) }, clumpDir: { value: new THREE.Vector3(0.3, 0.2, 0.9).normalize() },
       ice: { value: 0.12 }, cloud: { value: 0.4 }, landFrac: { value: 0.3 }, clump: { value: 0 }, modern: { value: 1 }, dry: { value: 0 }, marker: { value: 1 }, time: { value: 0 }, seed: { value: 0 }, veg: { value: 1 },
     },
     vertexShader: `varying vec3 vP, vN, vV; void main(){ vP = normalize(position); vN = normalize(mat3(modelMatrix) * normal); vec4 w = modelMatrix * vec4(position, 1.0); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix * viewMatrix * w; }`,
     fragmentShader: `
-      uniform sampler2D mask; uniform vec3 sea, land, lava, cloudCol, sunDir, site, clumpDir;
+      uniform sampler2D mask, atlas; uniform float frameA, frameB, frameMix, lights; uniform vec3 sea, land, lava, cloudCol, sunDir, site, clumpDir;
       uniform float ice, cloud, landFrac, clump, modern, dry, marker, time, seed, veg; varying vec3 vP, vN, vV;
       ${NOISE}
+      // one cell of the 4 × 7 atlas of past continents
+      float plate(float f, vec2 uv){ float c = mod(f, 4.0), r = floor(f / 4.0); return texture2D(atlas, vec2((c + clamp(uv.x, 0.001, 0.999)) / 4.0, 1.0 - (r + clamp(1.0 - uv.y, 0.002, 0.998)) / 7.0)).r; }
+      float landAt(vec2 uv){ return mix(plate(frameA, uv), plate(frameB, uv), frameMix); }
       void main(){
         vec3 p = normalize(vP);
         vec2 uv = vec2(atan(-p.z, p.x) / 6.2831853 + 0.5, asin(clamp(p.y, -1.0, 1.0)) / 3.14159265 + 0.5);
         float rough = fbm(p * 7.0 + seed);
-        float today = smoothstep(0.42, 0.56, texture2D(mask, uv).r + (rough - 0.5) * 0.22);
+        #ifdef HAS_ATLAS
+          float m0 = landAt(uv), today = smoothstep(0.42, 0.58, m0 + (fbm(p * 26.0) - 0.5) * 0.1);
+          // shallow shelf seas beside the land
+          float near = (landAt(uv + vec2(0.006, 0.0)) + landAt(uv - vec2(0.006, 0.0)) + landAt(uv + vec2(0.0, 0.008)) + landAt(uv - vec2(0.0, 0.008))) * 0.25;
+        #else
+          float today = smoothstep(0.42, 0.56, texture2D(mask, uv).r + (rough - 0.5) * 0.22), near = today;
+        #endif
         float old = fbm(p * 1.9 + seed * 3.7) + (dot(p, clumpDir) * 0.5) * clump;
         float th = mix(0.8, 0.4, landFrac) + clump * 0.12;
         float isLand = mix(smoothstep(th, th + 0.035, old), today, modern);
         // plant cover: green where it rains, tan in the desert belts either side of the tropics
         float desert = smoothstep(0.16, 0.0, abs(abs(p.y) - 0.42)) * smoothstep(0.35, 0.6, fbm(p * 2.6 + 3.0));
         vec3 ground = mix(land, mix(vec3(0.16, 0.3, 0.1), vec3(0.62, 0.5, 0.3), desert), veg) * (0.75 + 0.5 * rough);
-        vec3 surf = mix(mix(sea, ground * 0.8, dry), ground, isLand);
+        // mountains: darker rock, snow on the highest where it is cold enough
+        float high = smoothstep(0.56, 0.78, fbm(p * 9.0 + seed + 20.0)) * isLand;
+        ground = mix(ground, vec3(0.3, 0.26, 0.22) * (0.8 + 0.5 * rough), high * 0.6);
+        ground = mix(ground, vec3(0.9), high * smoothstep(0.35, 0.75, abs(p.y)) * veg);
+        vec3 water = mix(sea, mix(sea, vec3(0.25, 0.62, 0.66), 0.55), smoothstep(0.02, 0.5, near) * (1.0 - dry) * modern);
+        vec3 surf = mix(mix(water, ground * 0.8, dry), ground, isLand);
         float lat = abs(p.y) + (rough - 0.5) * 0.12;
         surf = mix(surf, vec3(0.74, 0.78, 0.82), smoothstep(1.0 - ice * 1.05, 1.03 - ice, lat));
         float glow = max(max(lava.r, lava.g), lava.b);
@@ -75,6 +101,9 @@ function earthMaterial(mask) {
         surf = mix(surf, cloudCol, cl * 0.85);
         float d = dot(vN, sunDir), day = smoothstep(-0.12, 0.25, d);
         vec3 col = surf * (0.03 + 1.25 * max(d, 0.0)) + lava * glow * 0.9 * (1.0 - cl);
+        // sunlight glinting off open water, and the lights of cities on the night side
+        col += vec3(1.0, 0.95, 0.85) * pow(max(dot(reflect(-sunDir, vN), vV), 0.0), 60.0) * (1.0 - isLand) * (1.0 - dry) * (1.0 - cl) * 0.6 * day;
+        col += vec3(1.0, 0.8, 0.45) * lights * isLand * (1.0 - day) * (1.0 - cl) * smoothstep(0.62, 0.8, fbm(p * 60.0)) * smoothstep(0.75, 0.2, abs(p.y)) * 0.9;
         float rim = pow(1.0 - max(dot(vN, vV), 0.0), 2.6);
         col += mix(sea, vec3(0.5, 0.7, 1.0), 0.6) * rim * day * (1.0 - dry) * 0.9;
         float a = acos(clamp(dot(p, site), -1.0, 1.0));
@@ -111,6 +140,11 @@ export class Space {
       return { name, au, radius, period, mesh, orbit, phase: i * 2.4 + 0.7 };
     });
     this.earth = this.bodies[2];
+    // the atlas of past continents arrives a moment later; until then the coarse hand-drawn map stands in
+    new THREE.TextureLoader().load('data/plates.png', (t) => {
+      t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.colorSpace = THREE.NoColorSpace;
+      this.earthMat.uniforms.atlas.value = t; this.earthMat.defines = { HAS_ATLAS: 1 }; this.earthMat.needsUpdate = true; this.hasAtlas = true;
+    });
     this.moon = new THREE.Mesh(ball, new THREE.MeshStandardMaterial({ color: 0xb8b4ac, roughness: 1 })); scene.add(this.moon);
     const mo = []; for (let k = 0; k <= 128; k++) { const a = (k / 128) * Math.PI * 2; mo.push(Math.cos(a), 0, Math.sin(a)); }
     const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(mo, 3));
@@ -156,16 +190,27 @@ export class Space {
     const E = this.earth.mesh.position;
 
     // the Earth as it looked: seas, land, ice, lava and cloud come from the timeline
-    const u = this.earthMat.uniforms, dry = env.sea < -30 && env.ice < -50 ? 1 : 0;
+    const u = this.earthMat.uniforms, dry = year > 0.95e9 || year < -4.3e9 ? 1 : 0;   // no oceans before the first rain, or after they boil away
     set(u.sea.value, env.water, 0.75); set(u.land.value, env.far); set(u.lava.value, env.lava); set(u.cloudCol.value, env.cloudCol, 0.95);
     u.dry.value = dry; u.cloud.value = env.cloud * 0.9; u.time.value = time;
     u.veg.value = env.ice > -50 || dry ? 0 : smooth((year + 430e6) / 60e6) * (1 - smooth((year - 450e6) / 150e6)) * (1 - Math.min(1, env.precip * (env.pVy > -14 ? 1 : 0))) * 0.85;
-    u.ice.value = env.ice > -50 ? 1 : year < -34e6 || year > 2e6 ? 0.03 : 0.13;
+    // ice: the whole planet in the two Snowball Earths, broad caps in the recent ice ages, small caps or none otherwise
+    const snowball = (year > -2.34e9 && year < -2.15e9) || (year > -717e6 && year < -636e6);
+    u.ice.value = snowball ? 1 : env.ice > -50 ? 0.3 : year < -34e6 || year > 2e6 ? 0.03 : 0.1;
     // continents: today's map near the present, generated shapes in deep time (one clump when there was a supercontinent)
-    u.modern.value = smooth((year + 150e6) / 110e6) * (1 - smooth((year - 20e6) / 130e6));
+    // with the atlas, real positions back to a billion years ago; before that, and in the far future, invented ones
+    u.modern.value = (this.hasAtlas ? 1 - smooth((-year - 1000e6) / 80e6) : smooth((year + 150e6) / 110e6)) * (1 - smooth((year - 20e6) / 130e6));
+    const pf = plateFrame(year); u.frameA.value = Math.floor(pf); u.frameB.value = Math.min(PLATE_MA.length - 1, Math.floor(pf) + 1); u.frameMix.value = pf - Math.floor(pf);
+    u.lights.value = smooth((year - 1880) / 120) * (1 - smooth((year - 9000) / 3000));
     const superC = Math.max(smooth((year + 340e6) / 40e6) * (1 - smooth((year + 200e6) / 60e6)), smooth((year + 1.2e9) / 1e8) * (1 - smooth((year + 800e6) / 1e8)), smooth((year - 150e6) / 1e8) * (1 - smooth((year - 500e6) / 2e8)));
     u.clump.value = superC; u.landFrac.value = year < -4.3e9 ? 1 : year < -2.5e9 ? 0.12 : 0.3; u.seed.value = Math.floor((year + 4.6e9) / 250e6) * 1.37;
-    u.site.value.copy(onGlobe(site.coords[0], site.coords[1])); u.marker.value = 1 - smooth((k - 0.2) / 0.12);
+    let [lat, lon] = site.coords;
+    if (site.elevator !== undefined && year < 0) {   // Manhattan rides its plate: follow it back through time
+      const f = Math.min(HOME_PATH.length - 1, pf), i = Math.min(HOME_PATH.length - 2, Math.floor(f)), t = f - i, a = HOME_PATH[i], b = HOME_PATH[i + 1];
+      let dl = b[1] - a[1]; if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
+      lat = a[0] + (b[0] - a[0]) * t; lon = a[1] + dl * t;
+    }
+    u.site.value.copy(onGlobe(lat, lon)); u.marker.value = 1 - smooth((k - 0.2) / 0.12);
 
     // turn the globe so the place on screen is in daylight, facing the camera's starting point
     const toSun = v.copy(E).multiplyScalar(-1).normalize().clone();

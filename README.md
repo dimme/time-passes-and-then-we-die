@@ -85,7 +85,10 @@ same span at true scale, where all of human existence is a fraction of a pixel.
 Rendering uses [three.js](https://threejs.org) (MIT), vendored in `vendor/`, with a sun shadow map,
 physically based materials, an HDR pipeline (bloom + filmic tone mapping), a sky that is baked into an
 environment map for reflections, reflective water, leaf-card vegetation with wind, and animated animals. All geometry
-textures and sounds are generated in code; there are no asset files.
+textures and sounds are generated in code. The one data file is `data/plates.png`, the map of where the continents were.
+
+The zoomed-out globe shows the continents where they actually were, back to a billion years ago, using the
+plate reconstruction of Merdith et al. (2021, CC BY 4.0) from the GPlates Web Service; see `data/README.md`.
 
 Dates for the deep past and far future are rounded scientific estimates; everything after
 about 2100 is imagination.
