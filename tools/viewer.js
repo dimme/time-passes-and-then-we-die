@@ -1,13 +1,14 @@
 // Developer tool: shows one model from four angles on neutral ground.
 //   tools/viewer.html?m=animal:theropod&t=1.2      t = animation time / gait phase
 //   m = animal:<species> | person:<variant> | car[:old|pod] | cart | flyer | ship:<sail|steam|cargo>
-//       | tree:<kind> | building:<type>[:seed] | list
+//       | air:<kind>[:trail] | tree:<kind> | building:<type>[:seed] | list
 import * as THREE from 'three';
 import { rng } from '../src/util.js';
 import { animTime } from '../src/organic.js';
 import { species, pose } from '../src/animals.js';
 import { personParts } from '../src/people.js';
 import { carParts, cartParts, flyerParts, shipParts } from '../src/vehicles.js';
+import { airParts, AIR_KINDS } from '../src/vehicles-air.js';
 import { makeKinds } from '../src/flora.js';
 import { TYPES } from '../src/city.js';
 
@@ -39,7 +40,7 @@ function fromParts(parts, tints = {}) {
 }
 const lin = (h) => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; };
 const outfit = { tint: lin(q.get('top') || '#7a2a2a'), legs: lin(q.get('legs') || '#2a3a5a'), skin: lin(q.get('skin') || '#c8956c') };
-const kinds = { animal: () => Object.keys(species()), person: () => ['modern', 'longhair', 'hat', 'dress', 'robe', 'native'], car: () => ['', 'old', 'pod'], ship: () => ['sail', 'steam', 'cargo'], tree: () => Object.keys(makeKinds()), building: () => Object.keys(TYPES) };
+const kinds = { animal: () => Object.keys(species()), person: () => ['modern', 'longhair', 'hat', 'dress', 'robe', 'native'], car: () => ['', 'old', 'pod'], ship: () => ['sail', 'steam', 'cargo'], air: () => AIR_KINDS, tree: () => Object.keys(makeKinds()), building: () => Object.keys(TYPES) };
 
 function build() {
   const [kind, name, extra] = spec;
@@ -49,6 +50,7 @@ function build() {
   if (kind === 'cart') return fromParts(cartParts(species()));
   if (kind === 'flyer') { const g = fromParts(flyerParts(name === 'bright')); g.position.y = 1.5; return g; }
   if (kind === 'ship') return fromParts(shipParts(name || 'sail'));
+  if (kind === 'air') { const g = fromParts(airParts(name, { trail: extra === 'trail' }), { tint: lin(q.get('top') || '#1c3a8a') }); g.position.y = 60; return g; }
   if (kind === 'tree') return fromParts(makeKinds()[name], { tint: [1, 1, 1] });
   if (kind === 'building') { const o = TYPES[name](rng(parseInt(extra || '7', 10))).obj; o.traverse((m) => { if (m.isMesh) { m.castShadow = m.receiveShadow = true; } }); return o; }
   return null;
