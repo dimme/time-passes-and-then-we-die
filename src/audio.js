@@ -121,7 +121,10 @@ export class Sound {
     E(curve([2016, 2160]), 0.07, (v) => this.buzz(v * 0.5, rnd(190, 260), 2.6));              // delivery drones
   }
 
-  setMuted(m) { this.muted = m; if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05); }
+  setMuted(m) { this.muted = m; this._level(); }
+  /** 0 on the ground … 1 far out in space, where there is nothing to hear. */
+  setDistance(k) { if (k !== this.far) { this.far = k; this._level(); } }
+  _level() { if (this.ctx) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.9 * (1 - (this.far || 0)), this.ctx.currentTime, 0.08); }
 
   update(u, dt) {
     const ctx = this.ctx; if (!ctx || ctx.state !== 'running') return;

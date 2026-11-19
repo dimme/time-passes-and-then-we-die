@@ -23,6 +23,8 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | Let time pass by itself | `Space` |
 | Return to now | `N` |
 | Sound on / off | `M` |
+| Zoom out to the Earth, Moon, planets and solar system | the slider on the right edge, or hold `R` (out) / `F` (in); `G` returns to the ground |
+| Follow history from place to place, or stay in Manhattan | the **Place** button |
 | Quality | the **Quality** button cycles Low / Medium / High; or add `?q=low` to the address |
 | Touch | left thumb walks, right thumb looks, drag the timeline |
 
@@ -73,6 +75,8 @@ same span at true scale, where all of human existence is a fraction of a pixel.
 - `src/vehicles*.js` — carts, cars by decade, pods, flying traffic and ships.
 - `src/city*.js` — every building lot has a generated history (Dutch house → brick house →
   tenement → tower → megatower → ruin), plus landmarks, props, streets and street furniture.
+- `src/sites.js`, `src/site-*.js` — the places each age is shown in, and travelling between them.
+- `src/space.js` — the view from above: the Earth as it was, the Moon, the planets and the Sun through time.
 - `src/audio.js` — every sound is synthesised with Web Audio.
 - `src/controls.js`, `src/ui.js`, `src/main.js` — walking, the HUD and timeline, start-up and the loop.
 - `src/textures.js`, `src/organic.js`, `src/movers.js`, `src/util.js` — shared textures, geometry and instancing helpers.

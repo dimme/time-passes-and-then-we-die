@@ -4,6 +4,7 @@ import { World } from './world.js';
 import { buildFlora } from './flora.js';
 import { buildFauna, viewOf } from './fauna.js';
 import { Travel } from './sites.js';
+import { Space, LIFT } from './space.js';
 import { buildCity } from './city.js';
 import { Player } from './controls.js';
 import { UI } from './ui.js';
@@ -80,13 +81,13 @@ async function boot() {
 
   // HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping → anti-aliasing.
   // Multisampled float targets are not available everywhere, so ask before relying on them.
-  let post = Q.post, composer = null, bloom = null, fxaa = null;
+  let post = Q.post, composer = null, bloom = null, fxaa = null, renderPass = null;
   const floatOK = renderer.capabilities.isWebGL2 && (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
   if (floatOK) {
     let msaa = 0;
     if (quality === 'high') { try { const s = gl.getInternalformatParameter(gl.RENDERBUFFER, gl.RGBA16F, gl.SAMPLES); if (s && Array.from(s).includes(4)) msaa = 4; } catch (_) { msaa = 0; } }
     composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: msaa }));
-    composer.addPass(new RenderPass(scene, camera));
+    renderPass = new RenderPass(scene, camera); composer.addPass(renderPass);
     bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.7, 1.0); composer.addPass(bloom);
     composer.addPass(new OutputPass());
     if (!msaa) { fxaa = new ShaderPass(FXAAShader); composer.addPass(fxaa); }
@@ -127,6 +128,7 @@ async function boot() {
     if (e.code === 'Space') { e.preventDefault(); $('play').click(); }
     if (e.code === 'KeyN') $('now').click();
     if (e.code === 'KeyM') $('mute').click();
+    if (e.code === 'KeyG') zoomTarget = 0;   // straight back to the ground
   });
 
   const sound = new Sound();
@@ -135,15 +137,40 @@ async function boot() {
   $('mute').addEventListener('click', () => { sound.setMuted(!sound.muted); $('mute').textContent = sound.muted ? 'Sound: off' : 'Sound: on'; });
   beginBtn.addEventListener('click', () => { $('intro').classList.add('gone'); });
 
-  const env = {};
+  const env = {}, envWorld = {};
+
+  // zooming out: 0 = standing on the ground, 1 = the whole solar system
+  const space = new Space($('tags')), zoomEl = $('zoom');
+  let zoom = 0, zoomTarget = 0;
+  zoomEl.addEventListener('input', () => { zoomTarget = zoomEl.value / 1000; });
   mark('@wired');
-  const draw = () => { if (post) { bloom.strength = env.bloom; composer.render(); } else renderer.render(scene, camera); };
+  const draw = () => {
+    const away = zoom > LIFT, sc = away ? space.scene : scene, cam = away ? space.camera : camera;
+    if (post) { renderPass.scene = sc; renderPass.camera = cam; bloom.strength = away ? 0.55 : env.bloom; composer.render(); } else renderer.render(sc, cam);
+  };
   const simulate = (dt, time) => {
     const year = uToYear(u);
     travel.update(year, dt);
     envAt(u, env); travel.applyEnv(year, env); env.grass *= Q.grass;
+    // the view from above
+    const k = player.keys;
+    if (k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
+    if (k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
+    zoom += (zoomTarget - zoom) * Math.min(1, dt * 6); if (Math.abs(zoomTarget - zoom) < 1e-4) zoom = zoomTarget;
+    if (document.activeElement !== zoomEl) zoomEl.value = Math.round(zoomTarget * 1000);
+    $('lift').style.opacity = Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);
+    $('tags').style.display = zoom > LIFT ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
+    sound.setDistance(Math.min(1, zoom / (LIFT * 2.5)));
+    if (zoom > LIFT) {
+      envAt(u, envWorld);
+      space.update(zoom, year, envWorld, travel.site, time, innerWidth / innerHeight, innerWidth, innerHeight);
+      renderer.toneMappingExposure = 1; return;
+    }
     world.update(env, dt, time, camera, u);
-    player.update(dt);
+    player.update(zoom > 0.002 ? 0 : dt);
+    if (zoom > 0) {   // lifting off: rise and look down
+      const s = zoom / LIFT; camera.position.y += s * s * 700; camera.rotation.x += (-1.3 - camera.rotation.x) * Math.min(1, s * 1.4);
+    }
     camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();   // culling below needs this frame's view
     flora.update(u, time, env, camera, travel.atHome);
     travel.updateContent(u, time, env, camera, viewOf(camera));
@@ -193,6 +220,6 @@ async function boot() {
   requestAnimationFrame(frame);
 
   // handy for poking at the world from the console
-  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, travel, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
+  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, travel, setZoom: (z) => { zoom = zoomTarget = z; }, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
 }
 boot().catch((err) => fatal('The game could not start.', err && err.stack ? err.stack : err));
