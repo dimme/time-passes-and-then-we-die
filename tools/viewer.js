@@ -2,11 +2,13 @@
 //   tools/viewer.html?m=animal:theropod&t=1.2      t = animation time / gait phase
 //   m = animal:<species> | person:<variant> | car[:old|pod] | cart | flyer | ship:<sail|steam|cargo>
 //       | air:<kind>[:trail] | tree:<kind> | building:<type>[:seed] | list
+//       | actor:<outfit>:<action>[:prop]      a person doing something at time t (prop: names joined with '+', or 'none')
 import * as THREE from 'three';
 import { rng } from '../src/util.js';
 import { animTime } from '../src/organic.js';
 import { species, pose } from '../src/animals.js';
 import { personParts } from '../src/people.js';
+import { actors, OUTFITS, ACTIONS, PROPS } from '../src/people-actors.js';
 import { carParts, cartParts, flyerParts, shipParts } from '../src/vehicles.js';
 import { airParts, AIR_KINDS } from '../src/vehicles-air.js';
 import { makeKinds } from '../src/flora.js';
@@ -39,13 +41,22 @@ function fromParts(parts, tints = {}) {
   g.userData.offset = t * 1.3; return g;
 }
 const lin = (h) => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; };
-const outfit = { tint: lin(q.get('top') || '#7a2a2a'), legs: lin(q.get('legs') || '#2a3a5a'), skin: lin(q.get('skin') || '#c8956c') };
-const kinds = { animal: () => Object.keys(species()), person: () => ['modern', 'longhair', 'hat', 'dress', 'robe', 'native'], car: () => ['', 'old', 'pod'], ship: () => ['sail', 'steam', 'cargo'], air: () => AIR_KINDS, tree: () => Object.keys(makeKinds()), building: () => Object.keys(TYPES) };
+const outfit = { tint: lin(q.get('top') || '#7a2a2a'), legs: lin(q.get('legs') || '#2a3a5a'), skin: lin(q.get('skin') || '#c8956c'), glow: [0.1, 1.5, 1.8] };
+const kinds = { animal: () => Object.keys(species()), person: () => [...OUTFITS, 'umbrella'], actor: () => ACTIONS, car: () => ['', 'old', 'pod'], ship: () => ['sail', 'steam', 'cargo'], air: () => AIR_KINDS, tree: () => Object.keys(makeKinds()), building: () => Object.keys(TYPES) };
 
 function build() {
   const [kind, name, extra] = spec;
   if (kind === 'animal') { const a = species()[name](); pose(a, t * 3, t); return a.obj; }
   if (kind === 'person') return fromParts(personParts(name || 'modern'), outfit);
+  if (kind === 'actor') {   // walking actions travel along +x; the colours are the outfit's own unless given in the URL
+    const tints = {}; for (const [k, key] of [['top', 'tint'], ['legs', 'legs'], ['skin', 'skin']]) if (q.get(k)) tints[key] = lin(q.get(k));
+    const site = actors(null, [{ outfit: name, action: extra, prop: spec[3], x: 0, z: 0, rot: 0, phase: 0, s: 1, path: [[0, 0], [4000, 0]], speed: 1.2, ...tints }], { seed: parseInt(q.get('seed') || '1', 10) });
+    site.update(0, t);
+    const g = new THREE.Group(), m4 = new THREE.Matrix4(); g.add(...site.meshes); site.meshes[0].getMatrixAt(0, m4);
+    const off = g.userData.offset = Math.abs(m4.elements[12]) > 0.6 ? 1.2 * t : 0; g.userData.box = new THREE.Box3(new THREE.Vector3(off - 1.2, 0, -1.2), new THREE.Vector3(off + 1.2, 2.2, 1.2));
+    g.userData.note = `${site.meshes.reduce((n, m) => n + m.geometry.index.count / 3, 0)} triangles in ${site.meshes.length} draw calls`;
+    return g;
+  }
   if (kind === 'car') return fromParts(carParts(name || undefined), { tint: lin(q.get('top') || '#b01818') });
   if (kind === 'cart') return fromParts(cartParts(species()));
   if (kind === 'flyer') { const g = fromParts(flyerParts(name === 'bright')); g.position.y = 1.5; return g; }
@@ -60,15 +71,15 @@ const label = document.getElementById('label');
 let obj = null;
 try { obj = build(); } catch (err) { label.textContent = 'ERROR: ' + (err.stack || err); console.error(err); }
 if (!obj) {
-  if (!label.textContent) label.innerHTML = 'models: ' + Object.entries(kinds).map(([k, f]) => f().map((n) => `${k}${n ? ':' + n : ''}`).join(', ')).join(' | ') + ' | cart | flyer';
+  if (!label.textContent) label.innerHTML = 'models: ' + Object.entries(kinds).map(([k, f]) => f().map((n) => `${k}${n ? ':' + n : ''}`).join(', ')).join(' | ') + ' | cart | flyer | actor:&lt;outfit&gt;:&lt;action&gt;[:prop], props: ' + PROPS.join(', ');
   window.viewerReady = true;
 } else {
   scene.add(obj); animTime.value = t;
-  const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+  const box = obj.userData.box || new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
   const R = Math.max(size.x, size.y, size.z) * 0.62 + 0.05;
   sun.position.copy(mid).add(new THREE.Vector3(-0.5, 0.9, 0.6).multiplyScalar(R * 6)); sun.target.position.copy(mid);
   const sc = sun.shadow.camera; sc.left = sc.bottom = -R * 2.2; sc.right = sc.top = R * 2.2; sc.near = R * 0.5; sc.far = R * 14; sc.updateProjectionMatrix();
-  label.textContent = `${spec.join(':')}  —  ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m (length × height × width), t=${t}`;
+  label.textContent = `${spec.join(':')}  —  ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m (length × height × width), t=${t}` + (obj.userData.note ? ', ' + obj.userData.note : '');
   const cam = new THREE.PerspectiveCamera(30, 1, R * 0.05, R * 60);
   // three-quarter front, side, front, three-quarter back from above
   const views = [[0.75, 0.22, 0.65], [0, 0.08, 1], [1, 0.1, 0], [-0.7, 0.55, -0.6]];
