@@ -9,7 +9,7 @@ export { staticPerson } from './people.js';
 
 const _vp = new THREE.Matrix4(), _view = { frustum: new THREE.Frustum(), eye: new THREE.Vector3() };
 /** The camera's frustum and position, for culling instanced travellers. */
-function viewOf(camera) {
+export function viewOf(camera) {
   _view.frustum.setFromProjectionMatrix(_vp.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
   _view.eye.copy(camera.position); return _view;
 }

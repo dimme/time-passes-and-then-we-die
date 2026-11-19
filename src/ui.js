@@ -56,7 +56,8 @@ export class UI {
 
   setPlaying(p) { $('play').textContent = p ? '❚❚ Pause' : '▶ Let time pass'; $('play').classList.toggle('on', p); }
 
-  update(u, glow) {
+  /** ev: a caption from the place on screen, if it has its own; place: its name. */
+  update(u, glow, ev, place) {
     const y = uToYear(u), L = this.last;
     this.handle.style.left = u * 100 + '%'; this.fill.style.width = u * 100 + '%';
     $('ts-marker').style.left = ((y - START) / this.span) * 100 + '%';
@@ -65,7 +66,8 @@ export class UI {
     if (fy.sub !== L.sub) { L.sub = fy.sub; $('yearsub').textContent = fy.sub; }
     const era = eraAt(y);
     if (era !== L.era) { L.era = era; $('era').textContent = era.name; $('era').style.color = era.color; }
-    const ev = eventAt(y);
+    ev = ev || eventAt(y);
+    if (place !== L.place) { L.place = place; $('place').textContent = place; }
     if (ev !== L.ev) {
       L.ev = ev;
       $('ev-title').textContent = ev.t; $('ev-here').textContent = ev.h; $('ev-world').textContent = ev.w;

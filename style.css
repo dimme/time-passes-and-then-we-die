@@ -23,6 +23,8 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 #ev-title { font-family: Georgia, serif; font-size: clamp(17px, 2vw, 23px); margin-bottom: 4px; }
 #ev-here { font-size: clamp(12.5px, 1.25vw, 15px); line-height: 1.45; }
 #ev-world { font-size: clamp(11.5px, 1.1vw, 13.5px); line-height: 1.45; margin-top: 6px; opacity: .78; font-style: italic; }
+#veil { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: #000; opacity: 0; pointer-events: none; z-index: 5;
+  font-family: Georgia, 'Times New Roman', serif; font-size: clamp(22px, 3.4vw, 44px); letter-spacing: .02em; text-align: center; padding: 0 24px; }
 #place { position: fixed; right: 20px; top: 22px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .75;
   text-shadow: 0 1px 3px rgba(0,0,0,.9); pointer-events: none; }
 #crosshair { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(255,255,255,.6);

@@ -24,6 +24,8 @@ function hills(x, z) {
   const mask = ax < 215 ? 1 : ax < 255 ? 1 - smooth((ax - 215) / 40) : ax < 600 ? 0 : smooth((ax - 600) / 60);
   return Math.max(0, n + 3) * mask;
 }
+/** Manhattan: an island between two rivers. Other places supply their own profile (see src/sites.js). */
+export const MANHATTAN = { base: (x) => landBase(x), relief: hills, bounds: { x: ISLAND - 6, z: 340 } };
 const iceBumps = (x, z) => 3 * Math.sin(x * 0.03) * Math.cos(z * 0.025) + 1.5 * Math.sin(x * 0.11 + z * 0.07);
 
 const SKY_FRAG = `
@@ -166,24 +168,16 @@ export class World {
     const n = g.attributes.position.count, p = g.attributes.position.array, uv = g.attributes.uv.array;
     this.tBase = new Float32Array(n); this.tHill = new Float32Array(n);
     const col = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      const x = p[i * 3], z = p[i * 3 + 2];
-      uv[i * 2] = x / 9; uv[i * 2 + 1] = z / 9;
-      const b = landBase(x); this.tBase[i] = b; this.tHill[i] = hills(x, z);
-      let t = 0.86 + 0.28 * (0.5 + 0.5 * Math.sin(x * 0.13 + Math.sin(z * 0.11) * 2) * Math.cos(z * 0.09 + x * 0.02));
-      if (b < 2.6 && b > -2) t *= 1.18;      // beaches
-      if (b < -2) t *= 0.72;                // river bed
-      if (x < -650) t *= 0.8;               // cliffs
-      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = t;
-    }
+    for (let i = 0; i < n; i++) { uv[i * 2] = p[i * 3] / 9; uv[i * 2 + 1] = p[i * 3 + 2] / 9; }
     g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.profile = MANHATTAN;
     this.terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, map: T.groundMap, normalMap: T.groundNormal, normalScale: new THREE.Vector2(0.9, 0.9), roughness: 0.96, metalness: 0 });
     this.terrain = new THREE.Mesh(g, this.terrainMat); this.terrain.receiveShadow = true;
     scene.add(this.terrain);
     // endless floor under everything so the horizon is never empty
     this.floor = new THREE.Mesh(new THREE.CircleGeometry(6000, 24).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ roughness: 1 }));
     this.floor.position.y = BED - 0.5; scene.add(this.floor);
-    this._applyHill(1);
+    this.setProfile(MANHATTAN);
 
     // --- water ---
     this.waterU = {
@@ -259,7 +253,25 @@ export class World {
     }
   }
 
-  heightAt(x, z) { return landBase(x) + this.hill * hills(x, z); }
+  /** Reshape the ground for another place: { base(x, z), relief(x, z), bounds: { x, z } }. Height = base + hill × relief. */
+  setProfile(profile) {
+    this.profile = profile;
+    const g = this.terrain.geometry, p = g.attributes.position.array, col = g.attributes.color.array, n = g.attributes.position.count;
+    for (let i = 0; i < n; i++) {
+      const x = p[i * 3], z = p[i * 3 + 2], b = profile.base(x, z);
+      this.tBase[i] = b; this.tHill[i] = profile.relief(x, z);
+      let t = 0.86 + 0.28 * (0.5 + 0.5 * Math.sin(x * 0.13 + Math.sin(z * 0.11) * 2) * Math.cos(z * 0.09 + x * 0.02));
+      if (b < 2.6 && b > -2) t *= 1.18;                          // beaches and banks
+      if (b < -2) t *= 0.72;                                    // river and sea bed
+      if (profile === MANHATTAN && x < -650) t *= 0.8;          // the Palisades
+      if (profile.tint) t *= profile.tint(x, z, b);
+      col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = t;
+    }
+    g.attributes.color.needsUpdate = true;
+    this._applyHill(this.hill);
+  }
+
+  heightAt(x, z) { return this.profile.base(x, z) + this.hill * this.profile.relief(x, z); }
   /** What the player (and objects that must stay on the surface) stand on. */
   surfaceAt(x, z) {
     const h = this.heightAt(x, z);

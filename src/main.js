@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { NOW, yearToU, uToYear, envAt } from './timeline.js';
 import { World } from './world.js';
 import { buildFlora } from './flora.js';
-import { buildFauna } from './fauna.js';
+import { buildFauna, viewOf } from './fauna.js';
+import { Travel } from './sites.js';
 import { buildCity } from './city.js';
 import { Player } from './controls.js';
 import { UI } from './ui.js';
@@ -63,11 +64,19 @@ async function boot() {
 
   mark('@renderer');
   const world = await step('Shaping the land and sky', () => new World(scene, renderer));
-  const flora = await step('Growing 235 million years of plants', () => buildFlora(world, scene));
-  const fauna = await step('Raising the animals and the people', () => buildFauna(world, scene));
-  const city = await step('Building and demolishing Manhattan', () => buildCity(world, scene));
+  // Manhattan lives in its own group, so it can step aside while another place is on screen
+  const home = new THREE.Group(); scene.add(home);
+  const flora = await step('Growing 400 million years of plants', () => buildFlora(world, home));
+  const fauna = await step('Raising the animals and the people', () => buildFauna(world, home));
+  const city = await step('Building and demolishing Manhattan', () => buildCity(world, home));
+  scene.add(flora.cover.mesh);   // the ground cover goes wherever the visitor goes
   mark('@built');
   const player = new Player(camera, canvas, world, city);
+  const travel = new Travel({ world, scene, player, home: {
+    group: home, collide: (pos) => city.collide(pos),
+    update: (u, t, env, cam) => { fauna.update(u, t, cam); city.update(u, t); },
+  } });
+  $('follow').addEventListener('click', () => { travel.follow = !travel.follow; $('follow').textContent = travel.follow ? 'Place: follow history' : 'Place: stay in Manhattan'; });
 
   // HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping → anti-aliasing.
   // Multisampled float targets are not available everywhere, so ask before relying on them.
@@ -130,13 +139,14 @@ async function boot() {
   mark('@wired');
   const draw = () => { if (post) { bloom.strength = env.bloom; composer.render(); } else renderer.render(scene, camera); };
   const simulate = (dt, time) => {
-    envAt(u, env); env.grass *= Q.grass;
+    const year = uToYear(u);
+    travel.update(year, dt);
+    envAt(u, env); travel.applyEnv(year, env); env.grass *= Q.grass;
     world.update(env, dt, time, camera, u);
     player.update(dt);
     camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();   // culling below needs this frame's view
-    flora.update(u, time, env, camera);
-    fauna.update(u, time, camera);
-    city.update(u, time);
+    flora.update(u, time, env, camera, travel.atHome);
+    travel.updateContent(u, time, env, camera, viewOf(camera));
     world.sky.position.copy(camera.position);
     renderer.toneMappingExposure = env.exposure;
   };
@@ -167,7 +177,7 @@ async function boot() {
     if (Math.abs(uTarget - u) < 1e-7) u = uTarget;
     try {
       simulate(dt, time);
-      ui.update(u, env.glow);
+      ui.update(u, env.glow, travel.eventAt(uToYear(u)), travel.site.place);
       sound.update(u, dt);
       draw();
     } catch (err) {
@@ -183,6 +193,6 @@ async function boot() {
   requestAnimationFrame(frame);
 
   // handy for poking at the world from the console
-  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
+  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, travel, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
 }
 boot().catch((err) => fatal('The game could not start.', err && err.stack ? err.stack : err));

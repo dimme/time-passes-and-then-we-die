@@ -1,12 +1,11 @@
 import { clamp } from './util.js';
-import { ISLAND } from './world.js';
 
 const EYE = 1.7;
 
 /** First-person walking: WASD + mouse (pointer lock, or drag), touch sticks on mobile. */
 export class Player {
   constructor(camera, canvas, world, city) {
-    this.camera = camera; this.world = world; this.city = city;
+    this.camera = camera; this.world = world; this.collide = (pos) => city.collide(pos);   // replaced when the place changes
     this.pos = { x: 0, y: 5, z: 2 };
     this.yaw = Math.PI - 0.1; this.pitch = 0.12;
     this.keys = new Set();
@@ -60,9 +59,10 @@ export class Player {
       this.pos.x += (-sin * f + cos * s) * speed;
       this.pos.z += (-cos * f - sin * s) * speed;
     }
-    this.pos.x = clamp(this.pos.x, -ISLAND + 6, ISLAND - 6);
-    this.pos.z = clamp(this.pos.z, -340, 340);
-    this.city.collide(this.pos);
+    const b = this.world.profile.bounds;
+    this.pos.x = clamp(this.pos.x, -b.x, b.x);
+    this.pos.z = clamp(this.pos.z, -b.z, b.z);
+    if (this.collide) this.collide(this.pos);
     const ground = Math.max(this.world.surfaceAt(this.pos.x, this.pos.z), this.world.sea - 0.9) + EYE;
     this.pos.y += (ground - this.pos.y) * Math.min(1, dt * 8);
     if (this.fly) this.pos.y = this.fly;   // debug: hover at a fixed height

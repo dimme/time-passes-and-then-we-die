@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { rng, smooth, box, vcMat } from './util.js';
 import { yearToU } from './timeline.js';
 import { shared } from './textures.js';
-import { ISLAND } from './world.js';
 import { windTime, leafMat, floraTextures } from './flora-tex.js';
 import { Builder, norm, tube, arc, ribbon, kite, grow, foliage, boulder } from './flora-geo.js';
 
@@ -269,7 +268,7 @@ class GroundCover {
       if (!all && kx === this.cell[i * 2] && kz === this.cell[i * 2 + 1]) continue;
       this.cell[i * 2] = kx; this.cell[i * 2 + 1] = kz; dirty = true;
       const x = this.off[i * 2] + kx * D, z = this.off[i * 2 + 1] + kz * D, y = w.heightAt(x, z), q = this.rnd[i];
-      const s = Math.abs(x) > ISLAND + 12 || y < env.sea + 0.25 ? 0 : 0.5 + q * 0.8;
+      const s = Math.abs(x) > w.profile.bounds.x + 18 || y < env.sea + 0.25 ? 0 : 0.5 + q * 0.8;
       _m.compose(_p.set(x, y - 0.03, z), _q.setFromAxisAngle(UP, q * 6.283), _s.set(s, s * (0.6 + ((q * 7) % 1) * 0.8), s));
       this.mesh.setMatrixAt(i, _m);
     }
@@ -372,5 +371,6 @@ export function buildFlora(world, scene) {
   add(DEAD, 350, both(), span(520e6, 1.0e9, 100e6, 150e6), [0.5, 1.3], grey);
 
   const cover = new GroundCover(world, scene, floraTextures().cover);
-  return { update(u, time, env, camera) { windTime.value = time; for (const s of sets) s.update(u, camera); cover.update(u, env, camera); } };
+  /** `plants` false: only the ground cover (used while another place is on screen). */
+  return { cover, update(u, time, env, camera, plants = true) { windTime.value = time; if (plants) for (const s of sets) s.update(u, camera); cover.update(u, env, camera); } };
 }
