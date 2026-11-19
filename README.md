@@ -24,7 +24,6 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | Return to now | `N` |
 | Sound on / off | `M` |
 | Zoom out to the Earth, Moon, planets and solar system | the slider on the right edge, or hold `R` (out) / `F` (in); `G` returns to the ground |
-| Follow history from place to place, or stay in Manhattan | the **Place** button |
 | Quality | the **Quality** button cycles Low / Medium / High; or add `?q=low` to the address |
 | Touch | left thumb walks, right thumb looks, drag the timeline |
 

@@ -12,7 +12,15 @@ export const fin = (color, rough = 0.7, metal = 0, glow = 0, paint = 0) => { con
 export function vehicleMat(opts = {}) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, ...opts });
   m.onBeforeCompile = (sh) => {
-    sh.vertexShader = 'attribute vec4 surf;\nvarying vec4 vSurf;\n' + sh.vertexShader.replace('#include <color_vertex>', `vSurf = surf; vColor = color;
+    // wheels roll: `spin` holds each wheel vertex's axle (x, y) and radius, and the distance travelled comes from the instance's own position
+    const roll = (v) => `
+      #ifdef USE_INSTANCING
+        if (spin.z > 0.0) { float ra = -dot(instanceMatrix[3].xyz, normalize(instanceMatrix[0].xyz)) / spin.z, rc = cos(ra), rs = sin(ra); ${v} }
+      #endif`;
+    sh.vertexShader = 'attribute vec4 surf;\nattribute vec3 spin;\nvarying vec4 vSurf;\n' + sh.vertexShader
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>' + roll('objectNormal.xy = vec2(objectNormal.x * rc - objectNormal.y * rs, objectNormal.x * rs + objectNormal.y * rc);'))
+      .replace('#include <begin_vertex>', '#include <begin_vertex>' + roll('vec2 rq = transformed.xy - spin.xy; transformed.xy = spin.xy + vec2(rq.x * rc - rq.y * rs, rq.x * rs + rq.y * rc);'))
+      .replace('#include <color_vertex>', `vSurf = surf; vColor = color;
       #ifdef USE_INSTANCING_COLOR
         vColor *= mix(vec3(1.0), instanceColor, surf.w);
       #endif`);
@@ -28,11 +36,12 @@ export function vehicleMat(opts = {}) {
 // A bag of triangles
 // =====================================================================================
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _n3 = new THREE.Matrix3();
+const NO_AXLE = [0, 0, 0];
 const SPHERE = new THREE.SphereGeometry(1, 10, 7).toNonIndexed(), BOX = new THREE.BoxGeometry(1, 1, 1).toNonIndexed();
 export class Bag {
-  constructor() { this.p = []; this.n = []; this.c = []; this.s = []; }
+  constructor() { this.p = []; this.n = []; this.c = []; this.s = []; this.w = []; this.axle = null; }   // axle: [x, y, radius] while a wheel is being built
   get tris() { return this.p.length / 9; }
-  vert(p, n, f) { this.p.push(p[0], p[1], p[2]); this.n.push(n[0], n[1], n[2]); this.c.push(f.c[0], f.c[1], f.c[2]); this.s.push(f.s[0], f.s[1], f.s[2], f.s[3]); }
+  vert(p, n, f) { this.p.push(p[0], p[1], p[2]); this.n.push(n[0], n[1], n[2]); this.c.push(f.c[0], f.c[1], f.c[2]); this.s.push(f.s[0], f.s[1], f.s[2], f.s[3]); this.w.push(...(this.axle || NO_AXLE)); }
   /** Add a three.js geometry, transformed by matrix m. `own` keeps its vertex colours (multiplied by the finish colour). */
   add(geo, f, m, own = false) {
     const g = geo.index ? geo.toNonIndexed() : geo, P = g.attributes.position, N = g.attributes.normal, C = own && g.attributes.color;
@@ -40,7 +49,7 @@ export class Bag {
     for (let i = 0; i < P.count; i++) {
       _v.fromBufferAttribute(P, i); if (m) _v.applyMatrix4(m); this.p.push(_v.x, _v.y, _v.z);
       _v.fromBufferAttribute(N, i); if (m) _v.applyMatrix3(_n3).normalize(); this.n.push(_v.x, _v.y, _v.z);
-      this.c.push(f.c[0] * (C ? C.getX(i) : 1), f.c[1] * (C ? C.getY(i) : 1), f.c[2] * (C ? C.getZ(i) : 1)); this.s.push(...f.s);
+      this.c.push(f.c[0] * (C ? C.getX(i) : 1), f.c[1] * (C ? C.getY(i) : 1), f.c[2] * (C ? C.getZ(i) : 1)); this.s.push(...f.s); this.w.push(...(this.axle || NO_AXLE));
     }
     return this;
   }
@@ -57,6 +66,7 @@ export class Bag {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
     g.setAttribute('color', new THREE.Float32BufferAttribute(this.c, 3)); g.setAttribute('surf', new THREE.Float32BufferAttribute(this.s, 4));
+    g.setAttribute('spin', new THREE.Float32BufferAttribute(this.w, 3));
     return g;
   }
 }
@@ -176,13 +186,16 @@ const axle = (x, y, z, out = Math.sign(z) || 1) => at(x, y, z, 0, out > 0 ? -Mat
  * `spokes` (number of rim spokes, 0 for a plain dish), `cap` (hubcap dome height).
  */
 export function wheel(bag, x, z, r, w, o) {
+  bag.axle = [x, r, r];
   const rr = r * (o.rimR || 0.64), h = w / 2, n = o.spokes || 0, seg = n ? n * 4 : 16;
   const prof = [[-h, 0], [-h, r * 0.86], [-h + 0.05, r], [h - 0.05, r], [h - 0.012, r * 0.93], [h, r * 0.82], [h - 0.02, rr],
     [h - 0.022, rr * 0.93], [h - 0.06, rr * 0.84], [h - 0.045 + (o.cap || 0) * 0.5, rr * (o.capR || 0.3)], [h - 0.03 + (o.cap || 0), 0]];
   revolve(bag, prof, (i, j) => (i < 4 ? o.tyre : i < 6 ? (i === 5 && o.wall) || o.tyre : i === 6 ? o.rim : i === 7 ? o.rim : i === 8 ? (n && j % 4 > 1 ? o.dark : o.face || o.rim) : o.hub || o.rim), axle(x, r, z), seg);
+  bag.axle = null;
 }
 /** A spoked wheel (wagons, early cars): thin tyre, felloe, spokes and hub. */
 export function spokedWheel(bag, x, z, r, w, n, o) {
+  bag.axle = [x, r, r];
   const h = w / 2, ri = r - (o.depth || 0.07), m = axle(x, r, z);
   revolve(bag, [[-h, ri], [-h, r - 0.01], [-h * 0.6, r], [h * 0.6, r], [h, r - 0.01], [h, ri], [-h, ri]], (i) => (i > 0 && i < 4 ? o.tyre : o.rim), m, 20);
   revolve(bag, [[-h * 1.6, 0], [-h * 1.6, o.hubR || 0.06], [h * 1.8, o.hubR || 0.06], [h * 2.4, (o.hubR || 0.06) * 0.6], [h * 2.5, 0]], o.hub || o.rim, m, 8);
@@ -190,4 +203,5 @@ export function spokedWheel(bag, x, z, r, w, n, o) {
     const a = (k / n) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
     bag.rod(o.spoke || o.rim, [x + c * 0.04, r + s * 0.04, z], [x + c * ri, r + s * ri, z], o.spokeR || 0.014, 4);
   }
+  bag.axle = null;
 }

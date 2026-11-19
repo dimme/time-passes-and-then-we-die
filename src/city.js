@@ -165,13 +165,23 @@ export function buildCity(world, scene) {
   // Brooklyn Bridge
   addProp(bridge(r), 0, -120, 1883, 6000, false);
   // megacity holograms
+  const SIGN_SPOTS = [[0, 90], [50, 60], [0, -150], [-50, -60], [100, 30], [150, 0], [-100, -30], [-50, 120]];
   const slogans = ['TIME IS\nRUNNING', 'MEMORIES\n50% OFF', 'RAIN AGAIN\nTOMORROW', 'LIVE\nFOREVER*', 'NEW NEW\nYORK', 'BREATHE™', 'SKY: SOLD', 'YOU ARE\nHERE'];
   slogans.forEach((s, i) => {
-    const h = holo(s, '#' + NEON[i % 5].toString(16).padStart(6, '0')), onAve = i % 2 === 0;
-    h.rotation.y = onAve ? 0 : Math.PI / 2;
-    addProp(h, onAve ? (i % 4 === 0 ? 0 : 100 * (i % 3 - 1)) : -40 + i * 22, (onAve ? -70 - i * 35 : 60 * ((i % 3) - 1)) + (i === 7 ? 120 : 0), 2190 + i * 6, 2820 - i * 9, false);
-    h.position.y = 30 + (i % 4) * 22;
+    // each hangs over the middle of a street, facing along it, and is narrower than the gap between the buildings
+    const h = holo(s, '#' + NEON[i % 5].toString(16).padStart(6, '0')), onAve = i % 2 === 0, [x, z] = SIGN_SPOTS[i];
+    h.rotation.y = onAve ? 0 : Math.PI / 2; h.scale.setScalar(onAve ? 0.38 : 0.23);
+    addProp(h, x, z, 2190 + i * 6, 2820 - i * 9, false);
+    h.position.y = (onAve ? 20 : 15) + (i % 3) * 7;
   });
+  // megacity: the streets are canals, so the sidewalks are joined by footbridges at every corner
+  const fb = { p: [], n: [], uv: [] }, slab = (x0, z0, x1, z1) => quad(fb, x0, z0, x1, z1, 0.19, 0, 0, (x1 - x0) / 3, (z1 - z0) / 3);
+  for (let a = -2; a <= 2; a++) for (let k = -8; k <= 8; k++) for (const s of [-1, 1]) {
+    const x = a * 100, z = k * 60;
+    slab(x + s * 8.25 - 1.75, z - 3.6, x + s * 8.25 + 1.75, z + 3.6);     // along the avenue, over the cross street
+    slab(x - 6.6, z + s * 4.75 - 1.25, x + 6.6, z + s * 4.75 + 1.25);     // along the cross street, over the avenue
+  }
+  addProp(flatMesh(fb, new THREE.MeshStandardMaterial({ color: 0x3a3f4c, roughness: 0.55, metalness: 0.5, emissive: 0x16303a })), 0, 0, 2172, 2950);
   // the star age
   addProp(elevator(), 420, 200, 2990, 9600, false);
 

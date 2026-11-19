@@ -206,7 +206,10 @@ export function holo(text, col) {
   g.fillStyle = col; g.font = 'bold 56px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const lines = text.split('\n'); lines.forEach((l, i) => g.fillText(l, 256, 128 + (i - (lines.length - 1) / 2) * 66));
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(new THREE.PlaneGeometry(44, 22), new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  // two faces back to back, so it reads the right way round from either end of the street
+  const geo = new THREE.PlaneGeometry(44, 22), mat = new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending });
+  const front = new THREE.Mesh(geo, mat), back = new THREE.Mesh(geo, mat); back.rotation.y = Math.PI; front.add(back);
+  return front;
 }
 
 // ---------- street furniture, as instanced parts (each stands on y = 0.1, its arm or face towards +x) ----------

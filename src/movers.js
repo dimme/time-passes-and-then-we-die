@@ -11,6 +11,7 @@ export const CROSS_SPAN = ISLAND - 6;
 // =====================================================================================
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(1, 1, 1), _c = new THREE.Color();
 const UP = new THREE.Vector3(0, 1, 0), _sphere = new THREE.Sphere();
+const TURN = 5;            // metres from the end of a cross street over which a traveller turns round
 const SHADOW_REACH = 70;   // travellers this close stay drawn even when behind the camera, so their shadows do not vanish
 export class Movers {
   /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, legs?, skin?, s } */
@@ -30,6 +31,30 @@ export class Movers {
     for (let k = 1; k < this.meshes.length; k++) this.meshes[k].instanceMatrix = this.meshes[0].instanceMatrix;
     this.minU = Math.min(...items.map((i) => i.u0)); this.maxU = Math.max(...items.map((i) => i.u1));
   }
+  /**
+   * Where a traveller is at time t: { x, y, z, yaw, run } (run = metres travelled, for gaits). Avenues run on past the
+   * horizon, so travellers there simply come round again; cross streets end at the waterfront, where they turn back.
+   */
+  where(it, t) {
+    const w = this.world, o = this._at || (this._at = {});
+    let x, z;
+    if (it.axis === 'z' || this.crossSpan === this.span) {
+      const span = this.span, L = span * 2, along = ((((it.off + it.v * t) % L) + L) % L) - span;
+      x = it.axis === 'z' ? it.lane : along; z = it.axis === 'z' ? along : it.lane;
+      o.yaw = it.axis === 'z' ? (it.v > 0 ? -H : H) : (it.v > 0 ? 0 : Math.PI); o.run = along;
+    } else {
+      const span = this.crossSpan, L = span * 2, q = (((it.off + Math.abs(it.v) * t) % (2 * L)) + 2 * L) % (2 * L), out = q < L;
+      const s = Math.sign(it.v) || 1, pos = (out ? q - span : 3 * span - q) * s, dir = (out ? 1 : -1) * s;
+      // swing across the street and round through 180° over the last few metres
+      const street = Math.round(it.lane / 60) * 60, side = (it.lane - street) * (out ? 1 : -1), e = Math.min(1, (span - Math.abs(pos)) / TURN), nearEnd = Math.sign(pos) === dir;
+      x = pos; z = street + side * e;
+      o.yaw = (dir > 0 ? 0 : Math.PI) + (1 - e) * H * (nearEnd ? 1 : -1) * Math.sign(side || 1) * -dir;
+      o.run = q;
+    }
+    o.x = x; o.z = z; o.y = this.ground ? Math.max(w.heightAt(x, z), w.sea - 0.15) + it.alt : it.alt;
+    if (this.bob) o.y += Math.abs(Math.cos(o.run * 2.6)) * this.bob;
+    return o;
+  }
   /** view = { frustum, eye }: only travellers in sight (or near enough to cast a shadow into it) are sent to the GPU. */
   update(u, t, view) {
     const on = !(u < this.minU || u > this.maxU);
@@ -40,18 +65,14 @@ export class Movers {
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
       if (flooded || u < it.u0 || u >= it.u1) continue;
-      const span = it.axis === 'z' ? this.span : this.crossSpan, L = span * 2;   // cross streets end at the shore
-      const along = ((((it.off + it.v * t) % L) + L) % L) - span;
-      const x = it.axis === 'z' ? it.lane : along, z = it.axis === 'z' ? along : it.lane;
-      let y = this.ground ? Math.max(w.heightAt(x, z), w.sea - 0.15) + it.alt : it.alt;
-      if (this.bob) y += Math.abs(Math.cos(along * 2.6)) * this.bob;
+      const at = this.where(it, t), x = at.x, y = at.y, z = at.z;
       _p.set(x, y, z);
       if (view) {
         _sphere.center.set(x, y + this.reach * 0.5, z); _sphere.radius = this.reach * 1.3 + 1;
         const dx = x - view.eye.x, dz = z - view.eye.z;
         if (dx * dx + dz * dz > SHADOW_REACH * SHADOW_REACH && !view.frustum.intersectsSphere(_sphere)) continue;
       }
-      _q.setFromAxisAngle(UP, it.axis === 'z' ? (it.v > 0 ? -H : H) : (it.v > 0 ? 0 : Math.PI));
+      _q.setFromAxisAngle(UP, at.yaw);
       first.setMatrixAt(k, _m.compose(_p, _q, _s.setScalar(it.s || 1)));
       for (let m = 0; m < this.meshes.length; m++) { const a = this.meshes[m].instanceColor.array, c = this.colors[m]; a[k * 3] = c[i * 3]; a[k * 3 + 1] = c[i * 3 + 1]; a[k * 3 + 2] = c[i * 3 + 2]; }
       k++;

@@ -1,6 +1,7 @@
 // Vehicles: carts, cars, pods, flying traffic, ships and (from vehicles-air.js) aircraft.
+import * as THREE from 'three';
 import { yearToU } from './timeline.js';
-import { species } from './animals.js';
+import { species, pose } from './animals.js';
 import { Movers, traffic, CROSS_SPAN } from './movers.js';
 import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js';
 import { carParts } from './vehicles-cars.js';
@@ -17,9 +18,12 @@ const C = {
   coat: fin(0x6a4428, 0.85), plain: fin(0xffffff, 0.7), leather: fin(0x1e150f, 0.55), wood: fin(0x7a5a36, 0.85), plank: fin(0x8f7450, 0.9), green: fin(0x34503a, 0.7), wheel: fin(0x8a3220, 0.7),
   iron: fin(0x26262a, 0.5, 0.7), sack: fin(0xb09a6c, 0.95), cask: fin(0x6e4a28, 0.8), coatCloth: fin(0x2a2c34, 0.9), trousers: fin(0x5a4a38, 0.9), skin: fin(0xc89a78, 0.8), hat: fin(0x1a1614, 0.9),
 };
-export function cartParts(M) {
-  const bag = new Bag(), horse = M.horse().obj, hx = 2.8; horse.updateMatrixWorld(true);
+const HORSE_X = 2.8;   // the horse stands this far ahead of the wagon's origin
+/** `horse` false leaves the horse out (the game puts a living, walking one in the shafts); the harness is still fitted to it. */
+export function cartParts(M, { horse: keep = true } = {}) {
+  const bag = new Bag(), horse = M.horse().obj, hx = HORSE_X; horse.updateMatrixWorld(true);
   horse.traverse((o) => { if (o.isMesh) bag.add(o.geometry, o.material.map ? C.coat : C.plain, at(hx, 0, 0).multiply(o.matrixWorld), true); });
+  const horseVerts = bag.p.length / 3;
   // measure the horse where the harness sits: back, belly (on the centre line, clear of the legs) and half-width
   const P = bag.p.slice(), probe = (x) => {
     let top = 0, bot = 9, w = 0;
@@ -65,6 +69,7 @@ export function cartParts(M) {
     sweep(bag, [[0.08, 1.83, s * 0.09], [0.47, 1.82, s * 0.11], [0.68, 1.42, s * 0.11]], oval(0.07, 0.07, 6), C.trousers, fig); bag.ball(C.hat, 0.75, 1.36, s * 0.11, 0.13, 0.06, 0.055, 0, 0, 0.7);
     sweep(bag, [[0.13, 2.26, s * 0.2], [0.2, 2.02, s * 0.23], [0.46, 1.94, s * 0.1]], oval(0.048, 0.048, 6), C.coatCloth, fig); bag.ball(C.skin, 0.5, 1.93, s * 0.09, 0.05);
   }
+  if (!keep) for (const [arr, size] of [[bag.p, 3], [bag.n, 3], [bag.c, 3], [bag.s, 4], [bag.w, 3]]) arr.splice(0, horseVerts * size);
   return [{ geo: bag.geo(), mat: vehicleMat(), tint: false }];
 }
 
@@ -113,13 +118,40 @@ export function flyerParts(bright) {
 }
 
 // =====================================================================================
+// Horses in harness: one living, walking horse for every wagon on the road
+// =====================================================================================
+class Teams {
+  constructor(world, scene, carts) { this.world = world; this.scene = scene; this.carts = carts; this.horses = []; this.meshes = []; this.items = carts.items; this.ground = true; }
+  update(u, t, view) {
+    const { carts, horses } = this, flooded = this.world.sea > carts.floodAt;
+    carts.items.forEach((it, i) => {
+      let on = !flooded && u >= it.u0 && u < it.u1, at;
+      if (on) {
+        at = carts.where(it, t);
+        if (view) { const dx = at.x - view.eye.x, dz = at.z - view.eye.z; _ball.center.set(at.x, at.y + 1, at.z); on = dx * dx + dz * dz < 4900 || view.frustum.intersectsSphere(_ball); }
+      }
+      let h = horses[i];
+      if (!on) { if (h && h.in) { h.in = false; this.scene.remove(h.obj); } return; }
+      if (!h) { h = horses[i] = species().horse(); h.obj.traverse((o) => { if (o.isMesh) o.castShadow = true; }); }
+      if (!h.in) { h.in = true; this.scene.add(h.obj); }
+      const c = Math.cos(at.yaw), s = Math.sin(at.yaw);
+      h.obj.position.set(at.x + c * HORSE_X, at.y, at.z - s * HORSE_X); h.obj.rotation.y = at.yaw;
+      // the gait turns exactly as fast as the ground goes by, so the hooves do not slide
+      pose(h, (2 * PI * h.def.gait.duty * at.run) / h.def.gait.stride, t);
+    });
+  }
+}
+const _ball = new THREE.Sphere(new THREE.Vector3(), 6);
+
+// =====================================================================================
 // Traffic through the ages
 // =====================================================================================
 export function buildVehicles(world, scene, r) {
   const { lanes, cloth } = traffic(r), Y = yearToU, movers = [];
   const mk = (parts, items, opts = {}) => { const m = new Movers(world, parts, items, { crossSpan: opts.ground === false ? 0 : CROSS_SPAN, ...opts }); movers.push(m); scene.add(...m.meshes); return m; };
   // wheels
-  mk(cartParts(species()), lanes(26, 1640, 1905, { jf: 200, jt: 22, v: [2, 3.5], off: (ax) => (ax === 'z' ? 3 : 1.8) }), { bob: 0.03 });
+  const carts = mk(cartParts(species(), { horse: false }), lanes(26, 1640, 1905, { jf: 200, jt: 22, v: [2, 3.5], off: (ax) => (ax === 'z' ? 3 : 1.8) }));
+  movers.push(new Teams(world, scene, carts));
   const lane = (ax) => (ax === 'z' ? 1.8 + Math.floor(r() * 2) * 3 : 1.8);
   const cars = (style, n, from, to, jf, jt, v, pal) => mk(carParts(style), lanes(n, from, to, { jf, jt, v, off: lane, alt: 0.02, tint: cloth(pal) }));
   cars('old', 40, 1903, 1944, 25, 10, [6, 10], [0x101010, 0x141414, 0x1a1210, 0x10141c, 0x3a1410, 0x1c2a20]);

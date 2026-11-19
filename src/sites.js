@@ -41,7 +41,7 @@ export class Travel {
   /** home: { group, update(u, t, env, camera, view), collide(pos) } */
   constructor({ world, scene, home, player, onArrive }) {
     Object.assign(this, { world, scene, home, player, onArrive });
-    this.follow = true;             // false: stay in Manhattan through every age
+    this.follow = true;             // (tests may switch this off to hold the view in Manhattan)
     this.id = 'home'; this.active = null; this.built = {}; this.fade = 0; this.dir = 0; this.pending = null;
     this.homePos = null; this.veil = document.getElementById('veil'); this.veilText = document.getElementById('veiltext');
   }

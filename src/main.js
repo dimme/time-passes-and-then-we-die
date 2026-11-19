@@ -77,7 +77,6 @@ async function boot() {
     group: home, collide: (pos) => city.collide(pos),
     update: (u, t, env, cam) => { fauna.update(u, t, cam); city.update(u, t); },
   } });
-  $('follow').addEventListener('click', () => { travel.follow = !travel.follow; $('follow').textContent = travel.follow ? 'Place: follow history' : 'Place: stay in Manhattan'; });
 
   // HDR pipeline: render → bloom (sun, fire, neon, lava) → filmic tone mapping → anti-aliasing.
   // Multisampled float targets are not available everywhere, so ask before relying on them.
