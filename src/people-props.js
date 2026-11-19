@@ -23,6 +23,8 @@ const blob = (c, rx, ry, rz, x, y, z, tilt = 0, segs = 8, rows = 5) => fix(ell(r
 const pot = (c, prof, x = 0, y = 0, z = 0, segs = 10) => fix(loft(prof.map(([h, r]) => [x, y + h, z, r, r]), { segs, sub: 2, cap: 'both' }), c);
 const BASKET = [[0, 0.11], [0.1, 0.17], [0.2, 0.21], [0.215, 0.2]], JAR = [[0, 0.06], [0.08, 0.13], [0.2, 0.15], [0.3, 0.1], [0.35, 0.055], [0.39, 0.07]], BOWL = [[0, 0.03], [0.03, 0.065], [0.06, 0.08]];
 const shaft = (c, y0, y1, r = 0.016) => rod(c, [0, y0, 0], [0, y1, 0], r);
+/** Stand a tall shield (modelled along y) up on a level forearm, strapped at its middle. */
+const upright = (g) => g.rotateZ(-Math.PI / 2).translate(0, 0.17, 0);
 
 /** An open umbrella with its grip at the origin: the dark canopy (seen from both sides) and the lit rim and shaft. */
 export function umbrella() {
@@ -82,8 +84,8 @@ export const PROPS = {
   bow: () => [['tool', join([...bars(WOOD, [[-0.17, -0.64, 0], [-0.03, -0.32, 0], [0.02, 0, 0], [-0.03, 0.32, 0], [-0.17, 0.64, 0]], 0.012, 5), rod(CLOTH, [-0.17, -0.64, 0], [-0.17, 0.64, 0], 0.004, 0.004, 3)])],
     ['chest', join([rod(HIDE, [-0.15, 1.02, -0.1], [-0.13, 1.52, 0.1], 0.04, 0.05), ...[0, 1, 2].map((i) => rod(WOOD, [-0.13, 1.5, 0.1], [-0.12 - i * 0.012, 1.68, 0.16 + i * 0.012], 0.005, 0.005, 3))])]],
   shield: () => [['off', fix(new THREE.SphereGeometry(1, 14, 6).scale(0.44, 0.44, 0.07).translate(0, 0.18, 0.1), BRONZE)]],
-  scutum: () => [['off', join([fix(loft([[0, -0.36, 0.1, 0.33, 0.03], [0, 0.72, 0.1, 0.33, 0.03]], { segs: 12, n: 5, cap: 'both' }), RED), blob(BRONZE, 0.09, 0.09, 0.05, 0, 0.18, 0.13)])]],
-  kite: () => [['off', fix(loft([[0, -0.62, 0.09, 0.02, 0.02], [0, -0.2, 0.09, 0.2, 0.025], [0, 0.2, 0.09, 0.29, 0.03], [0, 0.42, 0.09, 0.27, 0.03], [0, 0.5, 0.09, 0.16, 0.025]], { segs: 12, n: 3, cap: 'both' }), hex(0x2a3a6a))]],
+  scutum: () => [['off', upright(join([fix(loft([[0, -0.56, 0.1, 0.33, 0.03], [0, 0.52, 0.1, 0.33, 0.03]], { segs: 12, n: 5, cap: 'both' }), RED), blob(BRONZE, 0.09, 0.09, 0.05, 0, 0, 0.13)]))]],
+  kite: () => [['off', upright(fix(loft([[0, -0.72, 0.09, 0.02, 0.02], [0, -0.3, 0.09, 0.2, 0.025], [0, 0.1, 0.09, 0.29, 0.03], [0, 0.32, 0.09, 0.27, 0.03], [0, 0.4, 0.09, 0.16, 0.025]], { segs: 12, n: 3, cap: 'both' }), hex(0x2a3a6a)))]],
   sword: () => [['tool', join([slab(STEEL, 0.045, 0.74, 0.008, 0, 0.45, 0), slab(BRONZE, 0.16, 0.025, 0.03, 0, 0.07, 0), shaft(WOOD, -0.07, 0.07, 0.016)])]],
   staff: () => [['tool', shaft(WOOD, -1.08, 0.72, 0.017)]],
   torch: () => [['tool', join([shaft(WOOD, -0.2, 0.36, 0.016), blob(SOOT, 0.035, 0.06, 0.035, 0, 0.38, 0)])], ['tool', tag(ell(0.055, 0.13, 0.055, 0, 0.5, 0, 0, 6, 5), FLAME, 0, 0, 1), 'glow']],

@@ -94,7 +94,8 @@ function along(a, d, out) {
 export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
   const r = rng(seed), pick = (pal) => pal[Math.floor(r() * pal.length)], lin = (h) => { _c.set(h); return [_c.r, _c.g, _c.b]; }, byKey = new Map();
   for (const a of list) {
-    const act = ACTION[a.action] || ACTION.stand, outfit = OUTFIT[a.outfit] ? a.outfit : 'modern', prop = a.prop === undefined ? act.prop || 'none' : a.prop || 'none', key = outfit + '|' + prop + '|' + (act.left ? 1 : 0);
+    const act = ACTION[a.action] || ACTION.stand, outfit = OUTFIT[a.outfit] ? a.outfit : 'modern', kit = OUTFIT[outfit].kit || {};
+    const prop = a.prop === undefined ? (act.prop || 'none').split('+').map((n) => kit[n] || n).join('+') : a.prop || 'none', key = outfit + '|' + prop + '|' + (act.left ? 1 : 0);
     if (!byKey.has(key)) byKey.set(key, { ...groupParts(outfit, prop, act.left ? 1 : 0), items: [] });
     const G = byKey.get(key), look = LOOK[outfit] || PLAIN, it = {
       act, x: a.x, z: a.z, rot: a.rot || 0, y: a.y || 0, afloat: !!a.afloat, s: a.s || (G.f ? 0.93 : 1) * (0.95 + r() * 0.1), u0: a.u0 ?? -Infinity, u1: a.u1 ?? Infinity, phase: a.phase ?? r(),

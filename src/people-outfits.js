@@ -37,6 +37,7 @@ const brim = (rx, rz, c, tilt = 0, fixed = 1) => tag(ell(rx, 0.007, rz, -0.006, 
  * sleeve: cuff height (2 = sleeveless). legs: 'trousers' | 'breeches' | 'bare' | 'none'. skirt: hem height of a skirt in the trouser colour.
  * hair: 'short' | 'bob' | 'long' | 'bun' | 'wig' | 'tonsure' | 'none'. feet: 'bare' | 'sandal' (shoes otherwise). cut: neckline, see cut().
  * under: the coat takes the `legs` tint, leaving `tint` for what is draped over it. extra(K): pieces only this outfit has.
+ * kit: this outfit's own versions of the props an action asks for.
  */
 export const OUTFITS = {
   modern: { coat: 0.87, grow: 0.014, collar: 1, hair: 'short', shoes: [hex(0x8a8a8a), LINEN] },
@@ -65,7 +66,7 @@ export const OUTFITS = {
   'sumerian-f': { f: 1, coat: 0.2, grow: 0.014, flare: 0.14, cut: oneShoulder, bare: 1, sleeve: 2, legs: 'bare', feet: 'bare', hair: 'bun', fillet: 1, stride: 1, extra: (K) => K.top.push(K.tier(0.12, 0.24, 0.18)) },
   // Egypt: white linen, kilts for men and sheath dresses for women, wigs and broad collars for those who could afford them
   egyptian: { bare: 1, sleeve: 2, legs: 'bare', feet: 'bare', hair: 'short', extra: (K) => K.top.push(K.wrap(0.6, 1.04, 0.012, 0.2), K.band(1, 1.045, 0.018, dark(WHITE, 0.85), 0), tag(ell(0.012, 0.11, 0.05, 0.118, 0.92, 0, 0.06), dark(WHITE, 0.9), SKIRT, 1)) },
-  'egyptian-f': { f: 1, coat: 0.15, grow: 0.008, flare: 0.05, cut: (y) => y > 1.33, bare: 1, sleeve: 2, legs: 'bare', feet: 'bare', hair: 'wig', stride: 0.95,
+  'egyptian-f': { f: 1, coat: 0.15, grow: 0.008, flare: 0.05, cut: (y) => y > 1.36, bare: 1, sleeve: 2, legs: 'bare', feet: 'bare', hair: 'wig', stride: 0.95,
     extra: (K) => { for (const s of [1, -1]) K.top.push(tag(ell(0.108, 0.11, 0.022, 0.004, 1.352, s * 0.08), WHITE)); K.top.push(collar(K)); } },
   overseer: { bare: 1, sleeve: 2, legs: 'bare', feet: 'sandal', hair: 'wig', short: 1,
     extra: (K) => K.top.push(K.wrap(0.42, 1.04, 0.014, 0.3), K.band(1, 1.05, 0.02, dark(WHITE, 0.85), 0), tag(loft([[0.12, 1, 0, 0.012, 0.05], [0.17, 0.75, 0, 0.012, 0.11], [0.2, 0.5, 0, 0.012, 0.17]], { segs: 8, n: 4, cap: 'bottom' }), WHITE, SKIRT, 1), collar(K)) },
@@ -88,17 +89,17 @@ export const OUTFITS = {
     for (let i = 0; i < 6; i++) K.metal.push(K.band(1.01 + i * 0.072, 1.1 + i * 0.072, 0.019 + (i % 2) * 0.005, STEEL));
     for (const s of [1, -1]) K.metal.push(tag(ell(0.075, 0.03, 0.07, 0, 1.452, s * 0.15, 0, 8, 5), STEEL, BODY, 0, 1), tag(ell(0.012, 0.055, 0.03, 0.05, 1.6, s * 0.083), STEEL, BODY, 0, 1));
     K.metal.push(K.cap((dx, dy) => Math.max(sm(0.22, 0.4, dy), sm(0, 0.25, -dx) * sm(-0.8, -0.6, dy)), 0.018, STEEL, 1), tag(ell(0.075, 0.008, 0.105, -0.115, 1.578, 0, 0.4, 10, 4), STEEL, BODY, 0, 1), tag(ell(0.014, 0.012, 0.085, 0.092, 1.69, 0), STEEL, BODY, 0, 1));
-    K.top.push(K.band(0.985, 1.035, 0.03, LEATHER), K.wrap(0.74, 1, 0.03, 0.2, LEATHER, 1));   // belt and its apron of studded straps
-  } },
+    K.top.push(K.band(0.985, 1.035, 0.03, LEATHER), tag(loft([[0.125, 1, 0, 0.012, 0.07], [0.15, 0.76, 0, 0.012, 0.08]], { segs: 8, n: 4, cap: 'bottom' }), LEATHER, SKIRT, 1, 1));   // belt and its apron of studded straps
+  }, kit: { shield: 'scutum', spear: 'pilum' } },
   // medieval Europe: tunic, hose and hood; kirtle and veil; the monk's habit; mail, surcoat and helm
   medieval: { coat: 0.6, flare: 0.42, grow: 0.014, sash: 1, slim: 1, soft: 1, hat: 'hood', cowl: 1, hair: 'short' },
   'medieval-f': { f: 1, coat: 1.04, grow: 0.01, skirt: 0.05, legs: 'none', hat: 'veil', hair: 'short', spread: 0.035, stride: 1, soft: 1,
-    extra: (K) => K.top.push(tag(loft([[0.1, 1.06, 0, 0.02, 0.1], [0.19, 0.75, 0, 0.02, 0.16], [0.27, 0.36, 0, 0.02, 0.2]], { segs: 8, n: 4, cap: 'bottom' }), LINEN, SKIRT, 0.55, 1)) },
+    extra: (K) => K.top.push(tag(loft([[0.115, 1.06, 0, 0.02, 0.1], [0.225, 0.75, 0, 0.02, 0.15], [0.3, 0.45, 0, 0.02, 0.18]], { segs: 8, n: 4, cap: 'bottom' }), LINEN, SKIRT, 0.55, 1)) },
   monk: { coat: 0.98, grow: 0.022, skirt: 0.07, legs: 'none', hair: 'tonsure', wide: 0.12, sash: 1, rope: 1, cowl: 1, spread: 0.02, stride: 1.05, feet: 'sandal' },
   knight: { coat: 0.56, flare: 0.4, grow: 0.018, mail: 1, slim: 1, hair: 'none', extra: (K) => {
     K.top.push(K.wrap(0.5, 1.47, 0.032, 0.45), K.band(0.99, 1.04, 0.036, LEATHER));   // surcoat over the hauberk
     K.metal.push(K.cap(hooded(0.45), 0.014, MAIL, 1), K.band(1.4, 1.5, 0.03, MAIL), crown([[1.675, 0.104, 0.091], [1.74, 0.095, 0.083], [1.8, 0.062, 0.054], [1.835, 0.012, 0.012]], STEEL), tag(ell(0.008, 0.05, 0.013, 0.1, 1.64, 0), STEEL, BODY, 0, 1));
-  } },
+  }, kit: { shield: 'kite' } },
   // the neon megacity: a glossy hooded rain cape with a light strip at the hem
   raincoat: { coat: 0.42, grow: 0.028, flare: 0.5, wide: 0.1, hat: 'hood', cowl: 1, hair: 'short', gloss: 1, extra: (K) => K.glow.push(K.wrap(0.42, 0.45, 0.034, 0.5)) },
   'raincoat-f': { f: 1, coat: 0.42, grow: 0.026, flare: 0.5, wide: 0.1, hat: 'hood', cowl: 1, hair: 'short', gloss: 1, extra: (K) => K.glow.push(K.wrap(0.42, 0.45, 0.032, 0.5)) },
@@ -183,7 +184,7 @@ export function personGeo(variant) {
       if (buckle) bottom.push(tag(ell(0.016, 0.01, 0.02, 0.07, 0.078, s * (legZ - 0.01), -0.5), buckle, LEG, s, 1));
     }
   }
-  if (legs !== 'none') (o.mail ? metal : bottom).push(tag(torso(f, 0.8, 1.04, 0.006, { cap: 'both', n: 2.2 }), cloth, BODY, 0, cf));   // seat of the trousers, or a loincloth
+  if (legs !== 'none') (legs === 'bare' ? coat : o.mail ? metal : bottom).push(tag(torso(f, 0.8, 1.04, 0.006, { cap: 'both', n: 2.2 }), cloth, BODY, 0, cf));   // seat of the trousers, or a loincloth of the garment's cloth
   if (o.skirt) {
     const w = torsoAt(f, 1.07, 0.022), h = o.skirt, full = h < 0.2, R = (y, rx, rz) => [-0.012 * sm(1.06, 0.9, y), y, 0, rx, rz];
     const rings = full ? [w, R(0.99, 0.125, 0.172), R(0.9, 0.16, 0.19), R(0.75, 0.2, 0.215), R(0.5, 0.265, 0.275), R(0.25, 0.315, 0.325), R(h, 0.345, 0.355)]

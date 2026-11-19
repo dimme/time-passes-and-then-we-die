@@ -37,7 +37,7 @@ function kneeling(P, up, lean, bend = 0) {
 const carried = (P, w) => (w.tool ? P.reach(0, 0.3, w.prop === 'umbrella' ? 1.2 : 1.08, 0.22) : P);
 /** A two-handed swing in the vertical plane ahead: the shaft points at angle a (0 = forward, pi/2 = up), its edge leading the swing. */
 const swung = (P, a, x, y, z, gap) => P.grip(0, x, y, z, cos(a), sin(a), 0, gap, sin(a), -cos(a), 0);
-const soldier = (P) => P.reach(1, 0.33, 1.14, -0.03, -0.2, -0.9, 0.5);   // shield arm across the front
+const soldier = (P) => P.reach(1, 0.24, 1.08, 0.1, -0.3, -0.5, 1);   // shield arm across the front
 const idle = (P, c) => P.pelvis(0, HIP - 0.006, 0.012 * sin(c * 0.5), 0.01).face(0, 0.25 * sin(c * 0.23));
 
 /**
@@ -47,7 +47,7 @@ const idle = (P, c) => P.pelvis(0, HIP - 0.006, 0.012 * sin(c * 0.5), 0.01).face
 const A = {
   stand: { pose: (P, c, w) => carried(idle(P, c), w) },
   talk: { pose: (P, c) => idle(P, c).reach(0, 0.36, 1.12 + 0.1 * sin(c * 2.2), 0.2 + 0.08 * sin(c * 1.3)).swing(1, 0.25, 0.08, 0, 1.1 + 0.2 * sin(c * 0.9)).face(0.05 * sin(c * 3), 0.2 * sin(c * 0.4)) },
-  point: { pose: (P, c, w) => { idle(P, c).reach(0, 0.58, 1.46 + 0.03 * sin(c), 0.24).swing(1, -0.2, 0.5, 0, 1.6); if (w.tool) P.aim(0.9, 0.42, 0); } },
+  point: { pose: (P, c, w) => { idle(P, c).reach(0, 0.58, 1.46 + 0.03 * sin(c), 0.24).reach(1, 0.02, 1.02, -0.2, -0.8, 0, 1); if (w.tool) P.reach(0, 0.5, 1.22, 0.24).aim(0.3, 0.95, 0); } },
   walk: { walk: 1, pose: (P, c, w) => carried(P.gait(w.ph, w.stride), w) },
   sit: { pose: (P, c, w) => seated(P, w.seat, 0.03, 0.1 + 0.02 * sin(c * 0.8)).face(0.05, 0.3 * sin(c * 0.2)) },
   crouch: { pose: (P, c) => { squat(P).face(0.3); for (let i = 0; i < 2; i++) P.reach(i, 0.42 + 0.06 * sin(c * 2.6 + i * 2), 0.17 + 0.05 * sin(c * 1.7 + i), (i ? -1 : 1) * 0.1); } },
@@ -92,7 +92,7 @@ const A = {
   } },
   weave: { prop: 'loom', pose: (P, c) => { const f = fract(c * 0.4), z = cos(TAU * f), up = ss(0.8, 0.9, f) * (1 - ss(0.9, 1, f)); idle(P, c).face(-0.05, -0.2 * z).reach(0, 0.5, 1.2 + 0.25 * up, 0.14 + 0.2 * z).reach(1, 0.5, 1.2 + 0.25 * up, -0.14 + 0.2 * z); } },
   spin: { prop: 'spindle', pose: (P, c) => idle(P, c).face(0.2, -0.2).reach(1, 0.24, 1.3, -0.24).reach(0, 0.3, 1.12 + 0.12 * wave(c * 0.35), 0.2 + 0.02 * sin(c * 9)) },
-  write: { prop: 'tablet', pose: (P, c) => seated(P, 0, 0.12, 0.32).face(0.5).reach(1, 0.33, 0.5, -0.07).reach(0, 0.34 + 0.015 * sin(c * 6), 0.6, -0.02 + 0.05 * sin(c * 1.2)).aim(0.3, 0.9, 0.3) },
+  write: { prop: 'tablet', pose: (P, c) => seated(P, 0, 0.12, 0.32).face(0.5).reach(1, 0.33, 0.3, -0.07).reach(0, 0.34 + 0.015 * sin(c * 6), 0.38, -0.02 + 0.05 * sin(c * 1.2)).aim(0.3, 0.9, 0.3) },
   paint: { prop: 'brush', pose: (P, c) => idle(P, c).face(-0.3).reach(1, 0.3, 1.12, -0.2).reach(0, 0.54, 1.62 + 0.16 * sin(c * 1.4), 0.12 + 0.1 * sin(c * 0.9)).aim(0.95, 0.3, 0) },
   cook: { prop: 'hearth', pose: (P, c) => squat(P, 0.4, 0.3).face(0.3).reach(1, 0.24, 0.5, -0.2).reach(0, 0.56 + 0.05 * cos(c * 2.4), 0.62, 0.04 + 0.05 * sin(c * 2.4)).aim(0.1, -1, 0) },
 
@@ -106,7 +106,7 @@ const A = {
     const f = fract(c * 0.22), k = (a, b) => ss(a, b, f);
     P.pelvis(0, 0.9, 0, 0, -1.25).face(0, 1.1).stand(1, 0.22, 0).stand(0, -0.22, 0.03).reach(1, 0.7, 1.46, -0.03);
     // quiver → nock → draw → hold → loose
-    const x = mix(mix(mix(-0.22, 0.5, k(0.08, 0.22)), 0, k(0.3, 0.55)), -0.1, k(0.78, 0.8)), y = mix(1.62, 1.47, k(0.08, 0.22)) + 0.04 * k(0.3, 0.55);
+    const x = mix(mix(mix(-0.22, 0.5, k(0.08, 0.22)), 0.1, k(0.3, 0.55)), 0, k(0.78, 0.8)), y = mix(1.62, 1.47, k(0.08, 0.22)) + 0.03 * k(0.3, 0.55);
     P.reach(0, mix(x, -0.22, k(0.9, 1)), mix(y, 1.62, k(0.9, 1)), 0, -0.3, 0.2, 0.95);
   } },
   stalk: { prop: 'spear', walk: 0.6, pose: (P, c, w) => P.gait(w.ph, w.stride, 0.2, 0.45).back(0.2).face(-0.45, 0.2 * sin(c * 0.5)).reach(0, 0.22, 0.78, 0.25).aim(1, 0.06, 0).reach(1, 0.45, 0.86, -0.2) },
@@ -128,7 +128,7 @@ const A = {
   fish: { prop: 'fishspear', pose: (P, c) => { const f = fract(c * 0.2), r = 1 - ss(0.8, 0.86, f) * (1 - ss(0.9, 1, f)); stance(P, 0.86, 0.3 - 0.05 * r, 0.3, 0.14, 0.3 - 0.1 * r).face(0.45).grip(0, mix(0.4, 0.02, r), mix(1.12, 1.62, r), 0.2, 0.72, -0.7, -0.05, 0.55); } },
 
   // ---- ritual and social ----
-  pray: { pose: (P, c) => { idle(P, c).face(-0.25); for (let i = 0; i < 2; i++) P.reach(i, 0.3, 1.7 + 0.03 * sin(c * 0.6), 0.3, -0.2, -0.9, 0.4); } },
+  pray: { pose: (P, c) => { idle(P, c).face(-0.25); for (let i = 0; i < 2; i++) P.reach(i, 0.2, 1.72 + 0.03 * sin(c * 0.6), i ? -0.42 : 0.42, -0.2, -0.9, 0.5); } },
   'bow-down': { pose: (P, c) => { const a = ss(0.25, 0.75, wave(c * 0.12)); kneeling(P, 0.25 * (1 - a), 0.15 + 1.15 * a, 0.6 * a).face(0.3 * a - 0.1); for (let i = 0; i < 2; i++) P.reach(i, mix(0.28, 0.72, a), mix(1.22, 0.05, a), i ? -0.2 : 0.2, -0.2, -0.9, 0.4); } },
   dance: { pose: (P, c) => {
     const f = c * 1.1, b = sin(Math.PI * f);

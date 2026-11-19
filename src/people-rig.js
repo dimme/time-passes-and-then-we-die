@@ -58,7 +58,9 @@ const RIG = /* glsl */`
       } else if (limb == 3.0 && y < HIP + 0.05) {   // cloth below the hips goes with the leg under it
         vec3 a = p, b = p, na = n, nb = n; leg(a, na, 1.0, y, 1.0); leg(b, nb, -1.0, y, 1.0);
         float m = smoothstep(-0.07, 0.07, p.z), k = aRig.y * (1.0 - smoothstep(HIP - 0.16, HIP + 0.05, y));
-        p = mix(p, mix(b, a, m), k); n = normalize(mix(n, mix(nb, na, m), k));
+        vec3 c = mix(b, a, m); float ca = mix(c.x, a.x, smoothstep(-0.1, 0.03, p.z)), cb = mix(c.x, b.x, 1.0 - smoothstep(-0.03, 0.1, p.z));
+        c.x = p.x > 0.0 ? max(c.x, max(ca, cb)) : min(c.x, min(ca, cb));   // between the legs the leading one carries the front of the cloth, the trailing one the back
+        p = mix(p, c, k); n = normalize(mix(n, mix(nb, na, m), k));
       }
       if (limb == 6.0) chest = 1.0;
       if (limb == 7.0) crown = 1.0;
@@ -72,7 +74,7 @@ const RIG = /* glsl */`
     return p;
   }
 `;
-const KINDS = { cloth: { roughness: 0.85 }, gloss: { roughness: 0.22 }, skin: { roughness: 0.6 }, hair: { roughness: 0.7 }, metal: { roughness: 0.42, metalness: 0.75 }, prop: { roughness: 0.8 }, glow: null };
+const KINDS = { cloth: { roughness: 0.85 }, gloss: { roughness: 0.22 }, skin: { roughness: 0.6 }, hair: { roughness: 0.7 }, metal: { roughness: 0.45, metalness: 0.5 }, prop: { roughness: 0.8 }, glow: null };
 /** A material for one kind of surface of a person; 'glow' is unlit. */
 export const surface = (kind) => (KINDS[kind] ? new THREE.MeshStandardMaterial({ vertexColors: true, ...KINDS[kind] }) : new THREE.MeshBasicMaterial({ vertexColors: true }));
 /**
@@ -153,6 +155,7 @@ export class Pose {
   }
   /** Walking: `ph` is the distance covered in strides. Sets pelvis, feet and swinging arms; `drop` lowers the hips, `lean` tips the body forward. */
   gait(ph, stride, drop = 0, lean = 0.045, width = LEGZ) {
+    if (ph === null) return this.pelvis(0.02, HIP - 0.012 - drop * 1.1, 0, lean).stand(0, -0.12 - drop, width + 0.02).stand(1, 0.14 + drop, -width - 0.02);   // not going anywhere: a braced stance
     const u = fract(ph);
     this.pelvis(0, HIP - 0.024 - drop - 0.0155 * stride * Math.cos(2 * TAU * (u - 0.04)), 0.016 * Math.sin(TAU * (u - 0.05)), lean).back(0, 0.07 * Math.cos(TAU * u));
     for (let i = 0; i < 2; i++) {

@@ -61,7 +61,11 @@ const WALK = /* glsl */`
         bend(p, n, vec2(0.0, SHO), 0.12 * (1.0 - smoothstep(SHO - 0.03, SHO + 0.05, y)));
         y = SHO;
       }
-      if (aRig.x == 3.0 && y < HIP) p.x += mix(legX(legPose(fract(u + 0.5), hipY), y), legX(legPose(u, hipY), y), smoothstep(-0.05, 0.05, p.z)) * aRig.y;   // cloth follows the leg under it
+      if (aRig.x == 3.0 && y < HIP) {   // cloth follows the leg under it; between the legs the leading one carries the front, the trailing one the back
+        float a = legX(legPose(u, hipY), y), b = legX(legPose(fract(u + 0.5), hipY), y), c = mix(b, a, smoothstep(-0.05, 0.05, p.z));
+        float ca = mix(c, a, smoothstep(-0.1, 0.03, p.z)), cb = mix(c, b, 1.0 - smoothstep(-0.03, 0.1, p.z));
+        p.x += (p.x > 0.0 ? max(c, max(ca, cb)) : min(c, min(ca, cb))) * aRig.y;
+      }
       float yaw = -0.07 * cos(TAU * u) * smoothstep(0.98, 1.38, y) * (1.0 - smoothstep(1.47, 1.56, y)), c = cos(yaw), s = sin(yaw);   // shoulders turn against the hips
       p.xz = vec2(p.x * c + p.z * s, p.z * c - p.x * s); n.xz = vec2(n.x * c + n.z * s, n.z * c - n.x * s);
       p.x += 0.045 * max(0.0, p.y - HIP); p.y += hipY - HIP; p.z += sway;
