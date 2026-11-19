@@ -63,7 +63,7 @@ export class Sound {
     const pulse = ctx.createGain(); pulse.gain.value = 0.6; bugs.disconnect(); bugs.connect(pulse); pulse.connect(this.master);
     const trem = ctx.createOscillator(); trem.frequency.value = 17; const tg = ctx.createGain(); tg.gain.value = 0.4; trem.connect(tg); tg.connect(pulse.gain); trem.start();
     // deep rumble: eruptions, the impact, machinery, megacity, the swelling Sun
-    noiseBed(brown, 'lowpass', 110, 0.7, curve([-4.54e9, -4.42e9, 1], [-4.13e9, -3.86e9, 0.6], [-252.3e6, -251.6e6, 0.8], [-203e6, -192e6, 0.8], [-66.035e6, -65.97e6, 1], [1850, 1935, 0.25], [2180, 2900, 0.3], [4.6e9, 7.6e9, 1]), 0.75, 0.25);
+    noiseBed(brown, 'lowpass', 110, 0.7, curve([-4.54e9, -4.42e9, 1], [-4.13e9, -3.86e9, 0.6], [-254e6, -251.3e6, 0.8], [-203e6, -192e6, 0.8], [-66.035e6, -65.97e6, 1], [1850, 1935, 0.25], [2180, 2900, 0.3], [4.6e9, 7.6e9, 1]), 0.75, 0.25);
     // fire roar
     noiseBed(white, 'bandpass', 900, 0.4, curve([-4.54e9, -4.43e9, 1], [-66.03e6, -65.985e6, 0.9], [6.2e9, 7.6e9, 1]), 0.22, 0.4);
     // traffic
@@ -104,7 +104,21 @@ export class Sound {
     E(curve([2190, 2900]), 0.035, (v) => this.thunder(v));
     E(curve([2965, 9400, 1], [9400, 30000, 0.2]), 0.5, (v) => this.chime(v));
     E(curve([2960, 9200]), 0.12, (v) => this.whoosh(v * 0.4, 800, 2400, 2.5));
-    E(curve([-4.54e9, -3.86e9, 0.8], [-252.3e6, -251.6e6, 0.8], [3e9, 7.6e9, 0.6], [-203e6, -196e6, 0.6], [-66.03e6, -65.99e6, 1]), 0.12, (v) => this.thunder(v));
+    E(curve([-4.54e9, -3.86e9, 0.8], [-254e6, -251.3e6, 0.8], [3e9, 7.6e9, 0.6], [-203e6, -196e6, 0.6], [-66.03e6, -65.99e6, 1]), 0.12, (v) => this.thunder(v));
+    // --- before the dinosaurs ---
+    E(curve([-4.54e9, -4.42e9]), 1.4, (v) => this.bubble(v));                                 // the magma ocean
+    E(curve([-4.54e9, -4.45e9, 1], [-4.13e9, -3.86e9, 0.8], [-254e6, -251.3e6, 0.7], [-66.03e6, -65.995e6, 0.7]), 0.13, (v) => this.boom(v));   // impacts and eruptions
+    E(curve([-4.27e9, -2.34e9, 0.7], [-2.15e9, -720e6, 0.7], [-632e6, -478e6, 1], [-470e6, -253e6, 0.35]), 0.16, (v) => this.surf(v));           // waves on a shore with nothing living on it
+    E(curve([-375e6, -255e6]), 0.2, (v) => this.croak(v));                                    // the first voices: amphibians
+    E(curve([-326e6, -294e6]), 0.22, (v) => this.buzz(v, rnd(55, 80), 1.6));                  // giant dragonflies
+    E(curve([-300e6, -252.2e6]), 0.09, (v) => this.hiss(v));
+    E(curve([-296e6, -252.2e6]), 0.045, (v) => this.roar(v * 0.55, rnd(75, 115), rnd(0.8, 1.4)));
+    // --- things in the sky ---
+    E(curve([1911, 1962]), 0.03, (v) => this.engine(v, rnd(85, 110), 7, 'sawtooth', 700));     // propeller aircraft
+    E(curve([1924, 1937, 1], [1937, 2100, 0.3], [2180, 2850, 0.8]), 0.02, (v) => this.engine(v * 0.7, rnd(48, 60), 11, 'sawtooth', 320));   // airships
+    E(curve([1958, 2110]), 0.035, (v) => this.jet(v));
+    E(curve([1950, 2110]), 0.028, (v) => this.chopper(v));
+    E(curve([2016, 2160]), 0.07, (v) => this.buzz(v * 0.5, rnd(190, 260), 2.6));              // delivery drones
   }
 
   setMuted(m) { this.muted = m; if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05); }
@@ -236,6 +250,70 @@ export class Sound {
     const t = this.ctx.currentTime, g = this.out(), dur = rnd(2, 4.5);
     g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.5, t + 0.08); g.gain.exponentialRampToValueAtTime(v * 0.12, t + dur * 0.4); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     this.noise(this.brown, t, dur, this.filter('lowpass', rnd(140, 320), 0.7, g), rnd(0.6, 1));
+  }
+  bubble(v) {
+    const t = this.ctx.currentTime + Math.random() * 0.3, g = this.out(), hz = rnd(55, 140);
+    this.env(g, t, v * rnd(0.05, 0.16), 0.02, rnd(0.12, 0.35));
+    const o = this.osc('sine', hz, t, 0.4, g); o.frequency.exponentialRampToValueAtTime(hz * rnd(1.8, 3), t + 0.18);
+    const ng = this.ctx.createGain(); ng.gain.value = 0.35; ng.connect(g); this.noise(this.brown, t, 0.3, this.filter('lowpass', 500, 1, ng));
+  }
+  boom(v) {
+    const t = this.ctx.currentTime, g = this.out(), dur = rnd(3, 6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.6, t + 0.05); g.gain.exponentialRampToValueAtTime(v * 0.15, t + dur * 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const o = this.osc('sine', rnd(46, 60), t, dur, g); o.frequency.exponentialRampToValueAtTime(24, t + dur * 0.8);
+    this.noise(this.brown, t, dur, this.filter('lowpass', rnd(70, 130), 0.8, g), 0.6);
+  }
+  surf(v) {
+    const t = this.ctx.currentTime, g = this.out(rnd(-0.6, 0.6)), dur = rnd(3.5, 6.5);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.11, t + dur * 0.3); g.gain.linearRampToValueAtTime(v * 0.05, t + dur * 0.55); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const f = this.filter('lowpass', 350, 0.7, g); f.frequency.exponentialRampToValueAtTime(rnd(1600, 2600), t + dur * 0.3); f.frequency.exponentialRampToValueAtTime(500, t + dur);
+    this.noise(this.white, t, dur, f);
+  }
+  croak(v) {
+    const t0 = this.ctx.currentTime, pan = rnd(-0.8, 0.8), hz = rnd(85, 150), n = 2 + Math.floor(Math.random() * 5), gap = rnd(0.16, 0.3);
+    for (let i = 0; i < n; i++) {
+      const t = t0 + i * gap, g = this.out(pan); this.env(g, t, v * 0.08, 0.02, gap * 0.6);
+      const f = this.filter('bandpass', hz * 5, 3, g), o = this.osc('sawtooth', hz, t, gap, f); o.frequency.linearRampToValueAtTime(hz * 0.8, t + gap * 0.6);
+      const am = this.osc('square', 34, t, gap, this.ctx.createGain()), ag = this.ctx.createGain(); ag.gain.value = hz * 0.3; am.disconnect(); am.connect(ag); ag.connect(o.frequency);   // the rattle in it
+    }
+  }
+  hiss(v) {
+    const t = this.ctx.currentTime, g = this.out(), dur = rnd(0.7, 1.6);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.06, t + dur * 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    this.noise(this.white, t, dur, this.filter('bandpass', rnd(2600, 4200), 1.2, g));
+  }
+  /** A fast wing-beat passing by: giant dragonflies at low pitch, small drones higher. */
+  buzz(v, hz, dur) {
+    const t = this.ctx.currentTime, g = this.ctx.createGain(), dir = Math.random() < 0.5 ? -1 : 1;
+    const p = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+    if (p) { p.pan.setValueAtTime(-dir, t); p.pan.linearRampToValueAtTime(dir, t + dur); g.connect(p); p.connect(this.master); } else g.connect(this.master);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.07, t + dur * 0.5); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const f = this.filter('bandpass', hz * 7, 1.5, g);
+    for (const k of [1, 1.035]) { const o = this.osc('sawtooth', hz * k * 1.06, t, dur, f); o.frequency.linearRampToValueAtTime(hz * k * 0.94, t + dur); }
+  }
+  /** A droning engine crossing the sky: propellers, or the slow motors of an airship. */
+  engine(v, hz, dur, type, lp) {
+    const t = this.ctx.currentTime, g = this.ctx.createGain(), dir = Math.random() < 0.5 ? -1 : 1;
+    const p = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+    if (p) { p.pan.setValueAtTime(-dir * 0.9, t); p.pan.linearRampToValueAtTime(dir * 0.9, t + dur); g.connect(p); p.connect(this.master); } else g.connect(this.master);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.06, t + dur * 0.45); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const f = this.filter('lowpass', lp, 1, g);
+    for (const k of [1, 1.012, 2.01]) { const o = this.osc(type, hz * k * 1.05, t, dur, f); o.frequency.linearRampToValueAtTime(hz * k * 0.93, t + dur); }   // slight Doppler fall
+  }
+  jet(v) {
+    const t = this.ctx.currentTime, g = this.ctx.createGain(), dur = rnd(9, 14), dir = Math.random() < 0.5 ? -1 : 1;
+    const p = this.ctx.createStereoPanner ? this.ctx.createStereoPanner() : null;
+    if (p) { p.pan.setValueAtTime(-dir * 0.8, t); p.pan.linearRampToValueAtTime(dir * 0.8, t + dur); g.connect(p); p.connect(this.master); } else g.connect(this.master);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.1, t + dur * 0.45); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const f = this.filter('bandpass', 900, 0.6, g); f.frequency.exponentialRampToValueAtTime(1500, t + dur * 0.4); f.frequency.exponentialRampToValueAtTime(260, t + dur);
+    this.noise(this.white, t, dur, f); this.noise(this.brown, t, dur, this.filter('lowpass', 160, 0.7, g));
+  }
+  chopper(v) {
+    const t = this.ctx.currentTime, g = this.out(rnd(-0.7, 0.7)), dur = rnd(6, 10);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v * 0.16, t + dur * 0.5); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    const chop = this.ctx.createGain(); chop.gain.value = 0.5; chop.connect(g);
+    const lfo = this.osc('square', rnd(10, 13), t, dur, this.ctx.createGain()), lg = this.ctx.createGain(); lg.gain.value = 0.5; lfo.disconnect(); lfo.connect(lg); lg.connect(chop.gain);   // blade slap
+    this.noise(this.brown, t, dur, this.filter('lowpass', 420, 1, chop)); this.osc('sawtooth', 62, t, dur, this.filter('lowpass', 300, 1, chop));
   }
   chime(v) {
     const t = this.ctx.currentTime, g = this.out(), scale = [523.3, 587.3, 659.3, 784, 880, 1046.5, 1174.7, 1318.5], hz = scale[Math.floor(Math.random() * scale.length)];
