@@ -14,8 +14,9 @@ const UP = new THREE.Vector3(0, 1, 0), _sphere = new THREE.Sphere();
 const SHADOW_REACH = 70;   // travellers this close stay drawn even when behind the camera, so their shadows do not vanish
 export class Movers {
   /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, legs?, skin?, s } */
-  constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0 } = {}) {
-    this.world = world; this.items = items; this.span = span; this.crossSpan = crossSpan || span; this.ground = ground; this.bob = bob;
+  /** opts.sidewalk: these walk on the raised sidewalks, so they only stop when the water tops the curb. */
+  constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0, sidewalk = false } = {}) {
+    this.world = world; this.items = items; this.span = span; this.crossSpan = crossSpan || span; this.ground = ground; this.bob = bob; this.floodAt = sidewalk ? LAND + 0.16 : LAND - 0.25;
     this.reach = 0; this.colors = [];
     this.meshes = parts.map(({ geo, mat, tint = true, tintKey = 'tint', cast = true }) => {
       const m = new THREE.InstancedMesh(geo, mat, items.length); m.frustumCulled = false; m.castShadow = cast; m.receiveShadow = true;
@@ -34,7 +35,7 @@ export class Movers {
     const on = !(u < this.minU || u > this.maxU);
     for (const m of this.meshes) m.visible = on;
     if (!on) return;
-    const w = this.world, first = this.meshes[0], flooded = this.ground && w.sea > LAND - 0.25;   // nothing drives or walks through a flooded street
+    const w = this.world, first = this.meshes[0], flooded = this.ground && w.sea > this.floodAt;   // nothing drives or walks through a flooded street
     let k = 0;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
