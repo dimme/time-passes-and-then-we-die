@@ -59,11 +59,17 @@ export class Player {
       this.pos.x += (-sin * f + cos * s) * speed;
       this.pos.z += (-cos * f - sin * s) * speed;
     }
-    const b = this.world.profile.bounds;
-    this.pos.x = clamp(this.pos.x, -b.x, b.x);
+    const b = this.world.profile.bounds, d = this.world.deck;
+    // a bridge deck is walkable when you come onto it from its ramp (not when you pass underneath)
+    if (this.onDeck && d && this.pos.x > d.x0 + 60) this.pos.z = clamp(this.pos.z, d.z - d.hw + 0.5, d.z + d.hw - 0.5);   // parapets
+    this.pos.x = clamp(this.pos.x, -b.x, this.onDeck && d ? d.end - 6 : b.x);
     this.pos.z = clamp(this.pos.z, -b.z, b.z);
-    if (this.collide) this.collide(this.pos);
-    const ground = Math.max(this.world.surfaceAt(this.pos.x, this.pos.z), this.world.sea - 0.9) + EYE;
+    if (this.collide && !this.onDeck) this.collide(this.pos);
+    let ground = Math.max(this.world.surfaceAt(this.pos.x, this.pos.z), this.world.sea - 0.9);
+    const dy = d ? d.yAt(this.pos.x, this.pos.z - d.z) : null;
+    this.onDeck = dy !== null && this.pos.y - EYE > dy - 1.2 && dy > ground - 0.01;
+    if (this.onDeck) ground = dy;
+    ground += EYE;
     this.pos.y += (ground - this.pos.y) * Math.min(1, dt * 8);
     if (this.fly) this.pos.y = this.fly;   // debug: hover at a fixed height
     this.camera.position.set(this.pos.x, this.pos.y, this.pos.z);

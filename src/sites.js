@@ -25,7 +25,7 @@ import rome from './site-rome.js';
 import medieval from './site-medieval.js';
 
 export const SITES = { africa, cave, crescent, sumer, egypt, greece, rome, medieval };
-const HOME = { place: 'Manhattan · New York', coords: [40.71, -74.01] };
+const HOME = { place: 'Manhattan · New York', coords: [40.71, -74.01], elevator: true };   // the far future's space elevator rises from here
 
 /** [from year, site id] in order; a stage lasts until the next one begins. */
 export const STAGES = [
@@ -59,7 +59,7 @@ export class Travel {
       player.collide = this.home.collide;
       if (this.homePos) { player.pos.x = this.homePos.x; player.pos.z = this.homePos.z; player.yaw = this.homePos.yaw; }
     } else {
-      const site = SITES[id]; this.home.group.visible = false;
+      const site = SITES[id]; this.home.group.visible = false; world.deck = null;
       world.setProfile(site.terrain);
       if (!this.built[id]) { const group = new THREE.Group(); this.scene.add(group); this.built[id] = { group, ...site.build({ world, group }) }; }
       this.active = this.built[id]; this.active.group.visible = true;

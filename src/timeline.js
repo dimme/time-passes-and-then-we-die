@@ -46,6 +46,18 @@ export function formatYear(y) {
   return { main: big(y - NOW), sub: 'years from now' };
 }
 
+// ---------- the Moon ----------
+/**
+ * Distance to the Moon in km. Tides have been pushing it away ever since it formed just outside the Earth's
+ * Roche limit about 4.5 billion years ago: quickly at first, and ever more slowly since (distance ∝ age^(2/13),
+ * the classic tidal-friction law, which agrees with ancient tidal deposits: about 97% of today's distance
+ * 620 million years ago and about 90% 2.5 billion years ago). It is still leaving.
+ */
+export function moonDistance(year) {
+  const age = year + 4.5e9;
+  return age <= 0 ? 0 : Math.max(24000, 384400 * Math.pow(age / 4.5e9, 2 / 13));
+}
+
 // ---------- eras (bands on the slider) ----------
 export const ERAS = [
   { from: START, name: 'Molten Earth', color: '#c2401c' },
@@ -185,47 +197,47 @@ export function eventAt(y) {
 const base = {
   top: 0x3f8fe0, hor: 0xbfe0f5, fogD: 0.0016, sun: 0xfff4d6, sunSize: 0.035, sunEl: 0.95, sunI: 2.2, amb: 1.0,
   ground: 0x4f7a35, water: 0x2f6f8f, sea: 0, hill: 1, ice: -60, cloud: 0.45, precip: 0, pCol: 0xffffff, pVy: -2, pSize: 0.25,
-  lava: 0x000000, glow: 0, far: 0x4a6a4a, bloom: 0.22, exposure: 1.0, grass: 0, moon: 0.034, moonHot: 0, cloudCol: 0xffffff, meteor: 0,
+  lava: 0x000000, glow: 0, far: 0x4a6a4a, bloom: 0.22, exposure: 1.0, grass: 0, moonHot: 0, cloudCol: 0xffffff, meteor: 0,
 };
 const K = (y, o) => ({ y, ...o });
 const forest = { ground: 0x3f6a2c, far: 0x35552f, grass: 1 };
 const KEYS = [
   // --- before life ---
-  K(START, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, moon: 0, meteor: 0.7 }),
-  K(-4.505e9, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, moon: 0, meteor: 0.7 }),
-  K(-4.5e9, { top: 0x601808, hor: 0xffb050, fogD: 0.006, sun: 0xffd0a0, sunI: 1.4, amb: 1.6, ground: 0x401408, far: 0x401408, lava: 0xffb040, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffd080, pVy: -14, pSize: 0.45, bloom: 1.1, glow: 0.3, moon: 0, meteor: 1 }),
-  K(-4.49e9, { top: 0x0c0504, hor: 0x9a3012, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 1.0, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff6a18, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 0.8, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.45, moon: 0.5, moonHot: 1, meteor: 0.9 }),
-  K(-4.4e9, { top: 0x2a2624, hor: 0x8a7e72, fogD: 0.011, sun: 0xffe0c0, sunI: 0.6, amb: 0.9, ground: 0x1e1a18, far: 0x1a1816, lava: 0x1a0300, sea: -7, water: 0x3a3a32, hill: 0.8, cloud: 1, precip: 1, pCol: 0x9ab0c0, pVy: -30, pSize: 0.16, moon: 0.34, moonHot: 0.45, cloudCol: 0x9a9690, meteor: 0.1 }),
-  K(-4.25e9, { top: 0x7a5236, hor: 0xd8a070, fogD: 0.004, sun: 0xffe6c8, sunI: 1.4, amb: 1.0, ground: 0x26221e, far: 0x221e1a, sea: 0, water: 0x4a5a3a, hill: 0.9, cloud: 0.6, moon: 0.22, moonHot: 0.05, cloudCol: 0xe8c8a0, meteor: 0.15 }),
-  K(-4.1e9, { top: 0x3a1a10, hor: 0xe8703a, fogD: 0.005, sun: 0xffc090, sunI: 1.1, amb: 1.0, ground: 0x241c18, far: 0x201814, lava: 0x300800, sea: -1, water: 0x5a4a30, hill: 0.9, cloud: 0.5, precip: 0.8, pCol: 0xff9a3a, pVy: -9, pSize: 0.35, bloom: 0.5, moon: 0.17, cloudCol: 0x9a6a50, meteor: 1 }),
+  K(START, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, meteor: 0.7 }),
+  K(-4.505e9, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, meteor: 0.7 }),
+  K(-4.5e9, { top: 0x601808, hor: 0xffb050, fogD: 0.006, sun: 0xffd0a0, sunI: 1.4, amb: 1.6, ground: 0x401408, far: 0x401408, lava: 0xffb040, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffd080, pVy: -14, pSize: 0.45, bloom: 1.1, glow: 0.3, meteor: 1 }),
+  K(-4.49e9, { top: 0x0c0504, hor: 0x9a3012, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 1.0, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff6a18, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 0.8, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.45, moonHot: 1, meteor: 0.9 }),
+  K(-4.4e9, { top: 0x2a2624, hor: 0x8a7e72, fogD: 0.011, sun: 0xffe0c0, sunI: 0.6, amb: 0.9, ground: 0x1e1a18, far: 0x1a1816, lava: 0x1a0300, sea: -7, water: 0x3a3a32, hill: 0.8, cloud: 1, precip: 1, pCol: 0x9ab0c0, pVy: -30, pSize: 0.16, moonHot: 0.45, cloudCol: 0x9a9690, meteor: 0.1 }),
+  K(-4.25e9, { top: 0x7a5236, hor: 0xd8a070, fogD: 0.004, sun: 0xffe6c8, sunI: 1.4, amb: 1.0, ground: 0x26221e, far: 0x221e1a, sea: 0, water: 0x4a5a3a, hill: 0.9, cloud: 0.6, moonHot: 0.05, cloudCol: 0xe8c8a0, meteor: 0.15 }),
+  K(-4.1e9, { top: 0x3a1a10, hor: 0xe8703a, fogD: 0.005, sun: 0xffc090, sunI: 1.1, amb: 1.0, ground: 0x241c18, far: 0x201814, lava: 0x300800, sea: -1, water: 0x5a4a30, hill: 0.9, cloud: 0.5, precip: 0.8, pCol: 0xff9a3a, pVy: -9, pSize: 0.35, bloom: 0.5, cloudCol: 0x9a6a50, meteor: 1 }),
   // --- microbes only ---
-  K(-3.85e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.6, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, moon: 0.13, cloudCol: 0xf4d8b4 }),
-  K(-2.5e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.7, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, moon: 0.08, cloudCol: 0xf4d8b4 }),
-  K(-2.4e9, { top: 0x5a90c8, hor: 0xe0d8c0, fogD: 0.0022, sunI: 1.8, ground: 0x5a3a2c, far: 0x503428, water: 0x7a4a30, cloud: 0.4, moon: 0.075 }),
-  K(-2.33e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.07 }),
-  K(-2.18e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.07 }),
-  K(-2.1e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4, moon: 0.065 }),
-  K(-1.2e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4, moon: 0.06 }),
-  K(-1.1e9, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, sunI: 2.0, ground: 0x7a746c, far: 0x6a6660, hill: 6, cloud: 0.6, moon: 0.055 }),
-  K(-900e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x726a60, far: 0x625a52, hill: 3, cloud: 0.45, moon: 0.05 }),
-  K(-730e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x6a5a4c, far: 0x5a4e42, hill: 1.2, cloud: 0.45, moon: 0.048 }),
-  K(-716e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.048 }),
-  K(-640e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.046 }),
-  K(-632e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.0, ground: 0x625a4e, far: 0x565044, water: 0x2f7a8a, cloud: 0.5, moon: 0.046 }),
+  K(-3.85e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.6, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, cloudCol: 0xf4d8b4 }),
+  K(-2.5e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.7, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, cloudCol: 0xf4d8b4 }),
+  K(-2.4e9, { top: 0x5a90c8, hor: 0xe0d8c0, fogD: 0.0022, sunI: 1.8, ground: 0x5a3a2c, far: 0x503428, water: 0x7a4a30, cloud: 0.4 }),
+  K(-2.33e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6 }),
+  K(-2.18e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6 }),
+  K(-2.1e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4 }),
+  K(-1.2e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4 }),
+  K(-1.1e9, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, sunI: 2.0, ground: 0x7a746c, far: 0x6a6660, hill: 6, cloud: 0.6 }),
+  K(-900e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x726a60, far: 0x625a52, hill: 3, cloud: 0.45 }),
+  K(-730e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x6a5a4c, far: 0x5a4e42, hill: 1.2, cloud: 0.45 }),
+  K(-716e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6 }),
+  K(-640e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6 }),
+  K(-632e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.0, ground: 0x625a4e, far: 0x565044, water: 0x2f7a8a, cloud: 0.5 }),
   // --- animals in the sea, then plants and animals on land ---
-  K(-545e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.1, ground: 0x7a6e58, far: 0x6a604c, water: 0x2f7a8a, hill: 0.8, cloud: 0.5, moon: 0.044 }),
-  K(-539e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4, moon: 0.044 }),
-  K(-478e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4, moon: 0.042 }),
-  K(-470e6, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, ground: 0x6a665c, far: 0x5c5850, hill: 5, cloud: 0.6, moon: 0.042 }),
-  K(-440e6, { top: 0x4a8ed4, hor: 0xd4e2e4, ground: 0x687050, far: 0x586044, hill: 3.5, cloud: 0.5, grass: 0.05, moon: 0.04 }),
-  K(-420e6, { top: 0x4a94dc, hor: 0xd8e8e4, ground: 0x5f7046, far: 0x50603c, hill: 2.5, cloud: 0.5, grass: 0.3, moon: 0.04 }),
-  K(-385e6, { top: 0x4498dc, hor: 0xd8ecd8, fogD: 0.0022, ground: 0x4a7038, far: 0x3e5e30, water: 0x3a7a70, hill: 2, cloud: 0.5, grass: 0.85, moon: 0.038 }),
-  K(-320e6, { top: 0x4a98d4, hor: 0xd0e8c8, fogD: 0.004, ground: 0x33562a, far: 0x2c4a26, water: 0x3a5a3a, sea: 1.6, hill: 1.1, cloud: 0.7, grass: 1, moon: 0.037 }),
-  K(-302e6, { top: 0x4a98d4, hor: 0xd8e8c8, fogD: 0.003, ground: 0x4f6a34, far: 0x44582e, water: 0x3a6a5a, hill: 2.4, cloud: 0.55, grass: 0.7, moon: 0.037 }),
-  K(-285e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 2.6, cloud: 0.15, grass: 0.2, moon: 0.036 }),
-  K(-252.3e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 2.4, cloud: 0.15, grass: 0.2, moon: 0.036 }),
-  K(-252.2e6, { top: 0x3a2a22, hor: 0xc86a3a, fogD: 0.007, sun: 0xff9a5a, sunI: 0.8, amb: 0.7, ground: 0x4a3a2e, far: 0x2a2220, water: 0x5a5040, sea: -6, hill: 2.4, cloud: 1, precip: 0.6, pCol: 0x55504a, pVy: -1, pSize: 0.3, moon: 0.036, cloudCol: 0x5a4a40 }),
-  K(-251.8e6, { top: 0x4a3a30, hor: 0xd08a50, fogD: 0.005, sun: 0xffb070, sunI: 1.2, amb: 0.8, ground: 0x5a4a38, far: 0x3a302a, water: 0x5a5040, sea: -6, hill: 2.3, cloud: 0.8, precip: 0.3, pCol: 0x55504a, pVy: -1, pSize: 0.3, moon: 0.036, cloudCol: 0x7a6858 }),
+  K(-545e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.1, ground: 0x7a6e58, far: 0x6a604c, water: 0x2f7a8a, hill: 0.8, cloud: 0.5 }),
+  K(-539e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4 }),
+  K(-478e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4 }),
+  K(-470e6, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, ground: 0x6a665c, far: 0x5c5850, hill: 5, cloud: 0.6 }),
+  K(-440e6, { top: 0x4a8ed4, hor: 0xd4e2e4, ground: 0x687050, far: 0x586044, hill: 3.5, cloud: 0.5, grass: 0.05 }),
+  K(-420e6, { top: 0x4a94dc, hor: 0xd8e8e4, ground: 0x5f7046, far: 0x50603c, hill: 2.5, cloud: 0.5, grass: 0.3 }),
+  K(-385e6, { top: 0x4498dc, hor: 0xd8ecd8, fogD: 0.0022, ground: 0x4a7038, far: 0x3e5e30, water: 0x3a7a70, hill: 2, cloud: 0.5, grass: 0.85 }),
+  K(-320e6, { top: 0x4a98d4, hor: 0xd0e8c8, fogD: 0.004, ground: 0x33562a, far: 0x2c4a26, water: 0x3a5a3a, sea: 1.6, hill: 1.1, cloud: 0.7, grass: 1 }),
+  K(-302e6, { top: 0x4a98d4, hor: 0xd8e8c8, fogD: 0.003, ground: 0x4f6a34, far: 0x44582e, water: 0x3a6a5a, hill: 2.4, cloud: 0.55, grass: 0.7 }),
+  K(-285e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 2.6, cloud: 0.15, grass: 0.2 }),
+  K(-252.3e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 2.4, cloud: 0.15, grass: 0.2 }),
+  K(-252.2e6, { top: 0x3a2a22, hor: 0xc86a3a, fogD: 0.007, sun: 0xff9a5a, sunI: 0.8, amb: 0.7, ground: 0x4a3a2e, far: 0x2a2220, water: 0x5a5040, sea: -6, hill: 2.4, cloud: 1, precip: 0.6, pCol: 0x55504a, pVy: -1, pSize: 0.3, cloudCol: 0x5a4a40 }),
+  K(-251.8e6, { top: 0x4a3a30, hor: 0xd08a50, fogD: 0.005, sun: 0xffb070, sunI: 1.2, amb: 0.8, ground: 0x5a4a38, far: 0x3a302a, water: 0x5a5040, sea: -6, hill: 2.3, cloud: 0.8, precip: 0.3, pCol: 0x55504a, pVy: -1, pSize: 0.3, cloudCol: 0x7a6858 }),
   K(-246e6, { top: 0x5aa0d8, hor: 0xf2d8a8, fogD: 0.002, sunI: 2.5, ground: 0x9a7e4a, far: 0x8a7042, water: 0x4a7a70, sea: -3, hill: 1.8, cloud: 0.2, grass: 0.15 }),
   // --- the age of dinosaurs ---
   K(-235e6, { grass: 0.7, top: 0x4f9fd8, hor: 0xf2ddb0, fogD: 0.002, ground: 0x7d7a3e, far: 0x6a6a3a, water: 0x3f7f7a, cloud: 0.3 }),
@@ -283,7 +295,7 @@ const KEYS = [
 ].map((k) => ({ ...base, ...k, u: yearToU(k.y) }));
 
 const COLOR_FIELDS = ['top', 'hor', 'sun', 'ground', 'water', 'pCol', 'lava', 'far', 'cloudCol'];
-const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow', 'bloom', 'exposure', 'grass', 'moon', 'moonHot', 'meteor'];
+const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow', 'bloom', 'exposure', 'grass', 'moonHot', 'meteor'];
 const rgb = (h) => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255];
 for (const k of KEYS) for (const f of COLOR_FIELDS) k[f] = rgb(k[f]);
 
@@ -295,6 +307,8 @@ export function envAt(u, out = {}) {
   let t = (u - a.u) / Math.max(1e-9, b.u - a.u);
   t = Math.max(0, Math.min(1, t));
   for (const f of NUM_FIELDS) out[f] = a[f] + (b[f] - a[f]) * t;
+  // how large the Moon looks follows from how far away it was (0.034 is today's size as drawn)
+  const md = moonDistance(uToYear(u)); out.moon = md ? Math.min(0.5, (0.034 * 384400) / md) : 0;
   for (const f of COLOR_FIELDS) {
     const o = out[f] || (out[f] = [0, 0, 0]);
     for (let j = 0; j < 3; j++) o[j] = a[f][j] + (b[f][j] - a[f][j]) * t;

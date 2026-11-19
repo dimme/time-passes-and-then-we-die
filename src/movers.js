@@ -16,7 +16,7 @@ const SHADOW_REACH = 70;   // travellers this close stay drawn even when behind 
 export class Movers {
   /** items: { lane, alt, off, v (signed), axis 'z'|'x', u0, u1, tint, legs?, skin?, s } */
   /** opts.sidewalk: these walk on the raised sidewalks, so they only stop when the water tops the curb. */
-  constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0, sidewalk = false } = {}) {
+  constructor(world, parts, items, { span = 480, crossSpan = 0, ground = true, bob = 0, sidewalk = false, foot } = {}) {
     this.world = world; this.items = items; this.span = span; this.crossSpan = crossSpan || span; this.ground = ground; this.bob = bob; this.floodAt = sidewalk ? LAND + 0.16 : LAND - 0.25;
     this.reach = 0; this.colors = [];
     this.meshes = parts.map(({ geo, mat, tint = true, tintKey = 'tint', cast = true }) => {
@@ -28,6 +28,7 @@ export class Movers {
       return m;
     });
     this.reach *= Math.max(1, ...items.map((i) => i.s || 1));
+    this.foot = foot === undefined ? this.reach < 2.6 : foot;   // people on foot take the bridge's boardwalk, wheels its roadway
     for (let k = 1; k < this.meshes.length; k++) this.meshes[k].instanceMatrix = this.meshes[0].instanceMatrix;
     this.minU = Math.min(...items.map((i) => i.u0)); this.maxU = Math.max(...items.map((i) => i.u1));
   }
@@ -43,13 +44,19 @@ export class Movers {
       x = it.axis === 'z' ? it.lane : along; z = it.axis === 'z' ? along : it.lane;
       o.yaw = it.axis === 'z' ? (it.v > 0 ? -H : H) : (it.v > 0 ? 0 : Math.PI); o.run = along;
     } else {
-      const span = this.crossSpan, L = span * 2, q = (((it.off + Math.abs(it.v) * t) % (2 * L)) + 2 * L) % (2 * L), out = q < L;
-      const s = Math.sign(it.v) || 1, pos = (out ? q - span : 3 * span - q) * s, dir = (out ? 1 : -1) * s;
+      // back and forth between the two ends of the street; the street with the bridge on it carries on over the river
+      const street = Math.round(it.lane / 60) * 60, deck = this.ground && w.deck && w.deck.z === street ? w.deck : null;
+      const lo = -this.crossSpan, hi = deck ? deck.end - 8 : this.crossSpan, L = hi - lo;
+      const q = (((it.off + Math.abs(it.v) * t + (it.v < 0 ? L : 0)) % (2 * L)) + 2 * L) % (2 * L), out = q < L, pos = out ? lo + q : hi - (q - L), dir = out ? 1 : -1;
       // swing across the street and round through 180° over the last few metres
-      const street = Math.round(it.lane / 60) * 60, side = (it.lane - street) * (out ? 1 : -1), e = Math.min(1, (span - Math.abs(pos)) / TURN), nearEnd = Math.sign(pos) === dir;
+      let side = (it.lane - street) * dir;
+      if (deck && pos > deck.x0 - 14) side = Math.sign(side || 1) * (Math.abs(side) + ((this.foot ? deck.walk : deck.road) - Math.abs(side)) * Math.min(1, (pos - deck.x0 + 14) / 14));
+      const e = Math.min(1, Math.min(pos - lo, hi - pos) / TURN), nearEnd = dir > 0 ? hi - pos < pos - lo : pos - lo < hi - pos;
       x = pos; z = street + side * e;
       o.yaw = (dir > 0 ? 0 : Math.PI) + (1 - e) * H * (nearEnd ? 1 : -1) * Math.sign(side || 1) * -dir;
       o.run = q;
+      const dy = deck ? deck.yAt(x, z - street) : null;
+      if (dy !== null) { o.x = x; o.z = z; o.y = Math.max(dy, w.heightAt(x, z)) + it.alt; if (this.bob) o.y += Math.abs(Math.cos(o.run * 2.6)) * this.bob; return o; }
     }
     o.x = x; o.z = z; o.y = this.ground ? Math.max(w.heightAt(x, z), w.sea - 0.15) + it.alt : it.alt;
     if (this.bob) o.y += Math.abs(Math.cos(o.run * 2.6)) * this.bob;

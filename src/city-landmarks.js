@@ -118,6 +118,21 @@ export function oneWTC(r) {
  * Brooklyn Bridge, 1883, lying along +x from the Manhattan approach (x ≈ 112) across the East River to Brooklyn; y is height above the sea.
  * Granite towers with paired Gothic arches, four main cables, vertical suspenders crossed by diagonal stays, a promenade down the middle.
  */
+/**
+ * The bridge's deck as something to stand and drive on (the numbers match bridge() below). x is world x, z is measured
+ * from the bridge's centre line. The roadway climbs from the street at x0, runs level over the river and comes down in
+ * Brooklyn at `end`; pedestrians cross on the raised boardwalk down the middle.
+ */
+export const BRIDGE_DECK = {
+  x0: 112, end: 742, hw: 6, road: 3.9, walk: 0.85,
+  yAt(x, z) {
+    if (x < 112 || x > 742 || Math.abs(z) > 6) return null;
+    const y = x < 212 ? 3.5 + (20.4 * (x - 112)) / 100 : x > 638 ? 4.6 + (19.3 * (742 - x)) / 104 : 24;
+    if (Math.abs(z) > 1.7 || x < 222 || x > 628) return y;
+    return y + 1.63 * Math.min(1, (x - 222) / 8, (628 - x) / 8);   // the boardwalk, ramped at each end
+  },
+};
+
 export function bridge(r) {
   const k = new Kit(r), G = facadeOf('granite'), gt = [0.96, 0.93, 0.9], iron = 0x4c4842, DY = 24, TOP = 59, T0 = 330, T1 = 520, A0 = 222, A1 = 628, HW = 6;
   const ext = (shape, depth) => new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 5 });

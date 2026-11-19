@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { smooth } from './util.js';
 import { canvasTex } from './textures.js';
+import { moonDistance } from './timeline.js';
 
 export const LIFT = 0.07;          // zoom below this is still the ground view, rising
 const AU = 149600, R_EARTH = 6.371, D0 = R_EARTH * 1.16, DMAX = 46 * AU;
@@ -32,6 +33,7 @@ function landMask() {
   const t = canvasTex(c, false); t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping; return t;
 }
 /** Unit vector for a latitude / longitude in the globe's own frame (matches the shader). */
+const UP = new THREE.Vector3(0, 1, 0);
 const onGlobe = (lat, lon) => { const p = (lat * Math.PI) / 180, l = (lon * Math.PI) / 180; return new THREE.Vector3(Math.cos(p) * Math.cos(l), Math.sin(p), -Math.cos(p) * Math.sin(l)); };
 
 const NOISE = `
@@ -114,6 +116,13 @@ export class Space {
     const mg = new THREE.BufferGeometry(); mg.setAttribute('position', new THREE.Float32BufferAttribute(mo, 3));
     this.moonOrbit = new THREE.Line(mg, new THREE.LineBasicMaterial({ color: 0x8890a0, transparent: true, opacity: 0.5 })); this.moonOrbit.frustumCulled = false; scene.add(this.moonOrbit);
 
+    // the space elevator of the far future: a tether from the ground out past geostationary orbit, with a station on it
+    const tether = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 6).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0xcfefff }));
+    tether.scale.y = 8.6; tether.position.y = 1;                                            // from the surface to 61,000 km up, in Earth radii
+    const station = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); station.position.y = 6.62;   // geostationary
+    const weight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 6), new THREE.MeshBasicMaterial({ color: 0xbfe8ff })); weight.position.y = 9.6;
+    this.elevator = new THREE.Group(); this.elevator.add(tether, station, weight); this.station = station; this.earth.mesh.add(this.elevator);
+
     // rubble: the asteroid belt always, and a disc of debris while the planets are still forming
     const cloud = (n, r0, r1, thick, color, size) => {
       const a = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const an = Math.random() * 6.283, r = (r0 + Math.random() * (r1 - r0)) * AU; a.set([Math.cos(an) * r, (Math.random() - 0.5) * thick * AU, Math.sin(an) * r], i * 3); }
@@ -125,7 +134,7 @@ export class Space {
 
     // name tags
     this.labels = new Map();
-    for (const n of ['Sun', 'Moon', 'place', ...PLANETS.map((p) => p[0])]) { const el = document.createElement('div'); el.className = 'tag'; el.textContent = n; labelRoot.appendChild(el); this.labels.set(n, el); }
+    for (const n of ['Sun', 'Moon', 'place', 'lift', ...PLANETS.map((p) => p[0])]) { const el = document.createElement('div'); el.className = 'tag'; el.textContent = n; labelRoot.appendChild(el); this.labels.set(n, el); }
     this.caption = document.createElement('div'); this.caption.className = 'scale'; labelRoot.appendChild(this.caption);
     this._v = new THREE.Vector3(); this._q = new THREE.Quaternion(); this._t = new THREE.Vector3();
   }
@@ -162,16 +171,20 @@ export class Space {
     const toSun = v.copy(E).multiplyScalar(-1).normalize().clone();
     const facing = toSun.clone().multiplyScalar(0.78).add(new THREE.Vector3(0, 0.5, 0)).add(new THREE.Vector3(-toSun.z, 0, toSun.x).multiplyScalar(0.38)).normalize();
     this.earth.mesh.quaternion.setFromUnitVectors(u.site.value, facing);
+    this.elevator.visible = site.elevator && year >= 2990 && year < 9600;
+    if (this.elevator.visible) this.elevator.quaternion.setFromUnitVectors(UP, u.site.value);
     u.sunDir.value.copy(toSun);
 
     // the Moon was far closer when it was new (env.moon is its apparent size from the ground)
-    const hasMoon = env.moon > 0.002, moonD = hasMoon ? 384.4 * (0.034 / env.moon) : 1;
+    const moonKm = moonDistance(year), hasMoon = moonKm > 0, moonD = hasMoon ? moonKm / 1000 : 1;
     this.moon.position.set(E.x + Math.cos(time * 0.05 + 1) * moonD, moonD * 0.09 * Math.sin(time * 0.05 + 1), E.z + Math.sin(time * 0.05 + 1) * moonD);
     this.moon.material.emissive.setRGB(env.moonHot * 0.9, env.moonHot * 0.25, env.moonHot * 0.04);
     this.moonOrbit.position.copy(E); this.moonOrbit.scale.setScalar(moonD);
 
     // camera: straight above the place, tilting towards a view from above the planets as it pulls away
-    const tilt = smooth((k - 0.3) / 0.3), dir = facing.clone().lerp(new THREE.Vector3(0.2, 0.86, 0.47), tilt).normalize();
+    // (a little off to one side from the start, so that anything rising from the ground is seen in profile)
+    const lean = smooth((k - 0.03) / 0.1) * 0.5, sideways = new THREE.Vector3(-facing.z, 0, facing.x).normalize();
+    const tilt = smooth((k - 0.3) / 0.3), dir = facing.clone().addScaledVector(sideways, lean).normalize().lerp(new THREE.Vector3(0.2, 0.86, 0.47), tilt).normalize();
     const target = this._t.copy(E).multiplyScalar(1 - smooth((k - 0.62) / 0.2));
     cam.position.copy(target).addScaledVector(dir, d); cam.up.set(0, 1, 0); cam.lookAt(target);
     cam.aspect = aspect; cam.near = Math.max(0.05, d * 0.01); cam.far = 6e8; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
@@ -194,9 +207,10 @@ export class Space {
       el.style.left = ((v.x * 0.5 + 0.5) * w).toFixed(1) + 'px'; el.style.top = ((-v.y * 0.5 + 0.5) * h).toFixed(1) + 'px'; if (text) el.textContent = text;
     };
     tag('Sun', this.sun.position, d > 0.2 * AU);
-    tag('Moon', this.moon.position, this.moon.visible && d > 40);
+    tag('Moon', this.moon.position, this.moon.visible && d > 40, `Moon · ${(Math.round(moonKm / 1000) * 1000).toLocaleString('en-US')} km`);
     for (const b of this.bodies) tag(b.name, b.mesh.position, b.mesh.visible && (b.name === 'Earth' ? d > 90 : d > 0.25 * AU * Math.min(b.au, 6)) && (b.au > 2 || d < 9 * AU));
     tag('place', E.clone().addScaledVector(facing, R_EARTH * 1.01), d < 90, site.place);
+    tag('lift', this.station.getWorldPosition(v.clone()), this.elevator.visible && d > 25 && d < 3000, 'Space elevator');
     this.caption.textContent = d < 60 ? 'The Earth' : d < 0.03 * AU ? (hasMoon ? 'The Earth and the Moon' : 'The Earth, before the Moon') : d < 3 * AU ? 'The inner planets' : 'The solar system';
   }
 }

@@ -11,7 +11,7 @@ import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.j
 import { Scatter } from './flora.js';
 import { Kit, M, NEON, setNight, conform } from './city-kit.js';
 import { TYPES } from './city-types.js';
-import { empireState, chrysler, twinTower, oneWTC, bridge } from './city-landmarks.js';
+import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js';
 import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js';
 
 export { TYPES };
@@ -164,6 +164,7 @@ export function buildCity(world, scene) {
   addProp(palisade(r, liftAt(0, -66)), 0, -66, 1653, 1699);
   // Brooklyn Bridge
   addProp(bridge(r), 0, -120, 1883, 6000, false);
+  const deck = { ...BRIDGE_DECK, z: -120, yAt: BRIDGE_DECK.yAt }, uBridge = [Y(1883), Y(6000)];
   // megacity holograms
   const SIGN_SPOTS = [[0, 90], [50, 60], [0, -150], [-50, -60], [100, 30], [150, 0], [-100, -30], [-50, 120]];
   const slogans = ['TIME IS\nRUNNING', 'MEMORIES\n50% OFF', 'RAIN AGAIN\nTOMORROW', 'LIVE\nFOREVER*', 'NEW NEW\nYORK', 'BREATHE™', 'SKY: SOLD', 'YOU ARE\nHERE'];
@@ -197,6 +198,7 @@ export function buildCity(world, scene) {
   let lastV = -1, lastU = -9, built = 0, stamp = 0, last = 0, wait = [];
   return {
     update(u, t) {
+      world.deck = u >= uBridge[0] && u < uBridge[1] ? deck : null;   // while it stands, the bridge can be walked and driven over
       const moved = world.shapeVersion !== lastV, now = performance.now(), frame = now - last; lastV = world.shapeVersion; last = now;
       if (u !== lastU || moved) {
         lastU = u; stamp++; wait = [];
