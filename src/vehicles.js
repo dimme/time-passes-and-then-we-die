@@ -1,10 +1,11 @@
-// Vehicles: carts, cars, pods, flying traffic and ships.
+// Vehicles: carts, cars, pods, flying traffic, ships and (from vehicles-air.js) aircraft.
 import { yearToU } from './timeline.js';
 import { species } from './animals.js';
 import { Movers, traffic, CROSS_SPAN } from './movers.js';
 import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js';
 import { carParts } from './vehicles-cars.js';
 import { shipParts } from './vehicles-ships.js';
+import { buildAircraft } from './vehicles-air.js';
 
 export { carParts, shipParts };
 
@@ -141,6 +142,7 @@ export function buildVehicles(world, scene, r) {
     mk(shipParts('steam'), river(6, 1838, 1960, 6), shipOpts),
     mk(shipParts('cargo'), river(5, 1955, 2150, 5), shipOpts),
   ];
+  movers.push(...buildAircraft(world, scene));
 
   return { movers, fleets };
 }
