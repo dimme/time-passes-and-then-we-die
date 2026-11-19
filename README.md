@@ -67,7 +67,8 @@ same span at true scale, where all of human existence is a fraction of a pixel.
 - `src/world.js` — sky shader, terrain, rivers, ice sheet, weather particles.
 - `src/flora*.js` — trees with real branch structure, conifers, ancient plants, shrubs, rocks and ground cover,
   instanced and each with its own lifespan.
-- `src/animals*.js` — skinned, anatomically proportioned animals with jointed legs and a walking gait.
+- `src/animals*.js` — skinned, anatomically proportioned animals with jointed legs and a walking gait, from
+  trilobites, giant dragonflies and Dimetrodon through dinosaurs and mammoths to deer and gulls.
 - `src/people.js` — pedestrians with period clothing and an animated walk.
 - `src/vehicles*.js` — carts, cars by decade, pods, flying traffic and ships.
 - `src/city*.js` — every building lot has a generated history (Dutch house → brick house →
