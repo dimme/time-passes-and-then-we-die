@@ -9,9 +9,9 @@ import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles
 const PI = Math.PI, RAD = PI / 180;
 const A = {
   // balloons
-  silk: fin(0xe6d9b0, 0.85), gore: fin(0xffffff, 0.85, 0, 0, 1), rope: fin(0x4a3c28, 0.9), wicker: fin(0x9a7440, 0.9), wickerD: fin(0x5e4422, 0.9), sand: fin(0xb8a67c, 0.95), coat: fin(0x2c2a30, 0.9), skin: fin(0xc89a78, 0.8),
+  silk: fin(0xe6d9b0, 0.85), silk2: fin(0xdccd9e, 0.85), gore: fin(0xffffff, 0.85, 0, 0, 1), rope: fin(0x4a3c28, 0.9), wicker: fin(0x9a7440, 0.9), wickerD: fin(0x5e4422, 0.9), sand: fin(0xb8a67c, 0.95), coat: fin(0x2c2a30, 0.9), skin: fin(0xc89a78, 0.8),
   // airships
-  dope: fin(0xc2c6c8, 0.45, 0.35), dope2: fin(0xb4b9bc, 0.48, 0.35), ring: fin(0x9da3a6, 0.5, 0.3), keel: fin(0x8e9497, 0.55, 0.3), envelope: fin(0xdcdfe0, 0.55, 0.1), stripe: fin(0xffffff, 0.5, 0.1, 0, 1), batten: fin(0x70767a, 0.5, 0.4),
+  dope: fin(0xc2c6c8, 0.45, 0.35), dope2: fin(0xb4b9bc, 0.48, 0.35), ring: fin(0x9da3a6, 0.5, 0.3), keel: fin(0x8e9497, 0.55, 0.3), envelope: fin(0xdcdfe0, 0.55, 0.1), stripe: fin(0xffffff, 0.5, 0.1, 0, 1),
   // aeroplanes
   paint: fin(0xffffff, 0.35, 0.3, 0, 1), white: fin(0xf2f3f4, 0.32, 0.15), grey: fin(0xb2b7bc, 0.4, 0.3), alu: fin(0xc9cdd0, 0.26, 0.85), aluD: fin(0xa9aeb2, 0.3, 0.85), chrome: fin(0xe6eaee, 0.12, 1),
   yellow: fin(0xdcae28, 0.6), wood: fin(0x7a5a36, 0.7), steel: fin(0x55585c, 0.45, 0.7), iron: fin(0x2a2b2e, 0.5, 0.6), black: fin(0x121316, 0.6), rubber: fin(0x151516, 0.9), glass: fin(0x1c2a36, 0.06, 1), leather: fin(0x3a2616, 0.7),
@@ -132,9 +132,9 @@ const veilMat = (haze) => (mats['v' + haze] ||= thin(new THREE.MeshBasicMaterial
 // Gas balloon, 19th century: varnished silk under a rope net, wicker car
 // =====================================================================================
 function balloon(bag) {
-  const R = 7, yc = 16.6, N = 16, up = at(0, 0, 0, 0, 0, PI / 2), on = (t, k, q = R + 0.04) => { const a = (k / N) * PI * 2, s = Math.sin(t * RAD) * q; return [s * Math.cos(a), yc + Math.cos(t * RAD) * q, s * Math.sin(a)]; };
+  const R = 7, yc = 14.6, N = 16, up = at(0, 0, 0, 0, 0, PI / 2), on = (t, k, q = R + 0.04) => { const a = (k / N) * PI * 2, s = Math.sin(t * RAD) * q; return [s * Math.cos(a), yc + Math.cos(t * RAD) * q, s * Math.sin(a)]; };
   const neck = yc - R * Math.SQRT2 + 0.5, prof = [[neck - 0.5, 0.42], [neck - 0.1, 0.46], [neck, 0.5], ...range(135, 0, 12).map((t) => [yc + R * Math.cos(t * RAD), R * Math.sin(t * RAD)])];
-  revolve(bag, prof, (i, j) => (i < 2 ? A.silk : (j >> 1) % 2 ? A.gore : A.silk), up, N * 2);
+  revolve(bag, prof, (i, j) => (i > 5 && i < 9 ? A.gore : i > 13 ? A.gore : (j >> 1) % 2 ? A.silk : A.silk2), up, N * 2);   // a painted band round the equator and a painted crown
   revolve(bag, [[yc + R - 0.02, 0.9], [yc + R + 0.05, 0.8], [yc + R + 0.08, 0]], A.wood, up, 12);   // valve
   // net: meridian cords, girdles, then crow's feet down to the load ring
   const hoop = (k) => { const a = (k / N) * PI * 2; return [0.95 * Math.cos(a), neck - 1.6, 0.95 * Math.sin(a)]; };
@@ -151,7 +151,7 @@ function balloon(bag) {
   for (const [x, z, h] of [[0.3, 0.15, 0], [-0.35, -0.2, -0.06]]) {
     bag.ball(A.coat, x, 1.42 + h, z, 0.19, 0.36, 0.15); bag.ball(A.skin, x, 1.9 + h, z, 0.1, 0.115, 0.1); bag.cyl(A.black, 0.085, 0.09, 0.13, x, 2.04 + h, z, 8); bag.cyl(A.black, 0.15, 0.15, 0.02, x, 1.99 + h, z, 8);
   }
-  bag.rod(A.rope, [0.7, 1.05, -0.5], [1.1, -11, -0.8], 0.02, 3); bag.rod(A.iron, [1.1, -11, -0.8], [1.1, -11.5, -0.8], 0.04, 4);   // trail rope and grapnel
+  bag.rod(A.rope, [0.7, 1.05, -0.5], [0.95, -6, -0.7], 0.02, 3); bag.rod(A.iron, [0.95, -6, -0.7], [0.95, -6.5, -0.7], 0.04, 4);   // trail rope and grapnel
 }
 
 // =====================================================================================
@@ -161,12 +161,12 @@ function zeppelin(bag, veil) {
   const R = 15.25, SEG = 28;
   const r = curve([[-118, 0.02], [-108.6, 0.2], [-94.4, 0.4], [-70.8, 0.66], [-47.2, 0.85], [-23.6, 0.96], [0, 1], [42.5, 1], [59, 0.97], [75.5, 0.88], [89.7, 0.74], [101.5, 0.56], [110.9, 0.36], [115.6, 0.2], [118, 0]].map(([x, k]) => [x, k * R]));
   const frames = range(-105, 105, 14), xs = sorted([-118, -116, -112, ...frames.flatMap((x) => [x - 0.35, x + 0.35]), ...frames.slice(1).map((x) => x - 7.5), 109, 112.5, 115, 116.8, 117.7, 118]);
-  revolve(bag, xs.map((x) => [x, r(x)]), (i, j) => { const x = (xs[i] + xs[i + 1]) / 2; return x > 114.5 ? A.batten : xs[i + 1] - xs[i] < 1 ? A.ring : j === 13 || j === 14 ? A.keel : j % 2 ? A.dope : A.dope2; }, null, SEG, { crease: 0.985 });
+  revolve(bag, xs.map((x) => [x, r(x)]), (i, j) => { const x = (xs[i] + xs[i + 1]) / 2; return x > 114.5 ? A.keel : xs[i + 1] - xs[i] < 1 ? A.ring : j === 13 || j === 14 ? A.keel : j % 2 ? A.dope : A.dope2; }, null, SEG, { crease: 0.985 });
   bag.rod(A.steel, [117.5, 0, 0], [119.6, 0, 0], 0.25, 6, 0.08);
   // fins with their rudders and elevators
   for (const [cy, cz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     foil(bag, [[3, -60, 50, 3.4], [9.5, -73, 37.5, 2.6], [14, -85, 26, 1.7], [16.6, -95, 15.5, 0.9]].map(([q, x, c, th]) => [x, cy * q, cz * q, c, th]), (i, j) => (j === 5 || j === 6 ? A.ring : A.dope), { camber: 0 });
-    foil(bag, [[4.2, -111, 5.6, 0.8], [11, -111, 5.2, 0.7], [15.8, -111, 3.6, 0.5]].map(([q, x, c, th]) => [x, cy * q, cz * q, c, th]), A.dope2, { camber: 0 });
+    foil(bag, [[4.2, -110.3, 6.2, 0.8], [11, -110.6, 5.6, 0.7], [15.8, -110.4, 4, 0.5]].map(([q, x, c, th]) => [x, cy * q, cz * q, c, th]), A.dope2, { camber: 0 });
   }
   bag.ball(A.keel, -96, -r(-96) - 1.2, 0, 2.2, 1.3, 0.7);   // bumper under the lower fin
   // control car and passenger cabin, let into the hull forward
@@ -190,9 +190,9 @@ function blimp(bag, veil) {
   const R = 7, SEG = 32;
   const r = curve([[-29, 0], [-27.2, 0.17], [-23.1, 0.4], [-17.3, 0.63], [-8.5, 0.87], [0.25, 0.98], [6.1, 1], [12, 0.96], [17.8, 0.85], [22.5, 0.68], [26, 0.48], [28.3, 0.25], [29.5, 0]].map(([x, k]) => [x, k * R]));
   const xs = sorted([-29, -28.6, ...range(-28, 28, 28), -15, 19, 27.6, 28.9, 29.3, 29.5]);
-  revolve(bag, xs.map((x) => [x, r(x)]), (i, j) => { const x = (xs[i] + xs[i + 1]) / 2; return x > 27.6 ? (j % 2 ? A.batten : A.ring) : x > -15 && x < 19 && (j + 1) % 16 > 7 && (j + 1) % 16 < 10 ? A.stripe : A.envelope; }, null, SEG);
+  revolve(bag, xs.map((x) => [x, r(x)]), (i, j) => { const x = (xs[i] + xs[i + 1]) / 2; return x > 27.6 ? (j % 2 ? A.ring : A.dope2) : x > -15 && x < 19 && (j + 1) % 16 > 7 && (j + 1) % 16 < 10 ? A.stripe : A.envelope; }, null, SEG);
   bag.rod(A.steel, [29.2, 0, 0], [30.6, 0, 0], 0.16, 6, 0.05);
-  for (const s of [1, -1]) bag.rod(A.rope, [26.4, -r(26.4) * 0.8, s * r(26.4) * 0.55], [25.6, -13, s * 2.6], 0.03, 3);   // handling lines
+  for (const s of [1, -1]) bag.rod(A.rope, [26.4, -r(26.4) * 0.8, s * r(26.4) * 0.55], [26, -10.5, s * 3.2], 0.03, 3);   // handling lines
   for (const [cy, cz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     foil(bag, [[1.5, -13.5, 11.5, 0.8], [4.6, -16, 9.8, 0.6], [9.2, -20.2, 6.2, 0.36]].map(([q, x, c, th]) => [x, cy * q, cz * q, c, th]), (i, j) => (j === 0 || j === 11 ? A.stripe : A.envelope), { camber: 0 });
     for (const x of [-17.5, -22]) for (const s of [1, -1]) bag.rod(A.rope, [x, cy * 7.2 + cz * s * 0.1, cz * 7.2 + cy * s * 0.1], [x + 1, cy * r(x) * 0.9 + cz * s * 2.2, cz * r(x) * 0.9 + cy * s * 2.2], 0.02, 3);
@@ -290,7 +290,7 @@ function jet(bag, veil, kind, trail) {
     w: k([[x0, 0.1], [x0 + 0.4 * T, 0.5], [x0 + 0.75 * T, 0.88], [c0, 1], [c1, 1], [x1 - 0.7 * N, 0.9], [x1 - 0.42 * N, 0.68], [x1 - 0.18 * N, 0.42], [x1 - 0.05 * N, 0.2], [x1, 0.02]]),
   }, (x, s) => {
     if (s === 5 && x > xa && x < xb) return null;
-    if (x > x1 - 0.6 * N && x < x1 - 0.36 * N && (s === 6 || s === 7)) return A.glass;
+    if (x > x1 - 0.6 * N && x < x1 - 0.36 * N && s > 5 && s < 9) return A.glass;
     if (x > x1 - 0.1 * N) return four ? A.black : A.grey;
     if (four) return s >= 4 && s <= 6 && x < x1 - 0.36 * N ? A.paint : s > 6 ? A.white : A.alu;
     return x < x0 + 0.7 * T ? A.paint : s < 2 ? A.grey : A.white;
@@ -422,7 +422,7 @@ function glider(bag) {
 const BUILD = { balloon, zeppelin, blimp, biplane, propliner, jet4: (b, v, t) => jet(b, v, 'four', t), jet: (b, v, t) => jet(b, v, 'twin', t), helicopter, drone, adship, glider };
 export const AIR_KINDS = Object.keys(BUILD);
 /** Instanced parts for one kind of aircraft. haze: how much of the scene's fog it takes; trail: jets draw a contrail. */
-export function airParts(kind, { haze = 0.1, trail = false, cast = false } = {}) {
+export function airParts(kind, { haze = 0.05, trail = false, cast = false } = {}) {
   const bag = new Bag(), veil = new Veil();
   BUILD[kind](bag, veil, trail);
   const parts = [{ geo: bag.geo(), mat: solidMat(haze), cast }];
@@ -481,16 +481,16 @@ export function buildAircraft(world, scene) {
     const hdg = where === 'free' ? r() * PI * 2 : ns ? dir * PI / 2 : dir > 0 ? 0 : PI;
     const cx = where === 'free' ? (r() - 0.5) * 900 : where === 'river' ? (r() < 0.5 ? 1 : -1) * (310 + r() * 250) : ns ? Math.round(r() * 4 - 2) * 100 + (r() - 0.5) * 9 : 0;
     const cz = where === 'free' ? (r() - 0.5) * 1100 : where === 'street' && !ns ? Math.round(r() * 14 - 7) * 60 + (r() - 0.5) * 5 : 0;
-    return { cx, cz, hdg, alt: lerp(alt[0], alt[1], r()), off: r() * span * 2, v: lerp(v[0], v[1], r()), u0: Y(from + i * step), u1: Y(to + r() * 3), tint: pal ? lin(pal[Math.floor(r() * pal.length)]) : [1, 1, 1],
+    return { cx, cz, hdg, alt: lerp(alt[0], alt[1], (i + r()) / n), off: r() * span * 2, v: lerp(v[0], v[1], r()), u0: Y(from + i * step), u1: Y(to + r() * 3), tint: pal ? lin(pal[Math.floor(r() * pal.length)]) : [1, 1, 1],
       w: 0.1 + r() * 0.08, ph: r() * 7, bank, pitch, sway, bob, s };
   });
   const mk = (kind, items, span, opts) => { const m = new Flight(world, airParts(kind, opts), items, { span, ground: false }); out.push(m); scene.add(...m.meshes); };
   const add = (kind, n, from, to, o, opts) => mk(kind, fly(n, from, to, o), o.span, opts);
 
   add('balloon', 3, 1830, 1910, { alt: [180, 380], v: [2, 4.5], span: 1100, step: 12, pal: PAL.balloon, sway: 0.03, bob: 1.5 });
-  add('zeppelin', 2, 1924, 1937, { alt: [470, 560], v: [13, 18], span: 2400, step: 4 });
+  add('zeppelin', 2, 1924, 1937, { alt: [490, 580], v: [13, 18], span: 2400, step: 4 });
   add('blimp', 1, 1925, 2100, { where: 'river', alt: [240, 330], v: [8, 11], span: 1800, pal: PAL.blimp, sway: 0.015, bob: 2 });
-  add('blimp', 1, 1958, 2100, { alt: [480, 560], v: [9, 12], span: 2000, pal: PAL.blimp, sway: 0.015, bob: 2 });
+  add('blimp', 1, 1958, 2100, { alt: [560, 620], v: [9, 12], span: 2000, pal: PAL.blimp, sway: 0.015, bob: 2 });
   add('biplane', 2, 1911, 1940, { where: 'river', alt: [110, 240], v: [30, 38], span: 1700, step: 6, pal: PAL.biplane, bank: 0.1, bob: 2 });
   add('biplane', 2, 1919, 1940, { alt: [460, 600], v: [32, 40], span: 2000, step: 5, pal: PAL.biplane, bank: 0.22, bob: 2 });
   add('propliner', 3, 1934, 1962, { alt: [520, 800], v: [55, 68], span: 2600, step: 4, pal: PAL.liner, bank: 0.12 });
@@ -500,9 +500,9 @@ export function buildAircraft(world, scene) {
   add('jet4', 2, 1959, 1990, { alt: [1700, 2300], v: [55, 62], span: 5000, step: 4, pal: PAL.liner }, { haze: 0.02, trail: true });
   add('jet', 3, 1972, 2110, { alt: [1700, 2400], v: [55, 62], span: 5000, step: 12, pal: PAL.liner }, { haze: 0.02, trail: true });
   add('helicopter', 3, 1950, 2110, { where: 'river', alt: [110, 260], v: [26, 38], span: 1500, step: 8, pal: PAL.heli, bank: 0.06, pitch: -0.07, bob: 1.5 });
-  add('helicopter', 1, 1965, 2110, { alt: [480, 560], v: [30, 40], span: 1800, pal: PAL.heli, bank: 0.12, pitch: -0.07, bob: 1.5 });
+  add('helicopter', 1, 1965, 2110, { alt: [560, 620], v: [30, 40], span: 1800, pal: PAL.heli, bank: 0.12, pitch: -0.07, bob: 1.5 });
   add('drone', 16, 2016, 2160, { where: 'street', alt: [20, 80], v: [8, 14], span: 520, step: 3, pal: [0xf0b020, 0xf2f2f2, 0x9a7440, 0x2a6ad0], pitch: -0.12, sway: 0.03, bob: 0.4 }, { cast: true });
-  add('adship', 3, 2180, 2850, { where: 'river', alt: [190, 420], v: [5, 8], span: 1700, step: 12, pal: PAL.neon, bob: 3 }, { haze: 0.2 });
-  add('glider', 2, 2970, 9400, { alt: [620, 820], v: [16, 22], span: 3400, step: 30, bank: 0.03 }, { haze: 0.04 });
+  add('adship', 3, 2180, 2850, { where: 'river', alt: [190, 420], v: [5, 8], span: 1700, step: 12, pal: PAL.neon, bob: 3 }, { haze: 0.1 });
+  add('glider', 2, 2970, 9400, { alt: [620, 820], v: [16, 22], span: 3400, step: 30, bank: 0.03 }, { haze: 0.03 });
   return out;
 }
