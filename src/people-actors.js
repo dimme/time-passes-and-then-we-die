@@ -46,25 +46,30 @@ const PLAIN = [STREET, DARK, 'all', 7];
 // =====================================================================================
 // Geometry for one group: everybody with the same outfit and the same things in hand
 // =====================================================================================
-const GROUND = 9;
-const groupGeo = {};
+const GROUND = 9, TINTS = ['tint', 'legs', 'skin', 'hair', 'glow'], ROW = POSE_SIZE + TINTS.length * 4;
+const groupGeo = {}, bodies = {};
+/** Say which of the actor's tints a geometry's tinted vertices take (aRig.z: 1 = their own colour, 0 = tint, 2… = the rest of TINTS). */
+function tinted(g, key) { const rig = g.attributes.aRig, n = TINTS.indexOf(key); for (let i = 0; i < rig.count; i++) if (rig.getZ(i) < 0.5) rig.setZ(i, n && n + 1); return g; }
+/** Cloth, skin and hair of an outfit as one geometry, so a group's bodies are one draw call. */
+const bodyOf = (outfit, g) => bodies[outfit] || (bodies[outfit] = join([g.gloss ? null : g.top, g.bottom, g.skin, g.hair].map((p, i) => p && tinted(p.clone(), TINTS[i])).filter(Boolean)));
 /** Set every vertex's limb and side, keeping its `fixed` flag. */
 function attach(g, limb, side) { const rig = g.attributes.aRig; for (let i = 0; i < rig.count; i++) rig.setXY(i, limb, side); return g; }
 /** Mirror a geometry to the other side of the body. */
 function mirrored(g) { g.scale(1, 1, -1); const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i]; ix[i] = ix[i + 1]; ix[i + 1] = t; } return g; }
-/** The outfit's parts plus the props, as [{ geo, kind, tint, ground }]; `tool` says whether a hand is holding something. */
+/** The outfit plus the props, as [{ geo, kind, ground }]; `tool` says whether a hand is holding something. */
 function groupParts(outfit, prop, left) {
   const key = outfit + '|' + prop + '|' + left; if (groupGeo[key]) return groupGeo[key];
-  const g = personOf(outfit), s = left ? -1 : 1, held = { prop: [], glow: g.glow ? [g.glow] : [] }, ground = { prop: [], glow: [] }; let tool = false;
+  const g = personOf(outfit), s = left ? -1 : 1, held = { prop: [], glow: g.glow ? [tinted(g.glow.clone(), 'glow')] : [] }, ground = { prop: [], glow: [] }; let tool = false;
   for (const name of prop.split('+')) for (const [where, geo, kind = 'prop'] of PROP[name] ? PROP[name](s) : []) {
+    tinted(geo, 'glow');
     if (where === 'tool') { held[kind].push(attach(geo.translate(PALM[0], PALM[1], s * (g.armZ + PALM[2])), HELD, s * g.armZ)); tool = true; }
     else if (where === 'off') held[kind].push(attach((s > 0 ? mirrored(geo) : geo).translate(PALM[0], PALM[1], -s * (g.armZ + PALM[2])), GRIP, -s * g.armZ));
     else if (where === 'ground') ground[kind].push(attach(geo, GROUND, 0));
     else held[kind].push(attach(geo, where === 'head' ? CROWN : CHEST, 0));
   }
   const all = (list) => (list.length ? join(list) : null);
-  const parts = [{ geo: g.top, kind: g.gloss ? 'gloss' : 'cloth', tint: 'tint' }, { geo: g.bottom, kind: 'cloth', tint: 'legs' }, { geo: g.skin, kind: 'skin', tint: 'skin' }, { geo: g.hair, kind: 'hair', tint: 'hair' }, { geo: g.metal, kind: 'metal' },
-    { geo: all(held.prop), kind: 'prop' }, { geo: all(held.glow), kind: 'glow', tint: 'glow' }, { geo: all(ground.prop), kind: 'prop', ground: true }, { geo: all(ground.glow), kind: 'glow', ground: true }].filter((p) => p.geo);
+  const parts = [{ geo: bodyOf(outfit, g), kind: 'body' }, { geo: g.gloss && g.top, kind: 'gloss' }, { geo: g.metal, kind: 'metal' },
+    { geo: all(held.prop), kind: 'prop' }, { geo: all(held.glow), kind: 'glow' }, { geo: all(ground.prop), kind: 'prop', ground: true }, { geo: all(ground.glow), kind: 'glow', ground: true }].filter((p) => p.geo);
   return (groupGeo[key] = { parts, tool, armZ: g.armZ, stride: g.stride, f: g.f });
 }
 
@@ -72,6 +77,7 @@ function groupParts(outfit, prop, left) {
 // actors()
 // =====================================================================================
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _v = new THREE.Vector3(), _c = new THREE.Color(), _sphere = new THREE.Sphere();
+const WHITE = [1, 1, 1];
 const UP = new THREE.Vector3(0, 1, 0), HIPV = new THREE.Vector3(0, HIP, 0), P = new Pose(), _at = [0, 0], _a = [0, 0], _b = [0, 0];
 const SHADOW_REACH = 70;   // as for Movers: actors this close stay drawn behind the camera so their shadows do not vanish
 /** A point `d` metres along a path, going there and back unless it is a loop. */
@@ -111,12 +117,10 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
   }
   const groups = [...byKey.values()], meshes = [];
   for (const G of groups) {
-    const n = G.items.length, pose = G.pose = new THREE.DataTexture(new Float32Array(n * POSE_SIZE), POSE_SIZE / 4, n, THREE.RGBAFormat, THREE.FloatType), byKind = {};
-    G.meshes = []; G.colors = [];
+    const n = G.items.length, pose = G.pose = new THREE.DataTexture(new Float32Array(n * ROW), ROW / 4, n, THREE.RGBAFormat, THREE.FloatType), byKind = {};   // a row per actor: its pose, then its tints
+    G.meshes = [];
     for (const part of G.parts) {
       const mat = byKind[part.kind] || (byKind[part.kind] = rigMat(part.kind, pose)), m = new THREE.InstancedMesh(part.geo, mat, n); m.frustumCulled = false; m.castShadow = cast && part.kind !== 'glow'; m.receiveShadow = true; m.customDepthMaterial = mat.userData.depth; m.userData.ground = !!part.ground;
-      G.items.forEach((it, i) => m.setColorAt(i, _c.setRGB(...(part.tint ? it[part.tint] : [1, 1, 1]))));
-      G.colors.push(m.instanceColor.array.slice());
       const first = G.meshes.find((o) => o.userData.ground === m.userData.ground); if (first) m.instanceMatrix = first.instanceMatrix;   // the body's parts share one matrix buffer, things on the ground another
       G.meshes.push(m); meshes.push(m);
     }
@@ -143,15 +147,16 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
           const dx = x - view.eye.x, dz = z - view.eye.z;
           if (dx * dx + dz * dz > SHADOW_REACH * SHADOW_REACH && !view.frustum.intersectsSphere(_sphere)) continue;
         }
-        P.rest(); a.act.pose(P, t + a.phase * 20, w); P.solve(G.pose.image.data, k * POSE_SIZE, G.armZ, a.act.left ? 1 : 0);
+        const data = G.pose.image.data, row = k * ROW;
+        P.rest(); a.act.pose(P, t + a.phase * 20, w); P.solve(data, row, G.armZ, a.act.left ? 1 : 0);
+        for (let j = 0; j < TINTS.length; j++) data.set(a[TINTS[j]] || WHITE, row + POSE_SIZE + j * 4);
         _q.setFromAxisAngle(UP, rot); _s.setScalar(a.s);
         if (G.floor) G.floor.setMatrixAt(k, _m.compose(_p.set(x, y, z), _q, _s));
         _p.copy(P.hip).sub(_v.copy(HIPV).applyQuaternion(P.root)).multiplyScalar(a.s).applyQuaternion(_q); _p.x += x; _p.y += y; _p.z += z;
         G.body.setMatrixAt(k, _m.compose(_p, _q.multiply(P.root), _s));
-        for (let m = 0; m < G.meshes.length; m++) { const arr = G.meshes[m].instanceColor.array, c = G.colors[m]; arr[k * 3] = c[i * 3]; arr[k * 3 + 1] = c[i * 3 + 1]; arr[k * 3 + 2] = c[i * 3 + 2]; }
         k++;
       }
-      for (const m of G.meshes) { m.count = k; m.visible = k > 0; if (k) m.instanceColor.needsUpdate = true; }
+      for (const m of G.meshes) { m.count = k; m.visible = k > 0; }
       if (k) { G.pose.needsUpdate = true; G.body.instanceMatrix.needsUpdate = true; if (G.floor) G.floor.instanceMatrix.needsUpdate = true; }
     }
   }

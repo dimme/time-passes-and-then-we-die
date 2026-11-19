@@ -7,11 +7,11 @@ const V = THREE.Vector3, Q = THREE.Quaternion;
 export const WAIST = new V(-0.02, 1.06, 0), PALM = [0.012, 0.795, 0.033], LEGZ = 0.089;
 const UPPER = SHOULDER - ELBOW, FORE = ELBOW - PALM[1], THIGH = HIP - KNEE, SHIN = KNEE - ANKLE, HIPV = new V(0, HIP, 0);
 const X = new V(1, 0, 0), Y = new V(0, 1, 0), Z = new V(0, 0, 1);
-/** Floats per actor sent to the shader: seven texels. */
+/** Floats of pose per actor sent to the shader: seven texels. */
 export const POSE_SIZE = 28;
 
 // =====================================================================================
-// Vertex shader: joint rotations arrive in a float texture, one row of seven texels per actor
+// Vertex shader: joint rotations and tints arrive in a float texture, one row of texels per actor
 // =====================================================================================
 // texel 0 = spine (quaternion xyz), head nod | 1, 2 = right, left shoulder (xyz), elbow | 3, 4 = right, left hip (xyz), knee
 // 5 = right ankle, left ankle, head turn, right toes | 6 = the held thing against its forearm (xyz), left toes
@@ -36,6 +36,8 @@ const RIG = /* glsl */`
     bend(p, n, vec2(0.0, KNEE), -kn);
     turn(p, n, vec3(0.0, HIP, side * ${LEGZ}), quat(L.xyz, 1.0 - smoothstep(HIP - 0.06, HIP + 0.06, y)));
   }
+  // aRig.z says how a vertex is coloured: 1 = as painted, otherwise by one of the actor's tints (texels 7…)
+  vec3 tintOf(float slot) { return abs(slot - 1.0) < 0.5 ? vec3(1.0) : texelFetch(uPose, ivec2(7 + int(max(0.0, slot - 1.0) + 0.5), gl_InstanceID), 0).rgb; }
   vec3 rig(vec3 p, inout vec3 n) {
     #ifdef USE_INSTANCING
       float limb = aRig.x, y = p.y, chest = 0.0, crown = 0.0;
@@ -74,19 +76,19 @@ const RIG = /* glsl */`
     return p;
   }
 `;
-const KINDS = { cloth: { roughness: 0.85 }, gloss: { roughness: 0.22 }, skin: { roughness: 0.6 }, hair: { roughness: 0.7 }, metal: { roughness: 0.45, metalness: 0.5 }, prop: { roughness: 0.8 }, glow: null };
+const KINDS = { body: { roughness: 0.78 }, cloth: { roughness: 0.85 }, gloss: { roughness: 0.22 }, skin: { roughness: 0.6 }, hair: { roughness: 0.7 }, metal: { roughness: 0.45, metalness: 0.5 }, prop: { roughness: 0.8 }, glow: null };
 /** A material for one kind of surface of a person; 'glow' is unlit. */
 export const surface = (kind) => (KINDS[kind] ? new THREE.MeshStandardMaterial({ vertexColors: true, ...KINDS[kind] }) : new THREE.MeshBasicMaterial({ vertexColors: true }));
 /**
  * A material for one group of actors, whose poses are the rows of the texture `pose` (they all compile to the same few programs).
- * `fixed` vertices keep their own colour under the instance tint. userData.depth is its shadow twin.
+ * userData.depth is its shadow twin.
  */
 export function rigMat(kind, pose) {
   const m = surface(kind), uPose = { value: pose };
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uPose = uPose;
     sh.vertexShader = RIG + sh.vertexShader
-      .replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_INSTANCING_COLOR\n if (aRig.z > 0.5) vColor.xyz = color.xyz;\n#endif')
+      .replace('#include <color_vertex>', '#include <color_vertex>\n#ifdef USE_INSTANCING\n vColor.xyz *= tintOf(aRig.z);\n#endif')
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n vec3 rigged = rig(position, objectNormal);')
       .replace('#include <begin_vertex>', KINDS[kind] ? 'vec3 transformed = rigged;' : 'vec3 up = vec3(0.0, 1.0, 0.0); vec3 transformed = rig(position, up);');
   };
