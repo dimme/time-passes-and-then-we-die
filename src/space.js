@@ -204,13 +204,13 @@ export class Space {
     u.lights.value = smooth((year - 1880) / 120) * (1 - smooth((year - 9000) / 3000));
     const superC = Math.max(smooth((year + 340e6) / 40e6) * (1 - smooth((year + 200e6) / 60e6)), smooth((year + 1.2e9) / 1e8) * (1 - smooth((year + 800e6) / 1e8)), smooth((year - 150e6) / 1e8) * (1 - smooth((year - 500e6) / 2e8)));
     u.clump.value = superC; u.landFrac.value = year < -4.3e9 ? 1 : year < -2.5e9 ? 0.12 : 0.3; u.seed.value = Math.floor((year + 4.6e9) / 250e6) * 1.37;
-    let [lat, lon] = site.coords;
-    if (site.elevator !== undefined && year < 0) {   // Manhattan rides its plate: follow it back through time
+    let [lat, lon] = site.paleo || site.coords || HOME_PATH[0];
+    if (site.home ? year < 0 : !site.coords && year < 0) {   // Manhattan rides its plate: follow it back through time
       const f = Math.min(HOME_PATH.length - 1, pf), i = Math.min(HOME_PATH.length - 2, Math.floor(f)), t = f - i, a = HOME_PATH[i], b = HOME_PATH[i + 1];
       let dl = b[1] - a[1]; if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
       lat = a[0] + (b[0] - a[0]) * t; lon = a[1] + dl * t;
     }
-    u.site.value.copy(onGlobe(lat, lon)); u.marker.value = 1 - smooth((k - 0.2) / 0.12);
+    u.site.value.copy(onGlobe(lat, lon)); u.marker.value = site.coords ? 1 - smooth((k - 0.2) / 0.12) : 0;   // no marker where no one can say where the place was
 
     // turn the globe so the place on screen is in daylight, facing the camera's starting point
     const toSun = v.copy(E).multiplyScalar(-1).normalize().clone();
@@ -254,7 +254,7 @@ export class Space {
     tag('Sun', this.sun.position, d > 0.2 * AU);
     tag('Moon', this.moon.position, this.moon.visible && d > 40, `Moon · ${(Math.round(moonKm / 1000) * 1000).toLocaleString('en-US')} km`);
     for (const b of this.bodies) tag(b.name, b.mesh.position, b.mesh.visible && (b.name === 'Earth' ? d > 90 : d > 0.25 * AU * Math.min(b.au, 6)) && (b.au > 2 || d < 9 * AU));
-    tag('place', E.clone().addScaledVector(facing, R_EARTH * 1.01), d < 90, site.place);
+    tag('place', E.clone().addScaledVector(facing, R_EARTH * 1.01), d < 90 && !!site.coords, site.place);
     tag('lift', this.station.getWorldPosition(v.clone()), this.elevator.visible && d > 25 && d < 3000, 'Space elevator');
     this.caption.textContent = d < 60 ? 'The Earth' : d < 0.03 * AU ? (hasMoon ? 'The Earth and the Moon' : 'The Earth, before the Moon') : d < 3 * AU ? 'The inner planets' : 'The solar system';
   }
