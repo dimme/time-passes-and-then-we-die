@@ -127,7 +127,7 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
     G.body = G.meshes.find((m) => !m.userData.ground); G.floor = G.meshes.find((m) => m.userData.ground);
     G.minU = Math.min(...G.items.map((i) => i.u0)); G.maxU = Math.max(...G.items.map((i) => i.u1));
   }
-  const groundAt = (x, z, afloat) => { const h = world && world.heightAt ? world.heightAt(x, z) : 0; return afloat && world.sea > h ? world.sea : h; };
+  const groundAt = (x, z, afloat) => { const h = world && world.heightAt ? world.heightAt(x, z) : 0; return afloat && world && world.sea > h ? world.sea : h; };
 
   function update(u, t, view) {
     for (const G of groups) {

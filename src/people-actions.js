@@ -118,7 +118,7 @@ const A = {
 
   // ---- water ----
   row: { prop: 'oar', seat: 0.3, pose: (P, c, w) => {
-    const a = wave(c * 0.4), y = w.seat, x = 0.6 - 0.45 * a, h = y + 0.5 + 0.1 * a;
+    const a = wave(c * 0.4), y = w.seat, x = 0.6 - 0.45 * a, h = y + 0.42 + 0.1 * a;
     P.pelvis(0, y + 0.1, 0, 0.5 - 0.75 * a).back(0.1).stand(0, 0.55, 0.12).stand(1, 0.55, -0.12).face(-0.2 + 0.3 * a).grip(0, x, h, 0.17, 0.2 - x, y + 0.36 - h, 0.6, -0.32, 0, 1, 0);
   } },
   paddle: { prop: 'paddle', seat: 0.2, pose: (P, c, w) => {
