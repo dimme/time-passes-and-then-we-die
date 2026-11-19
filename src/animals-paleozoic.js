@@ -69,7 +69,7 @@ function digits(b, f, A, sd, { n = 5, len, r, fan = 1.1, yaw = 0.35, claw = 0, r
 
 /**
  * A sprawling four-legged animal from side-view profiles (metres, snout towards +x, x = 0 midway between the shoulder and the hip).
- * trunk = one loft from the tail tip to the back of the skull, head / jaw = lofts on the head and jaw bones; y = height of the backbone;
+ * trunk = one loft from the tail tip to the back of the skull; head = the skull as [x, top, tooth row, halfWidth], jaw = [x, top, bottom, halfWidth]; y = height of the backbone;
  * tailJ / neckJ = joint runs ending at the tail tip / the head joint; fore / hind = sprawlLimb specs for the right side;
  * bend = how far each girdle turns (radians), hinge = the jaw joint.
  */
@@ -80,10 +80,13 @@ function sprawler(s) {
   const tail = b.run('tail', 'pelvis', s.tailJ), neck = b.run('neck', 'chest', s.neckJ), hj = s.neckJ[s.neckJ.length - 1];
   b.bone('head', neck[neck.length - 1], hj[0], hj[1], 0, [...s.nose, 0]);
   const spine = b.path([...tail.slice().reverse(), 'pelvis', 'lum', 'body', 'tho', 'chest', ...neck, 'head'], 0.5);
-  b.skin(loft(s.trunk, { segs: 18, tile: T, capA: 0.5 }), spine);
-  b.skin(loft(s.head, { segs: 16, tile: T, capA: 0.6, capB: 0.6 }), 'head');
+  const e = s.trunk[s.trunk.length - 1], tuck = [e[0] + (s.nose[0] - e[0]) * 0.3, e[1] + (s.nose[1] - e[1]) * 0.3, 0, e[3] * 0.5, e[4] * 0.5, e[5] * 0.5];   // the neck ends inside the skull
+  b.skin(loft([...s.trunk, tuck], { segs: 18, tile: T, capA: 0.5 }), spine);
+  // the skull is a dome over the tooth row and the jaw a trough under it, so that the lips meet along the whole side of the mouth
+  const dome = (p) => { const e = (p[1] - p[2]) * 0.12; return [p[0], p[2] + e, 0, p[1] - p[2] - e, e, p[3]]; }, trough = (p) => { const e = (p[1] - p[2]) * 0.15; return [p[0], p[1] - e, 0, e, p[1] - p[2] - e, p[3]]; };
+  b.skin(loft(s.head.map(dome), { segs: 16, tile: T, capA: 0.3, capB: 0.6 }), 'head');
   b.bone('jaw', 'head', s.hinge[0], s.hinge[1]); b.jaw = b.ix.jaw; b.gape = s.gape || 0.35;
-  b.skin(loft(s.jaw, { segs: 12, tile: T, capA: 0.6, capB: 0.6 }), 'jaw');
+  b.skin(loft(s.jaw.map(trough), { segs: 12, tile: T, capA: 0.6, capB: 0.6 }), 'jaw');
   // a walking trot: each forefoot lands just after the opposite hind foot, and the trunk bends into a C towards the pair that is reaching
   const pf = s.fore.phase = 0, ph = s.hind.phase = 0.58, bend = s.bend ?? 0.16, cf = { kg: 1, kph: 0, phase: TAU * pf + Math.PI / 2 }, ch = { kg: 1, kph: 0, phase: TAU * ph + Math.PI / 2 };
   b.sway('tho', 'y', bend / 2, cf).sway('chest', 'y', bend / 2, cf).sway('lum', 'y', bend / 2, ch).sway('pelvis', 'y', bend / 2, ch);
@@ -106,7 +109,7 @@ function sprawler(s) {
 
 /**
  * A sail: skin stretched over a row of neural spines, each [x, y at the back, x, y at the tip], from tail to neck. `th` = thickness of a spine at its
- * base, `dip` = how far the skin sags between two tips, `bars` = little crossbars along each spine (Edaphosaurus).
+ * base, `dip` = how far the skin sags between two tips, `bars` = how far little crossbars stand out along each spine (Edaphosaurus).
  */
 function sail(spines, th, dip, tile, bars = 0, rows = 5, sub = 4) {
   const cols = (spines.length - 1) * sub + 1, pos = [], uv = [], idx = [];
@@ -116,7 +119,7 @@ function sail(spines, th, dip, tile, bars = 0, rows = 5, sub = 4) {
       const i = Math.min(spines.length - 2, Math.floor(c / sub)), f = c / sub - i, A = spines[i], Bq = spines[i + 1], ridge = (0.5 + 0.5 * Math.cos(TAU * f)) ** 3, edge = c === 0 || c === cols - 1 ? 0 : 1;
       const x0 = A[0] + (Bq[0] - A[0]) * f, y0 = A[1] + (Bq[1] - A[1]) * f, x1 = A[2] + (Bq[2] - A[2]) * f, y1 = A[3] + (Bq[3] - A[3]) * f, top = 1 - dip * Math.sin(Math.PI * f) ** 2;
       for (let r = 0; r <= rows; r++) {
-        const v = (r / rows) * top, bar = bars ? 1 + bars * ridge * Math.max(0, Math.sin(v * 38)) ** 4 : 1;
+        const v = (r / rows) * top, bar = 1 + bars * (r % 2);
         pos.push(x0 + (x1 - x0) * v, y0 + (y1 - y0) * v, sd * edge * th * (0.22 + 0.78 * ridge * bar) * (1 - 0.75 * (r / rows)) * (r === rows ? 0.15 : 1)); uv.push(x0 / tile, (y0 + (y1 - y0) * v) / tile);
       }
     }
@@ -155,7 +158,7 @@ function crawlLeg(b, name, parent, sd, pts, r, ph, { swing = 0.3, lift = 0.25, s
  * A millipede or one of its giant kin: N body rings between a head and a tail plate, L long, W = half-width, H = thickness, y0 = clearance.
  * flat = rings drawn out sideways into plates (Arthropleura) instead of round; per = leg pairs under each ring.
  */
-function myriapod({ L, N, W, H, y0, flat, per, rl, tile, tex, color, coat, speedLegs = 11 }) {
+function myriapod({ L, N, W, H, y0, flat, per, rl, tile, tex, color, coat }) {
   const b = new Rig(), seg = L / (N + 2), U = (x) => (L / 2 - x) / seg, taper = (u) => Math.min(1, 0.72 + 0.1 * (u - 1), 0.5 + 0.1 * (N + 1 - u));
   const half = (x) => { const u = U(x), m = u - Math.floor(u); return u < 1 ? W * 0.62 * Math.sqrt(1 - (1 - u) ** 2 * 0.96) : u > N + 1 ? W * taper(N + 1) * Math.sqrt(Math.max(0.02, 1 - (u - N - 1) ** 2)) : W * taper(u) * (flat ? 0.8 + 0.2 * Math.sin(Math.PI * m) ** 0.6 : 1); };
   const height = (x, v) => {
@@ -172,7 +175,7 @@ function myriapod({ L, N, W, H, y0, flat, per, rl, tile, tex, color, coat, speed
   b.wing(shell(xs, both(flat ? [-1, -0.85, -0.66, -0.48, -0.38, -0.25, -0.12] : [-1, -0.92, -0.75, -0.5, -0.25]), half, height, tile), spine);
   let i = 0;
   for (let j = 0; j < N; j++) for (let q = 0; q < per; q++, i++) {
-    const x = L / 2 - seg * (j + 1 + (q + 0.5) / per), hw = W * taper(j + 1.5), ph = i * (TAU / speedLegs);
+    const x = L / 2 - seg * (j + 1 + (q + 0.5) / per), hw = W * taper(j + 1.5), ph = i * (TAU / 11);   // eleven legs to a wave
     for (const sd of [1, -1]) crawlLeg(b, 'l' + i + (sd > 0 ? 'r' : 'l'), boneAt(x), sd, flat ? [[x, y0 + H * 0.1, sd * hw * 0.22], [x, y0 + H * 0.12, sd * hw * 0.66], [x, y0 * 0.4, sd * hw * 0.92], [x - seg * 0.1, 0, sd * hw * 1.02]]
       : [[x, y0 + H * 0.15, sd * hw * 0.3], [x, y0 + H * 0.3, sd * hw * 1.1], [x - seg * 0.1, 0, sd * hw * 1.5]], rl, ph, { swing: 0.3, lift: flat ? 0.1 : 0.2, segs: flat ? 4 : 3 });
   }
@@ -202,7 +205,7 @@ function insectWing(len, chord) {
 /** The membrane of an insect wing: clear, with a stiff leading edge, long veins fanning back from the root and a net of cross-veins between them. */
 function veinTex() {
   const c = document.createElement('canvas'), W = c.width = 512, Hh = c.height = 128, g = c.getContext('2d'), r = rng(31);
-  g.fillStyle = 'rgba(150,140,105,0.16)'; g.fillRect(0, 0, W, Hh);
+  g.fillStyle = 'rgba(165,155,115,0.42)'; g.fillRect(0, 0, W, Hh);
   g.strokeStyle = 'rgba(50,36,20,0.55)'; g.lineWidth = 1;
   for (let x = 4; x < W; x += 7) for (let y = 0; y < Hh; y += 13) { const o = r() * 6; g.beginPath(); g.moveTo(x + o, y + r() * 4); g.lineTo(x + o + (r() - 0.5) * 4, y + 13 + r() * 4); g.stroke(); }
   g.strokeStyle = 'rgba(45,30,16,0.95)';
@@ -221,17 +224,17 @@ export function paleozoic(M) {
     const trunk = [[-1.9, 0.13, 0, 0.012], [-1.6, 0.17, 0, 0.03, 0.03, 0.022], [-1.3, 0.23, 0, 0.055, 0.055, 0.04], [-1.0, 0.3, 0, 0.085, 0.085, 0.065], [-0.75, 0.36, 0, 0.12, 0.13, 0.1], [-0.5, 0.4, 0, 0.17, 0.2, 0.16],
       [-0.25, 0.41, 0, 0.2, 0.27, 0.21], [0, 0.41, 0, 0.21, 0.3, 0.23], [0.25, 0.41, 0, 0.21, 0.3, 0.23], [0.47, 0.42, 0, 0.2, 0.27, 0.2], [0.62, 0.45, 0, 0.16, 0.19, 0.14], [0.75, 0.48, 0, 0.13, 0.14, 0.105], [0.86, 0.5, 0, 0.12, 0.12, 0.09]];
     // a tall, narrow skull: convex snout, the eye high and far back, a step in the upper jaw behind the front teeth
-    const skull = [[0.84, 0.52, 0, 0.11, 0.08, 0.085], [0.94, 0.53, 0, 0.13, 0.085, 0.09], [1.06, 0.525, 0, 0.125, 0.08, 0.072], [1.18, 0.505, 0, 0.105, 0.07, 0.058], [1.27, 0.48, 0, 0.075, 0.055, 0.046]];
-    const jaw = [[0.86, 0.415, 0, 0.045, 0.06, 0.08], [1.0, 0.41, 0, 0.045, 0.055, 0.07], [1.15, 0.405, 0, 0.04, 0.05, 0.052], [1.26, 0.4, 0, 0.03, 0.04, 0.038]];
+    const skull = [[0.84, 0.63, 0.445, 0.085], [0.94, 0.66, 0.445, 0.09], [1.06, 0.655, 0.445, 0.072], [1.18, 0.625, 0.44, 0.058], [1.27, 0.58, 0.435, 0.048]];
+    const jaw = [[0.86, 0.455, 0.35, 0.08], [1.0, 0.455, 0.352, 0.07], [1.15, 0.452, 0.357, 0.052], [1.26, 0.447, 0.365, 0.038]];
     const spines = [];
     for (let i = 0; i <= 25; i++) { const u = i / 25, x = -0.56 + u * 1.3, p = at(trunk, x), h = 1.12 * Math.sin(Math.PI * clamp(u * 0.94 + 0.03)) ** 0.62; spines.push([x, p[1] + p[3] - 0.03, x + (u - 0.45) * 0.34, p[1] + p[3] - 0.03 + h]); }
     M.dimetrodon = sprawler({
       color: 0x6f6846, tex: SKIN, tile: 0.7, rough: 0.8, gait: { duty: 0.7, stride: 0.38 }, y: 0.42, bend: 0.16, gape: 0.4,
       tailJ: [[-0.6, 0.39], [-0.85, 0.34], [-1.1, 0.28], [-1.35, 0.22], [-1.6, 0.17], [-1.9, 0.13]], neckJ: [[0.6, 0.45], [0.84, 0.5]], nose: [1.31, 0.47], hinge: [0.87, 0.45],
       trunk, head: skull, jaw, eye: [0.955, 0.6, 0.08, 0.017], brow: 0.9, nostril: [1.27, 0.53, 0.036, 0.012],
-      fore: { J: [[0.47, 0.36, 0.16], [0.41, 0.25, 0.34], [0.46, 0.06, 0.3]], top: [0, 0.06, -0.08, 0.1], R: [[0.09, 0.1, 0.085], [0.075, 0.085, 0.07], [0.055, 0.06, 0.055], [0.05, 0.06, 0.05], [0.038, 0.04, 0.042]],
+      fore: { J: [[0.47, 0.36, 0.16], [0.41, 0.25, 0.34], [0.46, 0.06, 0.3]], top: [0, 0.06, -0.08, 0.11], R: [[0.1, 0.115, 0.095], [0.085, 0.1, 0.08], [0.06, 0.065, 0.06], [0.055, 0.068, 0.054], [0.04, 0.042, 0.044]],
         foot: { len: 0.19, r: 0.017, claw: 3.2, yaw: 0.3 }, lift: 0.07 },
-      hind: { J: [[-0.47, 0.38, 0.14], [-0.36, 0.26, 0.33], [-0.46, 0.065, 0.3]], top: [0, 0.06, -0.07, 0.11], R: [[0.1, 0.12, 0.09], [0.085, 0.1, 0.075], [0.06, 0.065, 0.06], [0.055, 0.07, 0.052], [0.04, 0.042, 0.044]],
+      hind: { J: [[-0.47, 0.38, 0.14], [-0.36, 0.26, 0.33], [-0.46, 0.065, 0.3]], top: [0, 0.06, -0.07, 0.12], R: [[0.115, 0.135, 0.1], [0.095, 0.115, 0.085], [0.065, 0.07, 0.064], [0.058, 0.075, 0.055], [0.042, 0.044, 0.046]],
         foot: { len: 0.22, r: 0.018, claw: 3.2, yaw: 0.45 }, lift: 0.07 },
       coat: (x, y, z, ny) => (y > 0.66 && z < 0.03 ? [1.5 - 0.5 * clamp((y - 1.1) * 2), 0.95, 0.7].map((c) => c * (0.8 + 0.25 * Math.sin(y * 9 + Math.sin(x * 6)))) : 1 - 0.22 * clamp(Math.sin(x * 9 + y * 5) * 2) * clamp(ny + 0.5)),
       extra: (b, spine) => {
@@ -239,8 +242,8 @@ export function paleozoic(M) {
         // teeth of two kinds ("Dimetrodon" = two measures of tooth): long stabbing canines near the front of the upper jaw, small cutting teeth behind
         for (let i = 0; i < 13; i++) {
           const x = 1.27 - i * 0.027, u = at(skull, x), big = i === 0 || i === 1 ? 0.035 : i === 4 || i === 5 ? 0.06 : 0.02 + 0.006 * (i % 2);
-          if (i !== 3) b.pair('detail', (s) => [cone(big * 0.24 + 0.002, big, x, u[1] - u[4] + 0.012, s * u[5] * 0.82, Math.PI), 'head', TOOTH]);
-          const l = at(jaw, x - 0.012); if (i < 12) b.pair('detail', (s) => [cone(0.005, i < 3 ? 0.03 : 0.017, x - 0.012, l[1] + l[3] - 0.008, s * l[5] * 0.72), 'jaw', TOOTH]);
+          if (i !== 3) b.pair('detail', (s) => [cone(big * 0.24 + 0.002, big, x, u[2] + 0.012, s * u[3] * 0.9, Math.PI), 'head', TOOTH]);
+          const l = at(jaw, x - 0.012); if (i < 12) b.pair('detail', (s) => [cone(0.005, i < 3 ? 0.03 : 0.017, x - 0.012, l[1] - 0.008, s * l[3] * 0.7), 'jaw', TOOTH]);
         }
       },
     });
@@ -251,12 +254,12 @@ export function paleozoic(M) {
   {
     const trunk = [[-0.7, 0.075, 0, 0.02, 0.02, 0.004], [-0.56, 0.08, 0, 0.045, 0.04, 0.012], [-0.43, 0.09, 0, 0.055, 0.05, 0.03], [-0.32, 0.1, 0, 0.062, 0.065, 0.06], [-0.22, 0.11, 0, 0.07, 0.075, 0.095],
       [0, 0.115, 0, 0.075, 0.085, 0.11], [0.2, 0.115, 0, 0.07, 0.08, 0.105], [0.3, 0.11, 0, 0.06, 0.065, 0.09], [0.36, 0.105, 0, 0.05, 0.05, 0.085]];
-    const skull = [[0.34, 0.105, 0, 0.045, 0.035, 0.085], [0.42, 0.1, 0, 0.042, 0.033, 0.092], [0.5, 0.09, 0, 0.03, 0.028, 0.072], [0.55, 0.082, 0, 0.02, 0.022, 0.045]];
+    const skull = [[0.34, 0.15, 0.072, 0.085], [0.42, 0.142, 0.07, 0.094], [0.495, 0.122, 0.066, 0.082], [0.54, 0.1, 0.063, 0.058]];
     const fin = (sgn, h, x0, x1) => { const sp = []; for (let i = 0; i <= 14; i++) { const u = i / 14, x = x0 + u * (x1 - x0), p = at(trunk, x), y = p[1] + sgn * (sgn > 0 ? p[3] : p[4]) * 0.8; sp.push([x, y, x - 0.05 * (1 - u), y + sgn * h * Math.sin(Math.PI * clamp(u * 0.9 + 0.12)) ** 0.7]); } return sail(sp, 0.004, 0.06, 0.25, 0, 3, 2); };
     M.tetrapod = sprawler({
       color: 0x6a7244, tex: SKIN, tile: 0.3, rough: 0.45, belly: 1.5, gait: { duty: 0.72, stride: 0.16 }, y: 0.11, bend: 0.3, wag: 0.3, gape: 0.3,
       tailJ: [[-0.3, 0.1], [-0.4, 0.092], [-0.5, 0.085], [-0.6, 0.08], [-0.7, 0.075]], neckJ: [[0.3, 0.11], [0.35, 0.105]], nose: [0.56, 0.08], hinge: [0.355, 0.085],
-      trunk, head: skull, jaw: [[0.35, 0.07, 0, 0.014, 0.025, 0.08], [0.45, 0.065, 0, 0.014, 0.022, 0.078], [0.535, 0.062, 0, 0.01, 0.016, 0.05]], eye: [0.435, 0.132, 0.042, 0.011], brow: 0.5, nostril: [0.535, 0.092, 0.03, 0.005],
+      trunk, head: skull, jaw: [[0.35, 0.078, 0.045, 0.08], [0.45, 0.075, 0.043, 0.082], [0.53, 0.07, 0.046, 0.06]], eye: [0.435, 0.132, 0.042, 0.011], brow: 0.5, nostril: [0.535, 0.092, 0.03, 0.005],
       fore: { J: [[0.25, 0.1, 0.09], [0.215, 0.1, 0.17], [0.26, 0.025, 0.19]], top: [0, 0.01, -0.04, 0.035], R: [[0.03, 0.035, 0.03], [0.027, 0.03, 0.025], [0.022, 0.024, 0.022], [0.02, 0.024, 0.02], [0.016, 0.018, 0.02]],
         foot: { len: 0.085, r: 0.006, n: 6, fan: 1.5, yaw: 0.45, rel: [0.6, 0.8, 0.95, 1, 0.9, 0.7], web: 0.15, segs: 4 }, lift: 0.03, toeOff: 0.3, curl: 0.2 },
       hind: { J: [[-0.25, 0.1, 0.085], [-0.2, 0.09, 0.17], [-0.25, 0.025, 0.19]], top: [0, 0.01, -0.04, 0.035], R: [[0.032, 0.036, 0.03], [0.028, 0.032, 0.026], [0.022, 0.024, 0.022], [0.02, 0.024, 0.02], [0.017, 0.019, 0.022]],
@@ -264,7 +267,7 @@ export function paleozoic(M) {
       coat: (x, y, z, ny) => { const d = clamp(Math.sin(x * 23 + Math.sin(z * 30) * 1.5) * Math.sin(z * 26 + x * 9) * 3) * clamp(ny + 0.4); return [1 - 0.5 * d, 1 - 0.45 * d, 1 - 0.3 * d].map((c) => c * (ny < -0.2 ? 1.5 : 1)); },
       extra: (b, spine) => {
         b.skin(fin(1, 0.075, -0.7, -0.33), spine, [1.15, 1.05, 0.8]).skin(fin(-1, 0.04, -0.7, -0.36), spine, [1.15, 1.05, 0.8]);
-        for (let i = 0; i < 16; i++) { const x = 0.54 - i * 0.011, u = at(skull, x); b.pair('detail', (s) => [cone(0.0025, 0.009, x, u[1] - u[4] + 0.004, s * u[5] * 0.85, Math.PI), 'head', TOOTH]); }
+        for (let i = 0; i < 16; i++) { const x = 0.54 - i * 0.011, u = at(skull, x); b.pair('detail', (s) => [cone(0.002, 0.007, x, u[2] + 0.003, s * u[3] * 0.93, Math.PI, 0, 1, 5), 'head', TOOTH]); }
       },
     });
   }
@@ -274,8 +277,8 @@ export function paleozoic(M) {
   {
     const trunk = [[-0.95, 0.12, 0, 0.02, 0.02, 0.008], [-0.8, 0.15, 0, 0.07, 0.065, 0.03], [-0.6, 0.2, 0, 0.11, 0.11, 0.065], [-0.42, 0.25, 0, 0.15, 0.16, 0.14], [-0.3, 0.27, 0, 0.17, 0.2, 0.22], [0, 0.28, 0, 0.18, 0.22, 0.27],
       [0.25, 0.28, 0, 0.18, 0.21, 0.26], [0.4, 0.27, 0, 0.16, 0.18, 0.22], [0.52, 0.26, 0, 0.11, 0.11, 0.19]];
-    const skull = [[0.5, 0.265, 0, 0.1, 0.07, 0.19], [0.65, 0.26, 0, 0.1, 0.065, 0.2], [0.8, 0.245, 0, 0.075, 0.055, 0.16], [0.92, 0.23, 0, 0.055, 0.045, 0.12], [1.0, 0.22, 0, 0.04, 0.035, 0.085]];
-    const jaw = [[0.52, 0.19, 0, 0.03, 0.055, 0.185], [0.7, 0.18, 0, 0.03, 0.05, 0.18], [0.88, 0.175, 0, 0.025, 0.04, 0.125], [0.99, 0.175, 0, 0.02, 0.03, 0.08]];
+    const skull = [[0.5, 0.365, 0.2, 0.19], [0.65, 0.36, 0.2, 0.2], [0.8, 0.32, 0.198, 0.16], [0.92, 0.285, 0.195, 0.12], [1.0, 0.26, 0.193, 0.085]];
+    const jaw = [[0.52, 0.21, 0.135, 0.185], [0.7, 0.21, 0.13, 0.18], [0.88, 0.207, 0.135, 0.125], [0.99, 0.203, 0.145, 0.08]];
     M.eryops = sprawler({
       color: 0x7a7448, tex: SKIN, tile: 0.5, rough: 0.5, belly: 1.45, gait: { duty: 0.72, stride: 0.28 }, y: 0.28, bend: 0.2, gape: 0.3,
       tailJ: [[-0.42, 0.25], [-0.6, 0.2], [-0.8, 0.15], [-0.95, 0.12]], neckJ: [[0.42, 0.27], [0.5, 0.26]], nose: [1.02, 0.21], hinge: [0.53, 0.215],
@@ -286,7 +289,7 @@ export function paleozoic(M) {
         foot: { len: 0.17, r: 0.016, fan: 1.3, yaw: 0.6 }, lift: 0.05, toeOff: 0.35, curl: 0.25 },
       coat: (x, y, z, ny) => { const d = clamp(Math.sin(x * 11 + Math.sin(z * 14) * 1.6) * Math.sin(z * 13 + x * 5) * 3 - 0.3) * clamp(ny + 0.5); return [1 - 0.5 * d, 1 - 0.5 * d, 1 - 0.4 * d].map((c) => c * (ny < -0.25 ? 1.45 : 1)); },
       extra: (b) => {
-        for (let i = 0; i < 22; i++) { const x = 0.99 - i * 0.02, u = at(skull, x), l = at(jaw, x - 0.01); b.pair('detail', (s) => [cone(0.0035, 0.013, x, u[1] - u[4] + 0.02, s * u[5] * 0.86, Math.PI, 0, 1, 5), 'head', TOOTH]); b.pair('detail', (s) => [cone(0.003, 0.01, x - 0.01, l[1] + l[3] - 0.006, s * l[5] * 0.8, 0, 0, 1, 5), 'jaw', TOOTH]); }
+        for (let i = 0; i < 22; i++) { const x = 0.99 - i * 0.02, u = at(skull, x); b.pair('detail', (s) => [cone(0.0035, 0.012, x, u[2] + 0.004, s * u[3] * 0.95, Math.PI, 0, 1, 5), 'head', TOOTH]); }   // a palisade of small pegs
       },
     });
   }
@@ -295,9 +298,9 @@ export function paleozoic(M) {
   // still sprawl, but the hind legs are tucked half under the body; a short tail ----------
   {
     const trunk = [[-1.25, 0.38, 0, 0.015], [-1.05, 0.46, 0, 0.05, 0.05, 0.04], [-0.8, 0.56, 0, 0.1, 0.1, 0.08], [-0.6, 0.64, 0, 0.16, 0.17, 0.14], [-0.45, 0.68, 0, 0.21, 0.24, 0.2], [-0.2, 0.68, 0, 0.23, 0.29, 0.24],
-      [0.1, 0.68, 0, 0.24, 0.32, 0.25], [0.35, 0.69, 0, 0.24, 0.32, 0.24], [0.5, 0.71, 0, 0.22, 0.28, 0.2], [0.65, 0.74, 0, 0.17, 0.19, 0.14], [0.76, 0.77, 0, 0.14, 0.14, 0.11]];
-    const skull = [[0.75, 0.79, 0, 0.11, 0.08, 0.1], [0.87, 0.795, 0, 0.115, 0.08, 0.105], [1.0, 0.785, 0, 0.105, 0.08, 0.08], [1.12, 0.775, 0, 0.095, 0.075, 0.068], [1.19, 0.765, 0, 0.075, 0.065, 0.058]];
-    const jaw = [[0.77, 0.69, 0, 0.05, 0.06, 0.09], [0.95, 0.685, 0, 0.05, 0.055, 0.075], [1.1, 0.68, 0, 0.05, 0.065, 0.058], [1.18, 0.68, 0, 0.045, 0.065, 0.048]];
+      [0.1, 0.68, 0, 0.24, 0.32, 0.25], [0.35, 0.69, 0, 0.24, 0.32, 0.24], [0.5, 0.71, 0, 0.22, 0.28, 0.2], [0.65, 0.74, 0, 0.18, 0.2, 0.15], [0.78, 0.78, 0, 0.14, 0.15, 0.115]];
+    const skull = [[0.75, 0.9, 0.715, 0.1], [0.87, 0.91, 0.715, 0.105], [1.0, 0.895, 0.712, 0.082], [1.12, 0.88, 0.708, 0.07], [1.19, 0.855, 0.705, 0.062]];
+    const jaw = [[0.77, 0.725, 0.63, 0.09], [0.95, 0.725, 0.63, 0.075], [1.1, 0.722, 0.615, 0.06], [1.18, 0.718, 0.615, 0.05]];
     M.gorgonopsid = sprawler({
       color: 0x7a6a50, tex: SKIN, tile: 0.7, rough: 0.8, gait: { duty: 0.66, stride: 0.55 }, y: 0.68, bend: 0.1, gape: 0.75,
       tailJ: [[-0.55, 0.66], [-0.8, 0.56], [-1.05, 0.46], [-1.25, 0.38]], neckJ: [[0.55, 0.72], [0.75, 0.78]], nose: [1.22, 0.76], hinge: [0.78, 0.715],
@@ -309,11 +312,11 @@ export function paleozoic(M) {
       coat: (x, y, z, ny) => 1 - 0.3 * clamp(Math.sin(x * 7 + Math.sin(y * 6) * 0.8) * 2 - 0.4) * clamp(ny + 0.3),
       extra: (b) => {
         // sabres: one long, back-curved canine each side behind five stout incisors; only a few small teeth behind them
-        b.pair('detail', (s) => [loft([[1.08, 0.73, s * 0.062, 0.022, 0.022, 0.013], [1.075, 0.66, s * 0.065, 0.017, 0.017, 0.01], [1.058, 0.595, s * 0.065, 0.002]], { segs: 7, sub: 3 }), 'head', TOOTH]);
+        b.pair('detail', (s) => [loft([[1.08, 0.73, s * 0.064, 0.022, 0.022, 0.013], [1.075, 0.66, s * 0.068, 0.017, 0.017, 0.01], [1.058, 0.595, s * 0.068, 0.002]], { segs: 7, sub: 3 }), 'head', TOOTH]);
         for (let i = 0; i < 5; i++) b.pair('detail', (s) => [cone(0.008, 0.04, 1.2 - i * 0.006, 0.715, s * (0.008 + i * 0.011), Math.PI), 'head', TOOTH]);
-        for (let i = 0; i < 4; i++) { const x = 1.02 - i * 0.022, u = at(skull, x); b.pair('detail', (s) => [cone(0.005, 0.016, x, u[1] - u[4] + 0.008, s * u[5] * 0.85, Math.PI), 'head', TOOTH]); }
-        for (let i = 0; i < 4; i++) b.pair('detail', (s) => [cone(0.007, 0.03, 1.185 - i * 0.008, 0.705, s * (0.008 + i * 0.01)), 'jaw', TOOTH]);
-        b.pair('detail', (s) => [cone(0.011, 0.045, 1.13, 0.705, s * 0.043), 'jaw', TOOTH]);
+        for (let i = 0; i < 4; i++) { const x = 1.02 - i * 0.022, u = at(skull, x); b.pair('detail', (s) => [cone(0.005, 0.016, x, u[2] + 0.006, s * u[3] * 0.9, Math.PI), 'head', TOOTH]); }
+        for (let i = 0; i < 4; i++) b.pair('detail', (s) => [cone(0.007, 0.03, 1.185 - i * 0.008, 0.71, s * (0.008 + i * 0.01)), 'jaw', TOOTH]);
+        b.pair('detail', (s) => [cone(0.011, 0.045, 1.13, 0.71, s * 0.043), 'jaw', TOOTH]);
       },
     });
   }
@@ -322,11 +325,11 @@ export function paleozoic(M) {
   // bent downwards, a horny beak and two tusks; nostrils high in front of the eyes; a stub of a tail ----------
   {
     const trunk = [[-0.5, 0.2, 0, 0.012], [-0.4, 0.26, 0, 0.04, 0.04, 0.035], [-0.3, 0.3, 0, 0.1, 0.11, 0.1], [-0.2, 0.31, 0, 0.13, 0.16, 0.15], [0, 0.31, 0, 0.14, 0.18, 0.17], [0.15, 0.31, 0, 0.14, 0.17, 0.16], [0.26, 0.32, 0, 0.12, 0.14, 0.13], [0.34, 0.33, 0, 0.1, 0.1, 0.09]];
-    const skull = [[0.32, 0.35, 0, 0.08, 0.07, 0.085], [0.4, 0.35, 0, 0.085, 0.07, 0.09], [0.47, 0.33, 0, 0.07, 0.075, 0.065], [0.52, 0.3, 0, 0.05, 0.075, 0.05]];
+    const skull = [[0.32, 0.43, 0.285, 0.085], [0.4, 0.435, 0.285, 0.09], [0.47, 0.4, 0.265, 0.065], [0.52, 0.35, 0.24, 0.05]];
     M.lystrosaurus = sprawler({
       color: 0x8a7458, tex: SKIN, tile: 0.4, rough: 0.8, gait: { duty: 0.68, stride: 0.26 }, y: 0.31, bend: 0.14, gape: 0.25,
       tailJ: [[-0.3, 0.3], [-0.4, 0.26], [-0.5, 0.2]], neckJ: [[0.26, 0.32], [0.33, 0.34]], nose: [0.54, 0.26], hinge: [0.34, 0.285],
-      trunk, head: skull, jaw: [[0.33, 0.262, 0, 0.022, 0.045, 0.075], [0.42, 0.252, 0, 0.022, 0.04, 0.065], [0.5, 0.24, 0, 0.02, 0.035, 0.04]], eye: [0.4, 0.4, 0.08, 0.011], brow: 0.9, nostril: [0.485, 0.365, 0.045, 0.008],
+      trunk, head: skull, jaw: [[0.33, 0.295, 0.217, 0.075], [0.42, 0.295, 0.212, 0.065], [0.5, 0.275, 0.205, 0.04]], eye: [0.4, 0.4, 0.08, 0.011], brow: 0.9, nostril: [0.485, 0.365, 0.045, 0.008],
       fore: { J: [[0.2, 0.27, 0.12], [0.15, 0.19, 0.23], [0.2, 0.04, 0.2]], top: [0, 0.04, -0.05, 0.07], R: [[0.06, 0.07, 0.055], [0.05, 0.06, 0.048], [0.04, 0.044, 0.04], [0.036, 0.044, 0.036], [0.03, 0.032, 0.034]],
         foot: { len: 0.11, r: 0.012, claw: 2, yaw: 0.25, fan: 1 }, lift: 0.05 },
       hind: { J: [[-0.2, 0.29, 0.11], [-0.12, 0.17, 0.19], [-0.2, 0.045, 0.17]], top: [0, 0.04, -0.05, 0.08], R: [[0.07, 0.08, 0.06], [0.058, 0.07, 0.052], [0.042, 0.046, 0.042], [0.038, 0.048, 0.038], [0.03, 0.034, 0.034]],
@@ -377,7 +380,7 @@ export function paleozoic(M) {
     coat: (x, y, z) => { const m = ((1.15 - x) / (2.3 / 32)) % 1; return (m > 0.86 ? 0.55 : 1) * (1 + 0.35 * clamp((z - 0.12) * 6)); } });
 
   // ---------- an early millipede (Pneumodesmus and its kin, among the first animals to breathe air): 6 cm of round rings, two pairs of legs to a ring ----------
-  M.millipede = myriapod({ L: 0.06, N: 18, W: 0.0032, H: 0.0052, y0: 0.0015, flat: false, per: 2, rl: 0.0004, tile: 0.02, tex: SHELL, color: 0x3a2a22,
+  M.millipede = myriapod({ L: 0.06, N: 18, W: 0.0032, H: 0.0036, y0: 0.0024, flat: false, per: 2, rl: 0.0004, tile: 0.02, tex: SHELL, color: 0x3a2a22,
     coat: (x) => (((0.03 - x) / (0.06 / 20)) % 1 > 0.8 ? 0.6 : 1) });
 
   // ---------- an early scorpion, 14 cm from the claws to the sting (the herd scales it up to 28 cm; Pulmonoscorpius reached 70): a short head shield with
@@ -426,10 +429,10 @@ export function paleozoic(M) {
     b.pair('skin', (s) => [loft([[-0.338, -0.013, s * 0.003, 0.0022], [-0.355, -0.013, s * 0.008, 0.0018], [-0.37, -0.014, s * 0.006, 0.0005]], { segs: 4, sub: 2 }), abd[abd.length - 1]]);   // claspers
     b.skin(mass(0.04, 0.004, 0, 0.011, 0.011, 0.014, 0, 0, T, 0.7), 'head');
     b.pair('detail', (s) => [mass(0.042, 0.008, s * 0.0095, 0.0095, 0.01, 0.008, 0, s * 0.3, 1, 0.8), 'head', [0.05, 0.07, 0.04]]);   // compound eyes that meet over the head
-    for (let i = 0; i < 3; i++) b.pair('skin', (s) => [loft([[0.02 - i * 0.013, -0.012, s * 0.008, 0.0028], [0.032 - i * 0.008, -0.036, s * (0.026 + i * 0.006), 0.0022], [0.06 - i * 0.012, -0.05, s * (0.018 + i * 0.004), 0.0008]], { segs: 4, sub: 3 }), 'body', [0.5, 0.45, 0.4]]);
+    for (let i = 0; i < 3; i++) b.pair('skin', (s) => [loft([[0.02 - i * 0.013, -0.012, s * 0.008, 0.0028], [0.034 - i * 0.008, -0.034, s * (0.017 + i * 0.003), 0.0022], [0.062 - i * 0.012, -0.046, s * (0.011 + i * 0.002), 0.0008]], { segs: 4, sub: 3 }), 'body', [0.5, 0.45, 0.4]]);
     const fore = insectWing(0.335, (u) => 0.066 * Math.sin(Math.PI * (0.1 + 0.9 * u) ** 0.75) ** 0.55), hind = insectWing(0.315, (u) => 0.08 * Math.sin(Math.PI * (0.16 + 0.84 * u) ** 0.9) ** 0.5), wings = [];
-    for (const sd of [1, -1]) [[fore, 0.014, 0], [hind, -0.02, 1.3]].forEach(([geo, x, lag], i) => {
-      const n = 'w' + i + (sd > 0 ? 'r' : 'l'), g = geo.clone().translate(x, 0.021, 0.011);
+    for (const sd of [1, -1]) [[fore, 0.016, 0, 0.1], [hind, -0.022, 1.3, -0.14]].forEach(([geo, x, lag, sweep], i) => {
+      const n = 'w' + i + (sd > 0 ? 'r' : 'l'), g = geo.clone().rotateY(sweep).translate(x, 0.021, 0.011);
       b.bone(n, 'body', x, 0.021, sd * 0.011, [x, 0.021, sd * 0.34]); b.wing(sd > 0 ? g : mirror(g), n); wings.push({ b: b.ix[n], sd, lag });
     });
     b.wave(abd, 'z', 0.03, { kt: 2.1, lag: 0.6 }).sway('head', 'y', 0.2, { kt: 0.7 });
@@ -437,5 +440,25 @@ export function paleozoic(M) {
     M.meganeura = b.build({ color: 0x4e5a30, tex: SHELL, rough: 0.45, back: 1, belly: 1.1, wingTex: { map: veinTex(), normalMap: SHELL.normalMap }, wingColor: 0xb0a890,
       wingMat: { transparent: true, depthWrite: false, roughness: 0.5, normalScale: new THREE.Vector2(0.15, 0.15) },
       coat: (x, y, z, ny) => (x < -0.03 && ((-0.03 - x) / 0.031) % 1 > 0.75 ? [1.7, 1.5, 0.6] : 1) });
+  }
+
+  // ---------- Edaphosaurus, the plant-eater among the sail-backs: 3 m long with a barrel of a body and a skull of only 16 cm; its sail is lower and rounder
+  // than Dimetrodon's, the front spines lean forwards, and every spine carries rows of little crossbars ----------
+  {
+    const trunk = [[-1.95, 0.12, 0, 0.012], [-1.6, 0.17, 0, 0.035, 0.035, 0.03], [-1.3, 0.24, 0, 0.07, 0.07, 0.055], [-1.0, 0.32, 0, 0.11, 0.11, 0.09], [-0.75, 0.38, 0, 0.15, 0.17, 0.15], [-0.5, 0.42, 0, 0.2, 0.25, 0.24],
+      [-0.25, 0.43, 0, 0.22, 0.31, 0.3], [0, 0.43, 0, 0.23, 0.33, 0.33], [0.25, 0.43, 0, 0.22, 0.31, 0.31], [0.5, 0.42, 0, 0.19, 0.25, 0.24], [0.63, 0.43, 0, 0.12, 0.14, 0.13], [0.73, 0.44, 0, 0.08, 0.085, 0.075], [0.79, 0.445, 0, 0.065, 0.065, 0.055]];
+    const skull = [[0.77, 0.515, 0.415, 0.055], [0.83, 0.517, 0.415, 0.058], [0.89, 0.495, 0.412, 0.045], [0.935, 0.47, 0.41, 0.03]], spines = [];
+    for (let i = 0; i <= 23; i++) { const u = i / 23, x = -0.55 + u * 1.25, p = at(trunk, x), h = 0.92 * Math.sin(Math.PI * clamp(u * 0.9 + 0.05)) ** 0.5; spines.push([x, p[1] + p[3] - 0.03, x + (u - 0.45) * 0.5, p[1] + p[3] - 0.03 + h]); }
+    M.edaphosaurus = sprawler({
+      color: 0x74703e, tex: SKIN, tile: 0.7, rough: 0.8, gait: { duty: 0.72, stride: 0.34 }, y: 0.43, bend: 0.14, gape: 0.2,
+      tailJ: [[-0.62, 0.4], [-0.85, 0.35], [-1.1, 0.29], [-1.35, 0.23], [-1.6, 0.17], [-1.95, 0.12]], neckJ: [[0.62, 0.43], [0.77, 0.45]], nose: [0.95, 0.43], hinge: [0.785, 0.42],
+      trunk, head: skull, jaw: [[0.78, 0.425, 0.37, 0.05], [0.85, 0.425, 0.372, 0.045], [0.925, 0.42, 0.38, 0.028]], eye: [0.835, 0.49, 0.05, 0.01], brow: 0.9, nostril: [0.93, 0.455, 0.022, 0.006],
+      fore: { J: [[0.5, 0.34, 0.2], [0.44, 0.24, 0.38], [0.5, 0.06, 0.36]], top: [0, 0.06, -0.1, 0.11], R: [[0.1, 0.115, 0.095], [0.085, 0.1, 0.08], [0.06, 0.065, 0.06], [0.055, 0.068, 0.054], [0.04, 0.042, 0.044]],
+        foot: { len: 0.18, r: 0.017, claw: 2.6, yaw: 0.3 }, lift: 0.06 },
+      hind: { J: [[-0.5, 0.36, 0.18], [-0.39, 0.25, 0.37], [-0.5, 0.065, 0.35]], top: [0, 0.06, -0.09, 0.12], R: [[0.115, 0.135, 0.1], [0.095, 0.115, 0.085], [0.065, 0.07, 0.064], [0.058, 0.075, 0.055], [0.042, 0.044, 0.046]],
+        foot: { len: 0.2, r: 0.018, claw: 2.6, yaw: 0.45 }, lift: 0.06 },
+      coat: (x, y, z, ny) => (y > 0.68 && z < 0.04 ? [1.35, 1.15, 0.6].map((c) => c * (0.75 + 0.3 * Math.sin(y * 14 - Math.abs(x - 0.1) * 5))) : 1 - 0.25 * clamp(Math.sin(x * 8 + z * 6) * 2 - 0.3) * clamp(ny + 0.5)),
+      extra: (b, spine) => { b.skin(sail(spines, 0.022, 0.07, 0.7, 1.8, 8), spine); },
+    });
   }
 }
