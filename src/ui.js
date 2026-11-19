@@ -42,7 +42,7 @@ export class UI {
 
     // true-scale bar: the same span, drawn honestly
     const span = END - START;
-    $('ts-dino').style.width = ((-66e6 - START) / span) * 100 + '%';
+    $('ts-dino').style.left = ((-235e6 - START) / span) * 100 + '%'; $('ts-dino').style.width = ((-66e6 + 235e6) / span) * 100 + '%';
     $('ts-now').style.left = ((NOW - START) / span) * 100 + '%';
     const scaleText = () => {
       const w = $('truescale').getBoundingClientRect().width || 1000, perPx = span / w;

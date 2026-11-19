@@ -1,13 +1,13 @@
 // Every sound is synthesised with Web Audio — there are no audio files.
 // Continuous "beds" (wind, water, traffic, rain, drones …) and random one-shot
 // "events" (birds, roars, bells, horns …) each have a loudness curve over the timeline.
-import { yearToU } from './timeline.js';
+import { yearToU, START } from './timeline.js';
 import { smooth } from './util.js';
 
 const Y = yearToU, FADE = 0.006;
 /** [fromYear, toYear, level] spans → function of slider position returning 0..1 */
 function curve(...spans) {
-  const s = spans.map(([a, b, l = 1]) => [a <= -235e6 ? -1 : Y(a), b >= 7.59e9 ? 2 : Y(b), l]);
+  const s = spans.map(([a, b, l = 1]) => [a <= START ? -1 : Y(a), b >= 7.59e9 ? 2 : Y(b), l]);
   return (u) => { let v = 0; for (const [a, b, l] of s) v = Math.max(v, l * smooth((u - a) / FADE) * smooth((b - u) / FADE)); return v; };
 }
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -53,25 +53,25 @@ export class Sound {
 
     // ---- beds ----
     // open-country wind: everywhere there is no city, strongest on ice and bare rock
-    noiseBed(white, 'bandpass', 420, 0.7, curve([-236e6, 1700, 0.35], [-2.2e6, -1.0e6, 0.5], [-420e3, -150e3, 1], [-90e3, -15e3, 0.8], [-27e3, -16.5e3, 1], [-16.5e3, -7000, 0.7], [1700, 1900, 0.15], [1900, 2160, 0.08], [2960, 120e6, 0.3], [120e6, 7.6e9, 0.8]), 0.22, 0.5);
+    noiseBed(white, 'bandpass', 420, 0.7, curve([-4.54e9, -236e6, 0.55], [-2.33e9, -2.16e9, 1], [-716e6, -636e6, 1], [-236e6, 1700, 0.35], [-2.2e6, -1.0e6, 0.5], [-420e3, -150e3, 1], [-90e3, -15e3, 0.8], [-27e3, -16.5e3, 1], [-16.5e3, -7000, 0.7], [1700, 1900, 0.15], [1900, 2160, 0.08], [2960, 120e6, 0.3], [120e6, 7.6e9, 0.8]), 0.22, 0.5);
     // the thin howl over the ice sheet
-    noiseBed(white, 'bandpass', 900, 9, curve([-420e3, -150e3], [-27e3, -16.5e3], [-80e3, -27e3, 0.4]), 0.1, 0.35);
+    noiseBed(white, 'bandpass', 900, 9, curve([-2.33e9, -2.16e9], [-716e6, -636e6], [-420e3, -150e3], [-27e3, -16.5e3], [-80e3, -27e3, 0.4]), 0.1, 0.35);
     // water: rivers, shore, later the canals
-    noiseBed(brown, 'lowpass', 700, 0.5, curve([-236e6, -1.2e6, 0.6], [-131e3, -100e3, 0.6], [-7000, 1850, 0.7], [1850, 2160, 0.2], [2160, 2900, 0.7], [2960, 90e6, 0.6]), 0.22, 0.2);
+    noiseBed(brown, 'lowpass', 700, 0.5, curve([-4.27e9, -2.34e9, 0.6], [-2.15e9, -720e6, 0.6], [-632e6, -236e6, 0.7], [-236e6, -1.2e6, 0.6], [-131e3, -100e3, 0.6], [-7000, 1850, 0.7], [1850, 2160, 0.2], [2160, 2900, 0.7], [2960, 90e6, 0.6]), 0.22, 0.2);
     // insects in warm forests
-    const bugs = noiseBed(white, 'bandpass', 5600, 14, curve([-236e6, -66.03e6, 1], [-64e6, -30e6, 0.9], [-30e6, -2.6e6, 0.4], [-7000, 1750, 0.3], [9000, 120e6, 0.35], [280e6, 520e6, 0.25]), 0.07, 0.03);
+    const bugs = noiseBed(white, 'bandpass', 5600, 14, curve([-335e6, -253e6, 0.8], [-236e6, -66.03e6, 1], [-64e6, -30e6, 0.9], [-30e6, -2.6e6, 0.4], [-7000, 1750, 0.3], [9000, 120e6, 0.35], [280e6, 520e6, 0.25]), 0.07, 0.03);
     const pulse = ctx.createGain(); pulse.gain.value = 0.6; bugs.disconnect(); bugs.connect(pulse); pulse.connect(this.master);
     const trem = ctx.createOscillator(); trem.frequency.value = 17; const tg = ctx.createGain(); tg.gain.value = 0.4; trem.connect(tg); tg.connect(pulse.gain); trem.start();
     // deep rumble: eruptions, the impact, machinery, megacity, the swelling Sun
-    noiseBed(brown, 'lowpass', 110, 0.7, curve([-203e6, -192e6, 0.8], [-66.035e6, -65.97e6, 1], [1850, 1935, 0.25], [2180, 2900, 0.3], [4.6e9, 7.6e9, 1]), 0.75, 0.25);
+    noiseBed(brown, 'lowpass', 110, 0.7, curve([-4.54e9, -4.42e9, 1], [-4.13e9, -3.86e9, 0.6], [-252.3e6, -251.6e6, 0.8], [-203e6, -192e6, 0.8], [-66.035e6, -65.97e6, 1], [1850, 1935, 0.25], [2180, 2900, 0.3], [4.6e9, 7.6e9, 1]), 0.75, 0.25);
     // fire roar
-    noiseBed(white, 'bandpass', 900, 0.4, curve([-66.03e6, -65.985e6, 0.9], [6.2e9, 7.6e9, 1]), 0.22, 0.4);
+    noiseBed(white, 'bandpass', 900, 0.4, curve([-4.54e9, -4.43e9, 1], [-66.03e6, -65.985e6, 0.9], [6.2e9, 7.6e9, 1]), 0.22, 0.4);
     // traffic
     noiseBed(brown, 'bandpass', 190, 0.6, curve([1905, 1945, 0.5], [1945, 2050, 1], [2050, 2165, 0.4]), 0.42, 0.15);
     // crowd murmur
     noiseBed(brown, 'bandpass', 480, 1.6, curve([1660, 1800, 0.3], [1800, 1900, 0.7], [1900, 2160, 1], [2160, 2880, 0.5]), 0.1, 0.25);
     // rain that never stops
-    noiseBed(white, 'highpass', 2400, 0.3, curve([2185, 2900, 1]), 0.11, 0.05);
+    noiseBed(white, 'highpass', 2400, 0.3, curve([-4.43e9, -4.26e9, 1], [2185, 2900, 1]), 0.11, 0.05);
     // the oceans boiling off
     noiseBed(white, 'bandpass', 3200, 0.8, curve([0.85e9, 2.2e9, 1], [-203e6, -196e6, 0.3]), 0.1, 0.3);
     // neon megacity drone, and the calm chord of the star age
@@ -86,8 +86,8 @@ export class Sound {
     E(curve([-236e6, -66.03e6]), 0.09, (v) => this.roar(v, rnd(45, 85), rnd(1.2, 2.4)));
     E(curve([-190e6, -66.03e6]), 0.3, (v) => this.thump(v * 0.5, 38, 0.5));                    // giants walking
     E(curve([-45e6, -1.2e6, 0.6], [-131e3, -100e3, 0.7], [-95e3, -27e3, 1], [-16.5e3, -9500, 1], [2e6, 140e6, 0.5]), 0.07, (v) => this.trumpet(v));
-    E(curve([-420e3, -150e3], [-27e3, -16.5e3]), 0.06, (v) => this.crack(v));                 // the glacier groaning
-    E(curve([-11.4e3, -9200, 0.7], [950, 1640, 0.7], [-66.03e6, -65.985e6, 1], [-203e6, -196e6, 0.5], [6.5e9, 7.6e9, 1]), 16, (v) => this.crackle(v));
+    E(curve([-2.33e9, -2.16e9], [-716e6, -636e6], [-420e3, -150e3], [-27e3, -16.5e3]), 0.06, (v) => this.crack(v));                 // the glacier groaning
+    E(curve([-4.54e9, -4.43e9, 1], [-11.4e3, -9200, 0.7], [950, 1640, 0.7], [-66.03e6, -65.985e6, 1], [-203e6, -196e6, 0.5], [6.5e9, 7.6e9, 1]), 16, (v) => this.crackle(v));
     E(curve([950, 1640]), 0.45, (v) => { this.thump(v * 0.7, 95, 0.25); this.thump(v * 0.45, 95, 0.25, 0.28); });   // a drum by the fire
     E(curve([-11.4e3, -9200, 0.5], [950, 1640, 0.6]), 0.05, (v) => this.flute(v));
     E(curve([1640, 1915]), 0.3, (v) => this.hooves(v));
@@ -104,7 +104,7 @@ export class Sound {
     E(curve([2190, 2900]), 0.035, (v) => this.thunder(v));
     E(curve([2965, 9400, 1], [9400, 30000, 0.2]), 0.5, (v) => this.chime(v));
     E(curve([2960, 9200]), 0.12, (v) => this.whoosh(v * 0.4, 800, 2400, 2.5));
-    E(curve([3e9, 7.6e9, 0.6], [-203e6, -196e6, 0.6], [-66.03e6, -65.99e6, 1]), 0.12, (v) => this.thunder(v));
+    E(curve([-4.54e9, -3.86e9, 0.8], [-252.3e6, -251.6e6, 0.8], [3e9, 7.6e9, 0.6], [-203e6, -196e6, 0.6], [-66.03e6, -65.99e6, 1]), 0.12, (v) => this.thunder(v));
   }
 
   setMuted(m) { this.muted = m; if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.9, this.ctx.currentTime, 0.05); }

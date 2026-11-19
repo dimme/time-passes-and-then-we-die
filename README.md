@@ -1,7 +1,7 @@
 # Time Passes, And Then We Die
 
 A small WebGL game. You stand on one patch of Manhattan and drag a timeline —
-from the first dinosaurs, 235 million years ago, to the day the Sun swallows the
+from the formation of the Earth, 4.54 billion years ago, to the day the Sun swallows the
 Earth, 7.59 billion years from now. There is nothing to shoot and nothing to win.
 The point is to feel how little of the line is ours.
 
@@ -34,6 +34,10 @@ printed to the browser console.
 
 | When | What this spot looks like | Meanwhile |
 |---|---|---|
+| 4.54–4.0 billion years ago | A magma ocean, the Moon-forming impact, the first rain and ocean, asteroid bombardment | No life anywhere |
+| 4.0–2.4 billion | Orange methane sky, green iron sea, black rock, microbial mounds | Life begins; nothing but microbes |
+| 2.4 billion – 540 million | Blue sky and rusting seas, two Snowball Earths, the mountains whose roots underlie Manhattan | Oxygen, complex cells, the first animals |
+| 540–252 million | A shallow tropical sea, new mountains and moss, the first forests, coal swamps, the dry heart of Pangaea, the Great Dying | Life fills the seas and comes ashore |
 | 235–66 million years ago | Cycads, tree ferns, sauropods, pterosaurs; the Palisades erupt | Pangaea splits, the Atlantic opens |
 | 66 million years ago | The sky burns, then goes dark | The Chicxulub impact |
 | 66–2.6 million years ago | Hothouse jungle, then temperate forest; early mammals, mastodons | Apes; the human line splits off; first stone tools |

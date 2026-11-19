@@ -27,7 +27,7 @@ function hills(x, z) {
 const iceBumps = (x, z) => 3 * Math.sin(x * 0.03) * Math.cos(z * 0.025) + 1.5 * Math.sin(x * 0.11 + z * 0.07);
 
 const SKY_FRAG = `
-  uniform vec3 top, hor, sunCol, sunDir; uniform float sunSize, cloud, time, sunBright; varying vec3 vDir;
+  uniform vec3 top, hor, sunCol, sunDir, moonDir; uniform float sunSize, cloud, time, sunBright, moonSize, moonHot; varying vec3 vDir;
   float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
   float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
     return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
@@ -62,6 +62,18 @@ const SKY_FRAG = `
       cc += sunCol * pow(max(mu, 0.0), 24.0) * 0.6 * (1.0 - cl * 0.5);
     }
     col = mix(col, sunSurf, disc * (1.0 - cl * 0.92));
+    // the Moon: pale by day, and vast and glowing when it was new
+    if (moonSize > 0.001) {
+      float mang = acos(clamp(dot(d, moonDir), -1.0, 1.0)), mr = mang / moonSize;
+      float mdisc = 1.0 - smoothstep(0.97, 1.02, mr);
+      vec3 side = normalize(cross(moonDir, vec3(0.0, 1.0, 0.0))), up2 = cross(side, moonDir);
+      vec2 mp = vec2(dot(d, side), dot(d, up2)) / moonSize;
+      float maria = fbm(mp * 2.6 + 7.0), sphere = sqrt(max(1.0 - mr * mr, 0.0)), phase = clamp(0.55 + mp.x * 0.8, 0.0, 1.0);
+      vec3 cold = mix(col, vec3(1.0, 0.98, 0.94), 0.82) * (0.72 + 0.28 * smoothstep(0.35, 0.65, maria));
+      vec3 hot = vec3(1.0, 0.3, 0.05) * (0.35 + 1.6 * pow(maria, 2.0)) * (0.55 + 0.45 * sphere);
+      col = mix(col, mix(cold, hot, moonHot), mdisc * mix(phase * 0.8, 1.0, moonHot) * (1.0 - cl * 0.9));
+      col += vec3(1.0, 0.3, 0.05) * moonHot * exp(-max(mr - 1.0, 0.0) * 3.0) * 0.25 * (1.0 - mdisc);
+    }
     col = mix(col, cc, cl * 0.94);
     if (d.y < 0.0) col = mix(col, hor, smoothstep(0.0, -0.04, d.y) * (1.0 - disc));
     gl_FragColor = vec4(col, 1.0);
@@ -105,6 +117,7 @@ export class World {
       top: { value: new THREE.Color() }, hor: { value: new THREE.Color() },
       sunCol: { value: new THREE.Color() }, sunDir: { value: new THREE.Vector3(0, 1, 0) },
       sunSize: { value: 0.035 }, cloud: { value: 0.4 }, time: { value: 0 }, sunBright: { value: 30 },
+      moonDir: { value: new THREE.Vector3(0.55, 0.42, 0.72).normalize() }, moonSize: { value: 0.034 }, moonHot: { value: 0 },
     };
     this.sunDir = this.skyU.sunDir.value;
     const skyMat = new THREE.ShaderMaterial({
@@ -225,6 +238,7 @@ export class World {
     set(su.top.value, env.top); set(su.hor.value, env.hor); set(su.sunCol.value, env.sun);
     su.sunSize.value = env.sunSize; su.cloud.value = env.cloud; su.time.value = time;
     su.sunBright.value = (2.2 + 26 * (1 - smooth((env.sunSize - 0.04) / 0.3))) * clamp(env.sunI / 2, 0.15, 1.6);
+    su.moonSize.value = env.moon; su.moonHot.value = env.moonHot;
     const az = -0.45; su.sunDir.value.set(Math.cos(env.sunEl) * Math.sin(az), Math.sin(env.sunEl), Math.cos(env.sunEl) * Math.cos(az));
     this.sky.position.copy(camera.position);
 

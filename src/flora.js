@@ -298,7 +298,7 @@ export function buildFlora(world, scene) {
       for (let i = Math.round(n / [].concat(kinds).length); i > 0; i--) {
         const [x, z] = place();
         const [a, b] = span(x, z);
-        const it = { x, z, s: size[0] + r() * (size[1] - size[0]), rot: r() * 6.28, u0: a <= -235e6 ? -1 : Y(a), u1: Y(b), tint: tint() };
+        const it = { x, z, s: size[0] + r() * (size[1] - size[0]), rot: r() * 6.28, u0: Y(a), u1: Y(b), tint: tint() };
         if (extra) extra(it);
         items.push(it);
       }
@@ -308,10 +308,21 @@ export function buildFlora(world, scene) {
   const both = () => () => (r() < 0.82 ? island() : shore());
   const span = (a, b, ja = 0, jb = 0) => () => [a + r() * ja, b + r() * jb];
 
+  // before the forests: bare rock, microbial mounds in the shallows, then moss and the first trees
+  const basalt = () => { const g = 0.28 + r() * 0.25; return [g * 1.05, g, g * 0.95]; };
+  add(ROCK, 420, both(), span(-4.38e9, -420e6, 0.15e9, 160e6), [0.6, 3], basalt);
+  add(ROCK, 300, both(), span(-3.55e9, -560e6, 0.5e9, 20e6), [0.5, 1.4], () => { const g = 0.45 + r() * 0.3; return [g * 0.8, g, g * 0.6]; });   // stromatolites
+  add(SHRUB, 600, both(), span(-468e6, -400e6, 30e6, 25e6), [0.12, 0.35]);            // moss and liverworts
+  add(SHRUB, 400, both(), span(-425e6, -252.15e6, 25e6, 5e4), [0.4, 1.1]);
+  add(FERN, 560, both(), span(-390e6, -296e6, 8e6, 40e6), [0.8, 2.2]);                // the first trees, then the coal swamps
+  add(FERN, 240, both(), span(-388e6, -252.15e6, 8e6, 5e4), [0.8, 2]);
+  add(ARAUCARIA, 300, both(), span(-318e6, -252.15e6, 16e6, 5e4), [0.6, 1.3]);        // early conifers
+  add(CYCAD, 240, both(), span(-288e6, -252.15e6, 16e6, 5e4), [0.6, 1.4]);
+  add(DEAD, 400, both(), span(-252.15e6, -249e6, 4e4, 2.5e6), [0.6, 1.4], () => { const g = 0.3 + r() * 0.3; return [g, g, g]; });
   // Mesozoic
-  add(CYCAD, 480, both(), span(-236e6, -66.03e6, 0, 1e4), [0.7, 1.7]);
-  add(FERN, 360, both(), span(-236e6, -66.03e6, 0, 1e4));
-  add(ARAUCARIA, 360, both(), span(-236e6, -66.03e6, 0, 1e4), [0.7, 1.5]);
+  add(CYCAD, 480, both(), span(-249e6, -66.03e6, 10e6, 1e4), [0.7, 1.7]);
+  add(FERN, 360, both(), span(-249e6, -66.03e6, 10e6, 1e4));
+  add(ARAUCARIA, 360, both(), span(-249e6, -66.03e6, 10e6, 1e4), [0.7, 1.5]);
   add(PINE, 240, both(), span(-190e6, -66.03e6, 20e6, 1e4), [0.8, 1.6]);
   // ash and stumps after the impact
   add(DEAD, 400, both(), span(-66.025e6, -65.9e6, 5e3, 5e4), [0.6, 1.4], () => { const g = 0.25 + r() * 0.3; return [g, g, g]; });

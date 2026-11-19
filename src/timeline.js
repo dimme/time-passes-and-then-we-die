@@ -2,13 +2,14 @@
 // every era gets room on the slider even though they differ by 8 orders of magnitude.
 
 export const NOW = 2026;
-export const START = -235e6;
+export const START = -4.54e9;   // the Earth forms
 export const END = 7.59e9;
 const M = 1e6, B = 1e9;
 
 // Each anchor is equally spaced on the slider; years are linear between anchors.
 const ANCHORS = [
-  START, -201e6, -150e6, -66.04e6, -66e6, -65.9e6, -50e6, -2.6e6, -300e3, -125e3, -50e3, -22e3, -16e3, -11e3,
+  START, -4.5e9, -4.4e9, -4.0e9, -3.5e9, -2.4e9, -2.2e9, -1.1e9, -720e6, -635e6, -539e6, -470e6, -385e6, -320e6, -299e6, -252.2e6, -251.8e6,
+  -235e6, -201e6, -150e6, -66.04e6, -66e6, -65.9e6, -50e6, -2.6e6, -300e3, -125e3, -50e3, -22e3, -16e3, -11e3,
   -6000, -3300, -1200, 1, 1000, 1500, 1609, 1650, 1700, 1776, 1811, 1850, 1900, 1930, 1950, 1975, 2000,
   NOW, 2050, 2100, 2200, 2500, 3000, 10000, 100e3, 1 * M, 100 * M, 250 * M, 600 * M, 1.1 * B, 3 * B, 5 * B, 7 * B, END,
 ];
@@ -47,7 +48,13 @@ export function formatYear(y) {
 
 // ---------- eras (bands on the slider) ----------
 export const ERAS = [
-  { from: START, name: 'Age of Dinosaurs', color: '#5d8a3a' },
+  { from: START, name: 'Molten Earth', color: '#c2401c' },
+  { from: -4.0e9, name: 'First Life', color: '#b8742a' },
+  { from: -2.4e9, name: 'Oxygen · Snowball Earth', color: '#6f9fc0' },
+  { from: -539e6, name: 'Life Fills the Seas', color: '#3a8f8f' },
+  { from: -420e6, name: 'First Forests', color: '#3f7a4a' },
+  { from: -299e6, name: 'Pangaea', color: '#b08a5a' },
+  { from: -251.8e6, name: 'Age of Dinosaurs', color: '#5d8a3a' },
   { from: -66.04e6, name: 'The Impact', color: '#c2401c' },
   { from: -65.9e6, name: 'Age of Mammals', color: '#8a9a4a' },
   { from: -2.6e6, name: 'Ice Ages · Old Stone Age', color: '#a9c9dc' },
@@ -75,7 +82,27 @@ export function eraAt(y) {
 // ---------- events (captions) ----------
 // t: headline, h: what is happening right here, w: meanwhile, in the wider world
 export const EVENTS = [
-  [START, 'Pangaea', 'This spot is deep inside a supercontinent, pressed against what will become Morocco. The first dinosaurs — small, quick, two-legged — hunt among cycads and tree ferns.', 'No flowers, no grass, no birds. A day lasts about 23 hours.'],
+  [START, 'The Earth forms', 'There is no Manhattan. There is no ground at all. Dust and rock falling together around a young Sun have melted into a ball of magma under a black sky.', 'The Sun is about 50 million years old, and a third dimmer than it will be in your day.'],
+  [-4.5e9, 'The Moon', 'A world the size of Mars strikes the Earth. The wreckage gathers into a Moon that hangs enormous and red-hot overhead, some fifteen times closer than the one you know.', 'A day lasts about five hours.'],
+  [-4.4e9, 'The first rain', 'The surface crusts over into black rock. Steam condenses, and it rains — for millions of years. The first ocean fills the low ground.', 'The oldest things on Earth that will survive to your time, tiny zircon crystals, form about now.'],
+  [-4.1e9, 'Bombardment', 'Asteroids left over from the making of the planets still fall. Each large one boils part of the sea away.', 'Nothing lives anywhere. The Earth is a wet, lifeless rock: no cell, no seed, no eye.'],
+  [-3.8e9, 'Something begins', 'Somewhere in warm water, chemistry becomes biology. Nobody knows exactly where, when, or how.', 'From here on, everything alive is descended from this.'],
+  [-3.5e9, 'The first living things', 'The sky is an orange haze of methane, the sea green with dissolved iron. In the shallows, mats of microbes build stone mounds layer by layer: stromatolites.', 'For the next three billion years, this is what life looks like. Slime.'],
+  [-2.4e9, 'Oxygen', 'Microbes that eat sunlight have been leaking a waste gas for ages. Now it fills the air. The sea rusts red, and the sky turns blue.', 'For most life this is a poison: the first great extinction, caused by the living.'],
+  [-2.25e9, 'Snowball Earth', 'With the methane gone the planet freezes, perhaps from pole to equator. You are standing on ice.', 'It lasts some two hundred million years.'],
+  [-1.8e9, 'The boring billion', 'Bare rock, shallow seas, a film of microbes. Nothing visibly changes for a thousand million years.', 'Unseen, cells swallow other cells and learn to keep them: the ancestors of every plant and animal.'],
+  [-1.1e9, 'The roots of Manhattan', 'Continents collide into the supercontinent Rodinia, and a mountain range as high as the Himalaya stands here. Deep beneath it forms the oldest rock that will one day lie under New York.', 'Still no animals. Still no plants on land.'],
+  [-717e6, 'Snowball Earth, again', 'Ice to the equator once more. The mountains have long since worn down to their roots.', 'Under the ice, life holds on around volcanic vents and meltwater pools.'],
+  [-600e6, 'The first animals', 'The ice is gone. On the sea floor lie soft, quilted creatures with no mouths, no eyes and no enemies.', 'The land is still bare rock.'],
+  [-539e6, 'The Cambrian explosion', 'This spot is a warm, shallow sea south of the equator. Trilobites crawl across lime mud and sand that will become Manhattan\'s marble and schist.', 'In a few million years the seas fill with eyes, shells, claws and teeth.'],
+  [-470e6, 'Mountains and moss', 'A chain of volcanic islands collides with the coast. The sea floor is crushed and cooked into the schist that will carry the skyscrapers, and mountains rise overhead.', 'The first plants creep onto land: a green film, no taller than your thumb.'],
+  [-420e6, 'Life comes ashore', 'Low, leafless plants stand along the streams. Millipedes and scorpions walk among them, the first animals to breathe air.', 'Fish get jaws.'],
+  [-385e6, 'The first forests', 'Trees. The oldest fossil forest ever found grew 150 km north of here, at Cairo and Gilboa, New York.', 'A fish with a neck and wrists hauls itself onto a mudbank.'],
+  [-320e6, 'The coal swamps', 'A steaming swamp forest of giant club mosses and tree ferns. Dragonflies with wings as long as your arm; millipedes as long as a car.', 'The air holds half again as much oxygen as yours. These forests will become coal.'],
+  [-299e6, 'Pangaea', 'Africa has collided with North America. You are high in a mountain range as tall as the Himalaya, in the dry heart of a single world-continent.', 'Sail-backed Dimetrodon hunts here. It is no dinosaur: it is nearer kin to you.'],
+  [-252.2e6, 'The Great Dying', 'Volcanoes in Siberia pour out lava for a million years. The air sours, the seas turn to acid, the forests die.', 'Nine species in ten vanish. Life has never come closer to ending.'],
+  [-251e6, 'Aftermath', 'A hot, bare, quiet world. A few tough, pig-sized burrowers have it almost to themselves.', 'It takes ten million years for forests to return.'],
+  [-235e6, 'The first dinosaurs', 'This spot is deep inside a supercontinent, pressed against what will become Morocco. The first dinosaurs — small, quick, two-legged — hunt among cycads and tree ferns.', 'No flowers, no grass, no birds. A day lasts about 23 hours.'],
   [-201e6, 'The Atlantic tears open', 'Pangaea rips apart. Lava floods the rift valley just to the west; it will cool into the cliffs of the Palisades — the same cliffs you will see across the Hudson for the next 200 million years.', 'The eruptions trigger a mass extinction. Dinosaurs inherit the Earth.'],
   [-185e6, 'Jurassic', 'A warm, wet rift valley. Conifers and ferns. The dinosaurs are growing.', 'A narrow sea — the infant Atlantic — widens by a few centimetres a year. About as fast as your fingernails grow.'],
   [-150e6, 'The giants', 'Long-necked sauropods shake the ground. Pterosaurs circle above the river.', 'The first birds take wing. Dinosaurs will rule for 165 million years — 550 times longer than our species has existed.'],
@@ -158,12 +185,50 @@ export function eventAt(y) {
 const base = {
   top: 0x3f8fe0, hor: 0xbfe0f5, fogD: 0.0016, sun: 0xfff4d6, sunSize: 0.035, sunEl: 0.95, sunI: 2.2, amb: 1.0,
   ground: 0x4f7a35, water: 0x2f6f8f, sea: 0, hill: 1, ice: -60, cloud: 0.45, precip: 0, pCol: 0xffffff, pVy: -2, pSize: 0.25,
-  lava: 0x000000, glow: 0, far: 0x4a6a4a, bloom: 0.22, exposure: 1.0, grass: 0,
+  lava: 0x000000, glow: 0, far: 0x4a6a4a, bloom: 0.22, exposure: 1.0, grass: 0, moon: 0.034, moonHot: 0,
 };
 const K = (y, o) => ({ y, ...o });
 const forest = { ground: 0x3f6a2c, far: 0x35552f, grass: 1 };
 const KEYS = [
-  K(START, { grass: 0.7, top: 0x4f9fd8, hor: 0xf2ddb0, fogD: 0.002, ground: 0x7d7a3e, far: 0x6a6a3a, water: 0x3f7f7a, cloud: 0.3 }),
+  // --- before life ---
+  K(START, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0.25, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, moon: 0 }),
+  K(-4.505e9, { top: 0x0a0404, hor: 0x8a2410, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 0.9, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff5a10, sea: -40, water: 0x401008, hill: 0.7, cloud: 0.25, precip: 1, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.7, moon: 0 }),
+  K(-4.5e9, { top: 0x601808, hor: 0xffb050, fogD: 0.006, sun: 0xffd0a0, sunI: 1.4, amb: 1.6, ground: 0x401408, far: 0x401408, lava: 0xffb040, sea: -40, water: 0x401008, hill: 0.7, cloud: 0, precip: 1, pCol: 0xffd080, pVy: -14, pSize: 0.45, bloom: 1.1, glow: 0.3, moon: 0 }),
+  K(-4.49e9, { top: 0x0c0504, hor: 0x9a3012, fogD: 0.004, sun: 0xffd0a0, sunI: 1.1, amb: 1.0, ground: 0x2a0e06, far: 0x2a0e06, lava: 0xff6a18, sea: -40, water: 0x401008, hill: 0.7, cloud: 0.2, precip: 0.8, pCol: 0xffa040, pVy: -9, pSize: 0.35, bloom: 0.45, moon: 0.5, moonHot: 1 }),
+  K(-4.4e9, { top: 0x2a2624, hor: 0x8a7e72, fogD: 0.011, sun: 0xffe0c0, sunI: 0.6, amb: 0.9, ground: 0x1e1a18, far: 0x1a1816, lava: 0x1a0300, sea: -7, water: 0x3a3a32, hill: 0.8, cloud: 1, precip: 1, pCol: 0x9ab0c0, pVy: -30, pSize: 0.16, moon: 0.34, moonHot: 0.45 }),
+  K(-4.25e9, { top: 0x7a5236, hor: 0xd8a070, fogD: 0.004, sun: 0xffe6c8, sunI: 1.4, amb: 1.0, ground: 0x26221e, far: 0x221e1a, sea: 0, water: 0x4a5a3a, hill: 0.9, cloud: 0.6, moon: 0.22, moonHot: 0.05 }),
+  K(-4.1e9, { top: 0x3a1a10, hor: 0xe8703a, fogD: 0.005, sun: 0xffc090, sunI: 1.1, amb: 1.0, ground: 0x241c18, far: 0x201814, lava: 0x300800, sea: -1, water: 0x5a4a30, hill: 0.9, cloud: 0.8, precip: 0.8, pCol: 0xff9a3a, pVy: -9, pSize: 0.35, bloom: 0.5, moon: 0.17 }),
+  // --- microbes only ---
+  K(-3.85e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.6, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, moon: 0.13 }),
+  K(-2.5e9, { top: 0xa86a40, hor: 0xf0c090, fogD: 0.003, sun: 0xffe8cc, sunI: 1.7, ground: 0x2c2622, far: 0x282420, water: 0x4a7a50, cloud: 0.4, moon: 0.08 }),
+  K(-2.4e9, { top: 0x5a90c8, hor: 0xe0d8c0, fogD: 0.0022, sunI: 1.8, ground: 0x5a3a2c, far: 0x503428, water: 0x7a4a30, cloud: 0.4, moon: 0.075 }),
+  K(-2.33e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.07 }),
+  K(-2.18e9, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.8, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.07 }),
+  K(-2.1e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4, moon: 0.065 }),
+  K(-1.2e9, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 1.9, ground: 0x6a5a4c, far: 0x5a4e42, cloud: 0.4, moon: 0.06 }),
+  K(-1.1e9, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, sunI: 2.0, ground: 0x7a746c, far: 0x6a6660, hill: 6, cloud: 0.6, moon: 0.055 }),
+  K(-900e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x726a60, far: 0x625a52, hill: 3, cloud: 0.45, moon: 0.05 }),
+  K(-730e6, { top: 0x4a90d8, hor: 0xd8e4e8, sunI: 2.0, ground: 0x6a5a4c, far: 0x5a4e42, hill: 1.2, cloud: 0.45, moon: 0.048 }),
+  K(-716e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.048 }),
+  K(-640e6, { top: 0x4a90d8, hor: 0xeaf4fc, fogD: 0.0035, sunI: 1.9, amb: 1.35, ground: 0xdfe8ee, far: 0xe6eef4, sea: -40, ice: 55, cloud: 0.4, precip: 0.8, pVy: -1.6, moon: 0.046 }),
+  K(-632e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.0, ground: 0x625a4e, far: 0x565044, water: 0x2f7a8a, cloud: 0.5, moon: 0.046 }),
+  // --- animals in the sea, then plants and animals on land ---
+  K(-545e6, { top: 0x4a94dc, hor: 0xd8e8ec, sunI: 2.1, ground: 0x7a6e58, far: 0x6a604c, water: 0x2f7a8a, hill: 0.8, cloud: 0.5, moon: 0.044 }),
+  K(-539e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4, moon: 0.044 }),
+  K(-478e6, { top: 0x3a98e0, hor: 0xd8f0f0, sunI: 2.2, ground: 0xc8b890, far: 0xb8a880, water: 0x2a8a90, sea: 3.25, hill: 0.3, cloud: 0.4, moon: 0.042 }),
+  K(-470e6, { top: 0x4a8ad0, hor: 0xd0dce4, fogD: 0.0018, ground: 0x6a665c, far: 0x5c5850, hill: 5, cloud: 0.6, moon: 0.042 }),
+  K(-440e6, { top: 0x4a8ed4, hor: 0xd4e2e4, ground: 0x687050, far: 0x586044, hill: 3.5, cloud: 0.5, grass: 0.05, moon: 0.04 }),
+  K(-420e6, { top: 0x4a94dc, hor: 0xd8e8e4, ground: 0x5f7046, far: 0x50603c, hill: 2.5, cloud: 0.5, grass: 0.3, moon: 0.04 }),
+  K(-385e6, { top: 0x4498dc, hor: 0xd8ecd8, fogD: 0.0022, ground: 0x4a7038, far: 0x3e5e30, water: 0x3a7a70, hill: 2, cloud: 0.5, grass: 0.85, moon: 0.038 }),
+  K(-320e6, { top: 0x4a98d4, hor: 0xd0e8c8, fogD: 0.004, ground: 0x33562a, far: 0x2c4a26, water: 0x3a5a3a, sea: 1.6, hill: 1.1, cloud: 0.7, grass: 1, moon: 0.037 }),
+  K(-302e6, { top: 0x4a98d4, hor: 0xd8e8c8, fogD: 0.003, ground: 0x4f6a34, far: 0x44582e, water: 0x3a6a5a, hill: 3.5, cloud: 0.55, grass: 0.7, moon: 0.037 }),
+  K(-285e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 4.5, cloud: 0.15, grass: 0.2, moon: 0.036 }),
+  K(-252.3e6, { top: 0x5aa0d8, hor: 0xf0d8a8, fogD: 0.002, sunI: 2.5, ground: 0xa8824e, far: 0x987444, water: 0x4a7a70, sea: -6, hill: 3.5, cloud: 0.15, grass: 0.2, moon: 0.036 }),
+  K(-252.2e6, { top: 0x3a2a22, hor: 0xc86a3a, fogD: 0.007, sun: 0xff9a5a, sunI: 0.8, amb: 0.7, ground: 0x4a3a2e, far: 0x2a2220, water: 0x5a5040, sea: -6, hill: 3.5, cloud: 1, precip: 0.6, pCol: 0x55504a, pVy: -1, pSize: 0.3, moon: 0.036 }),
+  K(-251.8e6, { top: 0x4a3a30, hor: 0xd08a50, fogD: 0.005, sun: 0xffb070, sunI: 1.2, amb: 0.8, ground: 0x5a4a38, far: 0x3a302a, water: 0x5a5040, sea: -6, hill: 3.4, cloud: 0.8, precip: 0.3, pCol: 0x55504a, pVy: -1, pSize: 0.3, moon: 0.036 }),
+  K(-246e6, { top: 0x5aa0d8, hor: 0xf2d8a8, fogD: 0.002, sunI: 2.5, ground: 0x9a7e4a, far: 0x8a7042, water: 0x4a7a70, sea: -3, hill: 2.4, cloud: 0.2, grass: 0.15 }),
+  // --- the age of dinosaurs ---
+  K(-235e6, { grass: 0.7, top: 0x4f9fd8, hor: 0xf2ddb0, fogD: 0.002, ground: 0x7d7a3e, far: 0x6a6a3a, water: 0x3f7f7a, cloud: 0.3 }),
   K(-203e6, { grass: 0.7, top: 0x4f9fd8, hor: 0xf2ddb0, fogD: 0.002, ground: 0x7d7a3e, far: 0x6a6a3a, water: 0x3f7f7a, cloud: 0.3 }),
   K(-201e6, { grass: 0.15, top: 0x3a2a22, hor: 0xd8743a, fogD: 0.006, sun: 0xff9a5a, sunI: 0.9, amb: 0.7, ground: 0x4a3f33, far: 0x2a2220, water: 0x4a4a44, cloud: 0.9, precip: 0.5, pCol: 0x55504a, pVy: -1, pSize: 0.3 }),
   K(-185e6, { grass: 0.9, top: 0x4a9ad8, hor: 0xe8e0b8, fogD: 0.0022, ground: 0x4f7a35, far: 0x3f6030, water: 0x3f7f7a }),
@@ -218,7 +283,7 @@ const KEYS = [
 ].map((k) => ({ ...base, ...k, u: yearToU(k.y) }));
 
 const COLOR_FIELDS = ['top', 'hor', 'sun', 'ground', 'water', 'pCol', 'lava', 'far'];
-const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow', 'bloom', 'exposure', 'grass'];
+const NUM_FIELDS = ['fogD', 'sunSize', 'sunEl', 'sunI', 'amb', 'sea', 'hill', 'ice', 'cloud', 'precip', 'pVy', 'pSize', 'glow', 'bloom', 'exposure', 'grass', 'moon', 'moonHot'];
 const rgb = (h) => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255];
 for (const k of KEYS) for (const f of COLOR_FIELDS) k[f] = rgb(k[f]);
 
