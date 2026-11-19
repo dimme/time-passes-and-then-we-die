@@ -6,6 +6,7 @@ import { TAU, pose } from './animals-rig.js';
 import { mammals } from './animals-mammals.js';
 import { dinosaurs } from './animals-dinos.js';
 import { birds } from './animals-birds.js';
+import { paleozoic } from './animals-paleozoic.js';
 
 export { pose };
 
@@ -43,7 +44,7 @@ class Herd {
 let MAKERS;
 /** Factories for every species, built once: each returns { obj, … } facing +x with its feet at y = 0. */
 export function species() {
-  if (!MAKERS) { MAKERS = {}; dinosaurs(MAKERS); mammals(MAKERS); birds(MAKERS); }
+  if (!MAKERS) { MAKERS = {}; paleozoic(MAKERS); dinosaurs(MAKERS); mammals(MAKERS); birds(MAKERS); }
   return MAKERS;
 }
 

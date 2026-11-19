@@ -289,7 +289,7 @@ export class Rig {
     return names;
   }
   /** Finish: coat(x, y, z, ny) → brightness or [r, g, b] multiplies the countershaded hide. gait = { duty, stride, bob }. */
-  build({ color, tex, coat, back = 0.82, belly = 1.2, rough = 0.85, wingTex, wingColor, gait = { duty: 0.65, stride: 1 }, flight, scale = 1 }) {
+  build({ color, tex, coat, back = 0.82, belly = 1.2, rough = 0.85, wingTex, wingColor, wingMat, gait = { duty: 0.65, stride: 1 }, flight, scale = 1 }) {
     const shade = (g) => {
       const p = g.attributes.position, n = g.attributes.normal, c = new Float32Array(p.count * 3), tint = g.userData.tint || [1, 1, 1];
       for (let i = 0; i < p.count; i++) {
@@ -301,7 +301,7 @@ export class Rig {
     const meshes = [];
     if (this.parts.skin.length) meshes.push([join(this.parts.skin.map(shade)), skinMat(tex, color, { roughness: rough })]);
     if (this.parts.detail.length) meshes.push([join(this.parts.detail), detailMat()]);
-    if (this.parts.wing.length) meshes.push([join(this.parts.wing.map(shade)), skinMat(wingTex || tex, wingColor || color, { roughness: 0.8, side: THREE.DoubleSide })]);
+    if (this.parts.wing.length) meshes.push([join(this.parts.wing.map(shade)), skinMat(wingTex || tex, wingColor || color, { roughness: 0.8, side: THREE.DoubleSide, ...wingMat })]);
     this.gait = gait; this.flight = flight;
     if (scale !== 1) {   // a smaller or larger individual of the same build
       const k = scale, mul = (a) => { for (let i = 0; i < a.length; i++) a[i] *= k; };
@@ -363,4 +363,5 @@ export function pose(a, g, t) {
     }
   }
   if (a.jaw) a.jaw.rotation.z = -0.03 - Math.max(0, Math.sin(t * 0.35 + ph)) ** 12 * (def.gape || 0.5);
+  if (def.custom) def.custom(a, g, t);   // a species' own motion (sprawling limbs, insect legs and wings)
 }
