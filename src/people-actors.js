@@ -41,6 +41,8 @@ const LOOK = {
   medieval: [HOMESPUN, [0x4a3c30, 0x5a5648, 0x3a3028, 0x6a5a4a], 'north', 7], 'medieval-f': [HOMESPUN, HOMESPUN, 'north', 7], monk: [[0x2a2420, 0x3a3028, 0x4a4038], [0x2a2420], 'north', 7], knight: [[0x8a1c14, 0x1c3a8a, 0xd8d0bc, 0x2a5a2a, 0xc8a030], DARK, 'north', 7],
   raincoat: [RAIN, DARK, 'all', 7], 'raincoat-f': [RAIN, DARK, 'all', 7], native: [HIDES, HIDES, 'america', 1],
 };
+const DRAB = [0x3a3632, 0x4a4238, 0x2e3038, 0x5a4e40, 0x3c4438, 0x6a5e4e];
+LOOK.georgian = [DRAB, [0x6a5e4e, 0x3a3632, 0x8a8068], 'north', 7]; LOOK.millhand = [DRAB, DRAB, 'north', 7];
 const PLAIN = [STREET, DARK, 'all', 7];
 
 // =====================================================================================

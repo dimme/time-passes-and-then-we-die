@@ -76,7 +76,7 @@ function build({ world, group }) {
   // working dress is drab; a few better coats among it
   const DRAB = [0x4a4238, 0x3a3a40, 0x5a4a3a, 0x2e3238, 0x6a5a48, 0x4a3a34, 0x55504a], lin = (h) => { const c = new THREE.Color(h); return [c.r, c.g, c.b]; }, drab = () => lin(DRAB[Math.floor(r() * DRAB.length)]);
   const P = (outfit, action, x, z, rot, a, b, o = {}) => list.push({ outfit, action, x, z, rot, ...(o.fine ? {} : { tint: drab(), legs: drab() }), ...o, u0: Y(a), u1: Y(b) });
-  const man = () => 'colonial', woman = () => 'dress', anyone = () => (r() < 0.55 ? 'colonial' : 'dress'), late = () => (r() < 0.45 ? 'dress' : r() < 0.7 ? 'hat' : 'colonial');
+  const man = () => (r() < 0.5 ? 'georgian' : 'millhand'), woman = () => 'dress', anyone = () => (r() < 0.55 ? 'millhand' : 'dress'), late = () => (r() < 0.45 ? 'dress' : r() < 0.7 ? 'hat' : 'millhand');
   const walker = (path, a, b, o = {}) => P(o.outfit || anyone(), o.action || 'walk', path[0][0], path[0][1], 0, a, b, { path, speed: 1.1 + r() * 0.35, phase: r(), ...o });
   let flats = 0; const flat = (mat, x0, z0, x1, z1, col, y0 = 0.05, y = y0 + (flats++ % 9) * 0.004) => kit.poly(mat, [[x0, G + y, z0], [x1, G + y, z0], [x1, G + y, z1], [x0, G + y, z1]], col);
 
@@ -187,16 +187,16 @@ function build({ world, group }) {
   });
   { const b = props.bag(1830, INF); track(b, -640, -44, G + DECK + 0.02, RAILZ); track(b, -640, -44, G + DECK + 0.02, RAILZ + 5); }
   const TR = trainParts(), train = new THREE.InstancedMesh(TR.geo, vehicleMat(), 1); train.frustumCulled = false; train.castShadow = true; group.add(train);
-  const crewList = [{ outfit: 'colonial', action: 'stand', x: TR.footplate[0] + 0.2, z: 0.3, rot: 0, y: TR.footplate[1], tint: lin(0x2a2a30) }, { outfit: 'colonial', action: 'stand', x: TR.footplate[0] - 0.3, z: -0.35, rot: 0.4, y: TR.footplate[1], tint: lin(0x3a3028) }];
-  TR.seats.forEach(([x, y, z], i) => { if (i % 5 !== 3) crewList.push({ outfit: i % 3 ? (i % 2 ? 'hat' : 'colonial') : 'dress', action: 'sit', x, z, rot: i % 2 ? 0 : Math.PI, y, seat: 0.42 }); });
+  const crewList = [{ outfit: 'millhand', action: 'stand', x: TR.footplate[0] + 0.2, z: 0.3, rot: 0, y: TR.footplate[1], tint: lin(0x2a2a30) }, { outfit: 'millhand', action: 'stand', x: TR.footplate[0] - 0.3, z: -0.35, rot: 0.4, y: TR.footplate[1], tint: lin(0x3a3028) }];
+  TR.seats.forEach(([x, y, z], i) => { if (i % 5 !== 3) crewList.push({ outfit: i % 3 ? (i % 2 ? 'hat' : 'millhand') : 'dress', action: 'sit', x, z, rot: i % 2 ? 0 : Math.PI, y, seat: 0.42 }); });
   const crew = actors({ heightAt: () => 0, sea: -99 }, crewList, { seed: 3 }), crewG = new THREE.Group(); crewG.add(...crew.meshes); group.add(crewG);
   const steam = smoke([{ x: TR.chimney[0], y: TR.chimney[1], z: 0, size: 1.1, dark: 0.25 }], { per: 14, rise: 2.4, wind: [-3.5, 0.6], life: 6, grey: 0.5 }); group.add(steam.mesh);
-  const platform = actors({ heightAt: () => G + DECK, sea: -99 }, Array.from({ length: 10 }, (_, i) => ({ outfit: ['hat', 'dress', 'hat', 'colonial', 'dress'][i % 5], action: ['stand', 'talk', 'stand'][i % 3], x: -104 + i * 5.6 + r() * 2, z: 23 + r() * 1.8, rot: 1.57 + (r() - 0.5), u0: Y(1830) })), { seed: 4 }); group.add(...platform.meshes);
+  const platform = actors({ heightAt: () => G + DECK, sea: -99 }, Array.from({ length: 10 }, (_, i) => ({ outfit: ['hat', 'dress', 'hat', 'millhand', 'dress'][i % 5], action: ['stand', 'talk', 'stand'][i % 3], x: -104 + i * 5.6 + r() * 2, z: 23 + r() * 1.8, rot: 1.57 + (r() - 0.5), u0: Y(1830) })), { seed: 4 }); group.add(...platform.meshes);
   // the navvies who built it
   for (let i = 0; i < 9; i++) P(man(), 'dig', -270 + i * 26 + r() * 6, i % 2 ? 5 + r() * 3 : 31 + r() * 4, ang(), 1826, 1830);
   const barrowPaths = [[[-260, 8], [-60, 8], [-60, 5], [-260, 5], [-260, 8]], [[-280, 33], [-90, 33], [-90, 30], [-280, 30], [-280, 33]]], barrows = [];
   for (let i = 0; i < 6; i++) { const path = barrowPaths[i % 2], ph = i / 6 + r() * 0.1; P(man(), 'push', 0, 0, 0, 1826, 1830, { path, speed: 0.9, phase: ph }); barrows.push({ path, speed: 0.9, phase: ph, ahead: 1.0, u0: Y(1826), u1: Y(1830) }); }
-  for (let i = 0; i < 4; i++) walker([[-250 + i * 50, 2], [-240 + i * 50, 10]], 1826, 1830, { outfit: 'colonial', action: 'carry', prop: 'basket', speed: 0.8 });
+  for (let i = 0; i < 4; i++) walker([[-250 + i * 50, 2], [-240 + i * 50, 10]], 1826, 1830, { outfit: 'millhand', action: 'carry', prop: 'basket', speed: 0.8 });
   // foundations for the second row of mills
   for (let i = 0; i < 6; i++) P(man(), 'dig', 84 + i * 9 + r() * 4, 16 + r() * 10, ang(), 1803, 1806);
   for (let i = 0; i < 2; i++) { const path = [[80, 10], [140, 10], [140, 8], [80, 8], [80, 10]]; P(man(), 'push', 0, 0, 0, 1803, 1806, { path, speed: 0.9, phase: i * 0.5 }); barrows.push({ path, speed: 0.9, phase: i * 0.5, ahead: 1.0, u0: Y(1803), u1: Y(1806) }); }
@@ -215,14 +215,14 @@ function build({ world, group }) {
   const barges = [{ path: [[-296, 117.4], [36, 117.4], [50, 120], [36, 122.6], [-296, 122.6], [-304, 120], [-296, 117.4]], speed: 1.05, phase: 0.05, load: coalLoad }, { path: [[280, 122.6], [-36, 122.6], [-50, 120], [-36, 117.4], [280, 117.4], [290, 120], [280, 122.6]], speed: 1.0, phase: 0.4, load: baleLoad }].map((q) => {
     const full = new Bag(); full.p.push(...bargeBag.p); full.n.push(...bargeBag.n); full.c.push(...bargeBag.c); full.s.push(...bargeBag.s); full.w.push(...bargeBag.w); for (const k of ['p', 'n', 'c', 's', 'w']) full[k].push(...q.load[k]);
     const mesh = new THREE.Mesh(props.loose(full.geo()), props.mat); mesh.castShadow = mesh.receiveShadow = true; group.add(mesh);
-    const men = actors({ heightAt: () => 0, sea: -99 }, [{ outfit: 'colonial', action: 'stand', x: -9.6, z: 0.5, rot: 0.2, y: 0.53, prop: 'staff', tint: drab() }, { outfit: 'colonial', action: 'fish', x: 8.6, z: -1.1, rot: -1.2, y: 0.53, prop: 'staff', tint: drab() }], { seed: 9 }); mesh.add(...men.meshes);
+    const men = actors({ heightAt: () => 0, sea: -99 }, [{ outfit: 'millhand', action: 'stand', x: -9.6, z: 0.5, rot: 0.2, y: 0.53, prop: 'staff', tint: drab() }, { outfit: 'millhand', action: 'fish', x: 8.6, z: -1.1, rot: -1.2, y: 0.53, prop: 'staff', tint: drab() }], { seed: 9 }); mesh.add(...men.meshes);
     return { ...q, P: pathOf(q.path), mesh, men };
   });
   // a horse on the towpath for each, led by a boy
-  const towing = barges.map((q, i) => { const z = i ? 130 : 110, x0 = i ? 270 : -290, x1 = i ? -30 : 30, path = [[x0, z], [x1, z], [x1, z + (i ? 2.5 : -2.5)], [x0, z + (i ? 2.5 : -2.5)], [x0, z]], sp = q.speed * (pathOf(path).L / q.P.L); P('colonial', 'herd', 0, 0, 0, 1770, INF, { path, speed: sp, phase: q.phase + 2.6 / pathOf(path).L, s: 0.74 }); return { make: horse, path, speed: sp, phase: q.phase }; });
+  const towing = barges.map((q, i) => { const z = i ? 130 : 110, x0 = i ? 270 : -290, x1 = i ? -30 : 30, path = [[x0, z], [x1, z], [x1, z + (i ? 2.5 : -2.5)], [x0, z + (i ? 2.5 : -2.5)], [x0, z]], sp = q.speed * (pathOf(path).L / q.P.L); P('millhand', 'herd', 0, 0, 0, 1770, INF, { path, speed: sp, phase: q.phase + 2.6 / pathOf(path).L, s: 0.74 }); return { make: horse, path, speed: sp, phase: q.phase }; });
   // unloading: coal heavers and porters
-  for (let i = 0; i < 8; i++) walker([[i < 4 ? -30 : 24, 143.2], [i < 4 ? -34 : 20, 149], [i < 4 ? -50 : 60, 156]], 1770, INF, { outfit: 'colonial', action: 'carry', prop: 'sack', speed: 0.85, tint: lin(0x24242a) });
-  for (let i = 0; i < 6; i++) walker([[-36 + i * 2, 97], [-44 + i * 5, 88], [-31, 81.5]], 1770, INF, { outfit: 'colonial', action: 'carry', prop: i % 2 ? 'sack' : 'basket', speed: 0.85 });
+  for (let i = 0; i < 8; i++) walker([[i < 4 ? -30 : 24, 143.2], [i < 4 ? -34 : 20, 149], [i < 4 ? -50 : 60, 156]], 1770, INF, { outfit: 'millhand', action: 'carry', prop: 'sack', speed: 0.85, tint: lin(0x24242a) });
+  for (let i = 0; i < 6; i++) walker([[-36 + i * 2, 97], [-44 + i * 5, 88], [-31, 81.5]], 1770, INF, { outfit: 'millhand', action: 'carry', prop: i % 2 ? 'sack' : 'basket', speed: 0.85 });
   for (const [x, z, rot, act] of [[-12, 96, -1.57, 'point'], [-10.6, 95, 2.2, 'talk'], [40, 96, -1.2, 'stand'], [-62, 145, 1, 'talk'], [-63.4, 146, -2, 'stand']]) P(act === 'point' ? 'hat' : man(), act, x, z, rot, 1770, INF, act === 'point' ? { fine: 1 } : {});
   // the smithy by the basin: chains, horseshoes, boat fittings
   kit.at(74, G, 150, 0, () => { kit.gable('slate', 'brick', 0, 0, 12, 8, 3.2, 2.4, { over: 0.4, wcol: 0xc0aa9c }); walls(kit, 'brick', 0, 0, 12, 0.5, 0, 3.2, 0.3, 0xc0aa9c); kit.box('brick', 1, 0, 1, 3.4, 1, 3.2, 0xb0a094, 'b'); kit.box('brick', 1.6, 1, 1, 2.6, 7, 2, 0xb0a094, 'b'); kit.solid(0, 0, 12, 0.8).solid(1, 1, 3.4, 3.2); });
@@ -234,7 +234,7 @@ function build({ world, group }) {
   for (let i = 0; i < 16; i++) hand([[62 + r() * 3, 46 + r() * 12], [296, 46 + r() * 12]], i < 9 ? 1798 : 1812);
   for (let i = 0; i < 12; i++) hand([[143 + r() * 6, -112], [143 + r() * 6, 40], [150 + r() * 20, 52]], i < 6 ? 1798 : 1815);
   for (let i = 0; i < 12; i++) hand([[58 - r() * 6, 160 + r() * 150], [56 - r() * 4, 148], [62, 104], [62 + r() * 4, 60]].map(([x, z], k) => (k === 0 ? [x, z] : [x, z])).filter(() => true), i < 6 ? 1802 : 1820);
-  for (let i = 0; i < 22; i++) { const kid = i % 4 === 1; P(i % 2 ? 'dress' : i % 4 ? 'hat' : 'colonial', ['stand', 'talk', 'stand', 'talk'][i % 4], 144 + (r() - 0.5) * 16, 57 + r() * 5.5, -1.57 + (r() - 0.5) * 1.4, i < 12 ? 1798 : 1816, INF, kid ? { s: 0.6 + r() * 0.12 } : {}); }
+  for (let i = 0; i < 22; i++) { const kid = i % 4 === 1; P(i % 2 ? 'dress' : i % 4 ? 'hat' : 'millhand', ['stand', 'talk', 'stand', 'talk'][i % 4], 144 + (r() - 0.5) * 16, 57 + r() * 5.5, -1.57 + (r() - 0.5) * 1.4, i < 12 ? 1798 : 1816, INF, kid ? { s: 0.6 + r() * 0.12 } : {}); }
   { const b = props.bag(1798, INF); b.box(IRON, 0.12, 5, 0.12, 163, G + 2.5, 63).box(IRON, 0.9, 0.08, 0.08, 162.6, G + 5, 63).cyl(fin(0xb08a34, 0.4, 0.8), 0.12, 0.3, 0.45, 162.2, G + 4.7, 63, 10); }   // the factory bell
   // ---------- streets: walkers, packhorses, carts ----------
   for (let i = 0; i < 26; i++) { const o = (r() - 0.5) * 5, late = i % 3 === 0; walker(i % 2 ? [[-296, -120 + o], [296, -120 + o]] : i % 4 ? [[-30 + o, -326], [-30 + o, 78]] : [[-200 + o, -326], [-200 + o, -24]], late ? 1810 : 1770, late ? INF : i % 3 === 1 ? 1815 : INF, late && i % 2 ? { outfit: 'hat', fine: 1 } : r() < 0.2 ? { action: 'carry', prop: 'basket' } : {}); }
@@ -242,7 +242,7 @@ function build({ world, group }) {
   const packPath = [[-296, -118], [-204, -118], [-204, -196], [-180, -196], [-180, -122], [-296, -122], [-296, -118]], packs = [];
   { const pk = new Bag(); for (const s of [1, -1]) { pk.box(BALE, 0.7, 0.5, 0.34, -0.05, 1.3, s * 0.48); pk.ball(SACK, -0.05, 1.62, s * 0.2, 0.36, 0.2, 0.26); } pk.box(fin(0x3a2a1c, 0.8), 0.5, 0.05, 0.9, -0.05, 1.5, 0);
     const geo = props.loose(pk.geo()); for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(geo, props.mat); m.castShadow = true; packs.push({ make: horse, path: packPath, speed: 1.1, phase: 0.3, ahead: -i * 3.2, u0: Y(1770), u1: Y(1802), load: m, scale: 0.86 }); } }
-  P('colonial', 'herd', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 + 2.4 / pathOf(packPath).L }); P('colonial', 'walk', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 - 12 / pathOf(packPath).L });
+  P('millhand', 'herd', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 + 2.4 / pathOf(packPath).L }); P('millhand', 'walk', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 - 12 / pathOf(packPath).L });
   const cartGeo = cartParts(species(), { horse: false })[0], cartRoutes = [{ path: [[-290, -121.5], [290, -121.5], [290, -118.5], [-290, -118.5], [-290, -121.5]], speed: 1.5, phase: 0.1 }, { path: [[-28.5, -320], [-28.5, 72], [-31.5, 72], [-31.5, -320], [-28.5, -320]], speed: 1.4, phase: 0.55 }, { path: [[70, 49], [290, 49], [290, 53], [70, 53], [70, 49]], speed: 1.4, phase: 0.3, u0: Y(1798) }, { path: [[-60, 150], [58, 150], [58, 153], [-60, 153], [-60, 150]], speed: 1.2, phase: 0.7 }];
   const carts = new Followers(world, cartGeo.geo, cartGeo.mat, cartRoutes); group.add(carts.mesh);
 

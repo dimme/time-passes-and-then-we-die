@@ -46,6 +46,8 @@ export const OUTFITS = {
   skirt: { f: 1, coat: 1.04, grow: 0.01, collar: 1, skirt: 0.5, legs: 'bare', hair: 'bob' },
   hat: { buttons: 4, coat: 0.53, grow: 0.016, flare: 0.5, shirt: 1, hat: 'top', hair: 'short' },
   colonial: { buttons: 6, coat: 0.56, grow: 0.018, flare: 0.6, falling: 1, legs: 'breeches', hat: 'brim', hair: 'bob', shoes: [LEATHER, SOLE, hex(0xb8b0a0)] },
+  georgian: { buttons: 6, coat: 0.56, grow: 0.016, flare: 0.55, shirt: 1, legs: 'breeches', hair: 'bob', shoes: [LEATHER, SOLE, hex(0xb8b0a0)] },   // 1770s: frock coat, breeches and stockings
+  millhand: { buttons: 4, coat: 0.7, grow: 0.014, flare: 0.3, shirt: 1, hair: 'short' },   // 1800–1840: short jacket and trousers, bare-headed
   dress: { f: 1, coat: 1.04, grow: 0.008, falling: 1, skirt: 0.04, legs: 'none', hat: 'coif', hair: 'short', puff: 0.01, spread: 0.035, stride: 1 },
   robe: { coat: 0.98, grow: 0.022, skirt: 0.07, legs: 'none', hair: 'short', wide: 0.12, sash: 1, cowl: 1, spread: 0.02, stride: 1.05, shoes: [LINEN, hex(0x8a8478)] },
   native: { coat: 0.68, grow: 0.012, flare: 0.5, sleeve: 1.22, hair: 'long', band: 1, sash: 1, fringe: 1, shoes: [BUCKSKIN, hex(0x5a4028)], soft: 1 },
