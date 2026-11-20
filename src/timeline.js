@@ -73,7 +73,7 @@ export const ERAS = [
   { from: -11e3, name: 'Neolithic', color: '#7da05a' },
   { from: -3300, name: 'Bronze Age', color: '#b9853a' },
   { from: -1200, name: 'Iron Age · Antiquity', color: '#8d8d95' },
-  { from: 500, name: 'Lenape Mannahatta · Middle Ages', color: '#4f8a50' },
+  { from: 500, name: 'Middle Ages', color: '#4f8a50' },
   { from: 1500, name: 'Exploration · Colony', color: '#a8734a' },
   { from: 1776, name: 'Revolution · Industry', color: '#7a5a4a' },
   { from: 1900, name: 'The 20th Century', color: '#c9b27a' },
