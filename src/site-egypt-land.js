@@ -55,7 +55,7 @@ function relief(x, z) {
 }
 /** Darker soil on the plain, pale dust on the plateau. */
 function tint(x, z, b) {
-  if (b < PLAIN + 0.5 && x > 380) return b < 0.3 ? 0.62 : 0.5;
+  if (b < PLAIN + 0.5 && x > 380) return b < 0.3 ? 0.55 : 0.4;
   return 1 + 0.08 * Math.sin(x * 0.031 + z * 0.017) * Math.sin(z * 0.023);
 }
 export const terrain = { base, relief, tint, bounds: { x: 900, z: 1100 } };

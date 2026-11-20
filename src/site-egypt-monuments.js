@@ -65,17 +65,17 @@ class Pyramid {
  */
 function rampGeo(L, h, half, land, sink = 0.5) {
   const out = [], P = [], N = Math.ceil((L + land) / 5);
-  for (let i = 0; i <= N; i++) { const x = ((L + land) * i) / N, y = h * Math.min(1, x / L), foot = half + Math.max(y / 2, 10 * Math.min(1, x / 30)) + 1.5; P.push([x, y, foot]); }
+  for (let i = 0; i <= N; i++) { const x = ((L + land) * i) / N, y = h * Math.min(1, x / L), foot = half + Math.max(y / 2 + 6 * Math.min(1, x / 30), 10 * Math.min(1, x / 30)) + 1.5; P.push([x, y, foot]); }
   const pos = [];
   const quad = (a, b, c, d) => pos.push(...a, ...b, ...c, ...a, ...c, ...d);
   for (let i = 0; i < N; i++) {
     const [x0, y0, f0] = P[i], [x1, y1, f1] = P[i + 1], t = half + 0.3;
-    quad([x0, y0, t], [x1, y1, t], [x1, y1, -t], [x0, y0, -t]);
+    quad([x0, y0, t - 0.01], [x1, y1, t - 0.01], [x1, y1, -t + 0.01], [x0, y0, -t + 0.01]);
     quad([x0, -sink, f0], [x1, -sink, f1], [x1, y1, t], [x0, y0, t]);
     quad([x0, y0, -t], [x1, y1, -t], [x1, -sink, -f1], [x0, -sink, -f0]);
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals();
-  out.push(fin(g, (x, y, z) => shade(Math.abs(z) > half + 0.2 ? C.mudDark : C.sand, 0.8 + 0.12 * Math.sin(x * 0.9 + z * 0.4)), 3));
+  out.push(fin(g, (x, y, z) => shade(Math.abs(z) > half + 0.295 ? C.mud : C.sand, 0.8 + 0.12 * Math.sin(x * 0.9 + z * 0.4)), 3));
   for (let x = 3; x < L; x += 3) out.push(fin(put(block(0.32, 0.14, half * 2 - 1.5), x, (h * x) / L - 0.05, 0, 0, 0, Math.atan2(h, L)), C.wood));
   return merge(out);
 }
@@ -99,7 +99,7 @@ const roadPts = (x0, z0, x1, z1, yAt, step = 8) => { const n = Math.ceil(Math.hy
 
 /** A doorway: a dark recess with jambs and lintel, standing against a wall facing `ry`. */
 function door(P, mat, span, x, y, z, ry, w = 2.2, h = 4.2, c = C.granite) {
-  P.add('plain', span, put(block(w, h, 0.5), x, y, z, ry), C.dark);
+  P.add(mat, span, put(block(w, h, 0.5), x, y, z, ry), C.dark);
   for (const s of [-1, 1]) P.add(mat, span, put(put(block(0.7, h + 0.7, 0.9), s * (w / 2 + 0.35), 0, 0), x, y, z, ry), c);
   P.add(mat, span, put(put(block(w + 2.2, 0.9, 1), 0, h, 0), x, y, z, ry), c);
 }
@@ -124,9 +124,9 @@ function mastaba(P, span, r, x, z, w, l, h, mud = false) {
   const y = Math.min(ground(x - w / 2, z - l / 2), ground(x + w / 2, z + l / 2), ground(x - w / 2, z + l / 2), ground(x + w / 2, z - l / 2)) - 0.4, mat = mud ? 'brick' : 'fine', c = shade(mud ? C.mud : C.tura, 0.9 + r() * 0.12);
   P.add(mat, span, put(block(w, h + 0.4, l, 0.14), x, y, z), c);
   const e = x + w / 2 - 0.14 * h * 0.5;
-  for (const dz of [-l * 0.3, l * 0.28]) { P.add('plain', span, put(block(0.5, h * 0.6, 1.1), e + 0.02, y + 0.4, z + dz, 0, 0, 0.14), C.dark); P.add(mat, span, put(block(0.7, 0.35, 2), e + 0.05, y + 0.4 + h * 0.6, z + dz, 0, 0, 0.14), c); }
+  for (const dz of [-l * 0.3, l * 0.28]) { P.add(mat, span, put(block(0.5, h * 0.6, 1.1), e + 0.02, y + 0.4, z + dz, 0, 0, 0.14), C.dark); P.add(mat, span, put(block(0.7, 0.35, 2), e + 0.05, y + 0.4 + h * 0.6, z + dz, 0, 0, 0.14), c); }
   if (mud) for (let k = -l / 2 + 1.2; k < l / 2 - 1; k += 2.2) P.add(mat, span, put(block(0.5, h * 0.8, 1.1), x - w / 2 + 0.14 * h * 0.4 - 0.1, y + 0.3, z + k, 0, 0, -0.14), shade(c, 0.9));   // palace-façade niches
-  for (let k = 0; k < 2; k++) P.add('plain', span, put(block(1.5, 0.1, 1.5), x - w * 0.12 + r() * w * 0.2, y + h + 0.36, z + (k ? 1 : -1) * l * 0.25), C.dark);
+  for (let k = 0; k < 2; k++) P.add(mat, span, put(block(1.5, 0.1, 1.5), x - w * 0.12 + r() * w * 0.2, y + h + 0.36, z + (k ? 1 : -1) * l * 0.25), C.dark);
   return [x - w / 2, x + w / 2, z - l / 2, z + l / 2];
 }
 
@@ -251,9 +251,9 @@ export function buildMonuments({ P, group, mats }) {
   for (let i = 0; i < 9; i++) for (let k = 0; k < 8; k++) {
     if (r() < 0.12) continue;
     const x = -112 - i * 26, z = -562 + k * 36;
-    ob(mastaba(P, ['m1', 'm2', 'm3', 'm4'][Math.min(3, Math.floor((i + k * 0.6 + r()) / 3))], r, x, z, 12 + r() * 3, 26 + r() * 4, 4 + r() * 1.5), K1.y0);
+    ob(mastaba(P, ['m1', 'm3'][Math.min(1, Math.floor((i + k * 0.6 + r()) / 6))], r, x, z, 12 + r() * 3, 26 + r() * 4, 4 + r() * 1.5), K1.y0);
   }
-  for (let k = 0; k < 5; k++) ob(mastaba(P, k < 3 ? 'm2' : 'm3', r, 272, -330 + k * 38, 22, 32, 6), K1.y0 + 30);
+  for (let k = 0; k < 5; k++) ob(mastaba(P, 'm3', r, 272, -330 + k * 38, 22, 32, 6), K1.y0 + 30);
   for (const [x, z, w, l] of [[170, 300, 9, 20], [198, 318, 11, 24], [232, 302, 8, 17], [150, 338, 7, 15]]) ob(mastaba(P, 'all', r, x, z, w, l, 3.2, true));   // older tombs of mud brick
 
   return {

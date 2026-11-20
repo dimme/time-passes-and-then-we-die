@@ -64,7 +64,7 @@ function silo(P, span, x, z, s = 1) {
   return [x - 1.4 * s, x + 1.4 * s, z - 1.4 * s, z + 1.4 * s];
 }
 /** A boat. Cargo boats are of wood, with a two-legged mast lowered on to its crutch and a deckhouse of matting; skiffs are bundles of papyrus. */
-function boat(P, span, [x, z, ry, kind], load) {
+export function boat(P, span, [x, z, ry, kind], load) {
   const T = (g) => put(g, x, 0, z, ry);
   if (kind === 1) {
     P.add('reed', span, T(skin([[-3.4, 0.95, 0, 0.12, 0.12, 0.1], [-2.6, 0.35, 0, 0.16, 0.2, 0.32], [-1, 0.12, 0, 0.18, 0.24, 0.55], [1, 0.12, 0, 0.18, 0.24, 0.55], [2.5, 0.3, 0, 0.16, 0.2, 0.36], [3.3, 0.75, 0, 0.12, 0.12, 0.12]], { segs: 8 })), shade(C.reed, 1.05), 0.7);
@@ -86,11 +86,11 @@ export function buildPlain({ P, group, mats, world }) {
 
   // ---- fields: strips of barley and emmer, green or ripe, flax, and ploughland; ditches between ----
   const crop = { pos: [], nor: [], col: [], uv: [] }, Y = PLAIN + 0.06;
-  const TYPES = [[0x5d8f38, 0.55, 0x6fa040], [0xc2a548, 1.0, 0xd8bc5a], [0x54412c, 0, 0], [0x3f7f45, 0.4, 0x4f9a55], [0x86a03e, 0.8, 0x9ab04a]];
+  const TYPES = [[0x5f7f3a, 0.55, 0x789a48], [0xb89c48, 1.0, 0xd2b45a], [0x4a3a28, 0, 0], [0x4a7444, 0.4, 0x5c8a50], [0x869440, 0.8, 0x9aa64c]];
   const field = (x0, x1, z0, z1, type) => {
     const [ground0, hgt, cc] = TYPES[type], k = 0.85 + r() * 0.3;
     P.add('field', 'all', put(new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(-Math.PI / 2), (x0 + x1) / 2, Y, (z0 + z1) / 2), shade(ground0, k * (hgt ? 0.8 : 1)), 9);
-    if (!hgt) { for (let z = z0 + 0.6; z < z1; z += 1.5) P.add('field', 'all', put(new THREE.PlaneGeometry(x1 - x0, 0.5).rotateX(-Math.PI / 2), (x0 + x1) / 2, Y + 0.02, z), shade(ground0, k * 0.7), 9); return; }   // furrows
+    if (!hgt) { for (let z = z0 + 0.4; z < z1; z += 0.8) P.add('field', 'all', put(new THREE.PlaneGeometry(x1 - x0, 0.3).rotateX(-Math.PI / 2), (x0 + x1) / 2, Y + 0.02, z), shade(ground0, k * 0.7), 9); return; }   // furrows
     const c = shade(cc, k);
     for (let z = z0 + 0.5; z < z1; z += 1.1) {
       const h = hgt * (0.9 + r() * 0.2), u0 = r() * 3, u1 = u0 + (x1 - x0) / 1.7, zz = z + (r() - 0.5) * 0.3;
@@ -184,7 +184,7 @@ export function buildPlain({ P, group, mats, world }) {
   const free = (x, z) => !obstacles.some((o) => x > o.r[0] - 2 && x < o.r[1] + 2 && z > o.r[2] - 2 && z < o.r[3] + 2) && !BASINS.some((b) => x > b[0] - 12 && x < b[1] + 12 && z > b[2] - 12 && z < b[3] + 12) && ground(x, z) > 1;
   const item = (x, z, s0, s1) => ({ x, z, s: s0 + r() * (s1 - s0), rot: r() * 6.28, g: r(), t: [0.85 + r() * 0.25, 0.75 + r() * 0.2] });
   const palms = [[], []], figs = [], scrub = [];
-  const tryPalm = (x, z) => { if (free(x, z) && !special.some(([f]) => x > f[0] - 1 && x < f[1] + 1 && z > f[2] - 1 && z < f[3] + 1)) palms[r() < 0.6 ? 0 : 1].push(item(x, z, 0.75, 1.25)); };
+  const tryPalm = (x, z) => { if (Math.hypot(x - 536, z - 356) > 16 && free(x, z) && !special.some(([f]) => x > f[0] - 1 && x < f[1] + 1 && z > f[2] - 1 && z < f[3] + 1)) palms[r() < 0.6 ? 0 : 1].push(item(x, z, 0.75, 1.25)); };
   for (let z = -1130; z < 1130; z += 9 + r() * 22) { tryPalm(plainEdge(z) + 2 + r() * 12, z); if (r() < 0.7) tryPalm(764 + r() * 8, z + r() * 8); if (r() < 0.25) for (let k = 0; k < 5; k++) tryPalm(plainEdge(z) - 2 + r() * 20, z + r() * 14); }
   for (let i = 0; i < 26; i++) tryPalm(V.x0 + r() * (V.x1 - V.x0 + 24), V.z0 - 6 + r() * (V.z1 - V.z0 + 12));
   for (let i = 0; i < 40; i++) tryPalm(530 + r() * 12, 250 + r() * 135);
@@ -200,7 +200,7 @@ export function buildPlain({ P, group, mats, world }) {
     for (let z = -1150; z < 1150; z += 2 + r() * 9) { if (BASINS.some((q) => z > q[2] - 16 && z < q[3] + 16)) continue; const n = 1 + Math.floor(r() * 4); for (let k = 0; k < n; k++) spots.push([777 + r() * 8, z + r() * 3]); }
     for (const q of [BASINS[0], BASINS[2]]) for (let i = 0; i < 26; i++) spots.push([q[0] + 4 + r() * (q[1] - q[0] - 8), r() < 0.5 ? q[2] - 4 - r() * 2 : q[3] + 4 + r() * 2]);
     const m = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ map: papyrusTex(), alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1 }), spots.length); m.frustumCulled = false; m.receiveShadow = true;
-    spots.forEach(([x, z], i) => { const s = 0.7 + r() * 0.6; _m.compose(new THREE.Vector3(x, Math.max(-0.3, ground(x, z)) - 0.1, z), _q.setFromAxisAngle(UP, r() * 3), new THREE.Vector3(s, s, s)); m.setMatrixAt(i, _m); m.setColorAt(i, _col.setRGB(0.5 + r() * 0.25, 0.8 + r() * 0.2, 0.4)); });
+    spots.forEach(([x, z], i) => { const s = 0.7 + r() * 0.6; _m.compose(new THREE.Vector3(x, Math.max(-0.3, ground(x, z)) - 0.1, z), _q.setFromAxisAngle(UP, r() * 3), new THREE.Vector3(s, s, s)); m.setMatrixAt(i, _m); m.setColorAt(i, _col.setRGB(0.3 + r() * 0.15, 0.42 + r() * 0.12, 0.2)); });
     group.add(m);
   }
   return { obstacles, update() {} };

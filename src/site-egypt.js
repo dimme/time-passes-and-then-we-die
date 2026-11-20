@@ -4,7 +4,7 @@ import { uToYear } from './timeline.js';
 import { shared } from './textures.js';
 import { animTime } from './organic.js';
 import { C, Parts, masonry, reedTex } from './site-egypt-kit.js';
-import { terrain, K1, K2, K3, RH, SLOPE, rampScale, builtCourses } from './site-egypt-land.js';
+import { terrain, K1, K2, K3, RH, SLOPE, RAMP, rampScale, builtCourses } from './site-egypt-land.js';
 import { buildMonuments } from './site-egypt-monuments.js';
 import { buildPlain } from './site-egypt-plain.js';
 import { buildPeople } from './site-egypt-people.js';
@@ -69,6 +69,7 @@ export default {
       for (const o of obstacles) if (year >= o.a && year < o.b && x > o.r[0] && x < o.r[1] && z > o.r[2] && z < o.r[3]) return true;
       const d = half - Math.max(Math.abs(x - K1.x), Math.abs(z - K1.z));
       if (d > 0 && year >= K1.y0) { const top = (builtCourses(K1, year) * K1.H) / K1.n; if (top > 0.5 && (year >= K1.y1 || top > RH + 0.5 || world.hill * terrain.relief(x, z) < Math.min(top, d / SLOPE) - 0.6)) return true; }
+      if (year >= K1.y0 && year < K1.y1 && z < RAMP.z0 && z > RAMP.z1) { const ax = Math.abs(x - RAMP.x), h = world.hill * RH * (RAMP.z0 - z) / (RAMP.z0 - RAMP.z1); if (h > 1.2 && ax > RAMP.half && ax < RAMP.half + h / 2 + 8) return true; }   // the ramp's embankments
       return false;
     };
     return {
