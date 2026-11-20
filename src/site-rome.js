@@ -137,12 +137,12 @@ function build({ world, group }) {
   // ------------------------------------------------------------------ ground: paving, roads, the river banks
   const MARCH = [[660, -3], [470, -3], [434, -6], [404, -50], [300, -56], [219, -56], [205, -4], [126, 8], [100, 8], [30, 14], [0, 18], [-20, 22], [-96, 22], [-96, -22], [-10, -22], [100, -4], [124, -4], [198, -12], [213, -62], [300, -62], [406, -56], [438, -11], [470, -11], [660, -11], [660, -3]];
   const VICUS = [[-138, 24], [-138, 60], [-200, 122], [-238, 140]], ARGI = [[-94.5, -24], [-94.5, -200]], APPIA = [[205, -8], [213, -59], [404, -53], [436, -7], [960, -7]];
-  B.when(-150, -80); drape(B, world, 'earth', -172, -30, -22, 30, 10, () => [0.04, 0x8a7a60]);
-  B.when(-80, 455); drape(B, world, 'slab', -172, -30, -22, 30, 10, () => [0.04, shade(C.travertine, 0.8)]);
-  B.when(455, Infinity); drape(B, world, 'slab', -172, -30, -22, 30, 5, (x, z) => [0.04, hash(Math.floor(x / 5), Math.floor(z / 5)) < 0.3 ? 0x6a6a48 : shade(C.travertine, 0.7 + 0.25 * hash(Math.floor(x / 5) + 9, Math.floor(z / 5)))]);
-  B.when(); road(B, world, 'flag', [[-170, -22], [-10, -22], [100, -4], [205, -8]], 7, C.basalt); road(B, world, 'flag', APPIA, 8, C.basalt); road(B, world, 'flag', VICUS, 5, C.basalt); road(B, world, 'flag', ARGI, 8, C.basalt); road(B, world, 'flag', [[-96, 22], [-20, 22], [30, 14], [126, 8]], 6, C.basalt);
+  B.when(-150, -80); drape(B, world, 'earth', -176, -40, -1, 36, 10, () => [0.04, 0x8a7a60]);
+  B.when(-80, 455); drape(B, world, 'slab', -176, -40, -1, 36, 10, () => [0.04, shade(C.travertine, 0.8)]);
+  B.when(455, Infinity); drape(B, world, 'slab', -176, -40, -1, 36, 5, (x, z) => [0.04, hash(Math.floor(x / 5), Math.floor(z / 5)) < 0.3 ? 0x6a6a48 : shade(C.travertine, 0.7 + 0.25 * hash(Math.floor(x / 5) + 9, Math.floor(z / 5)))]);
+  B.when(); road(B, world, 'flag', [[-170, -22], [-10, -22]], 7, C.basalt); road(B, world, 'flag', [[-10, -20], [100, -3], [205, -8]], 13, C.basalt); road(B, world, 'flag', APPIA, 8, C.basalt); road(B, world, 'flag', VICUS, 5, C.basalt); road(B, world, 'flag', ARGI, 8, C.basalt); road(B, world, 'flag', [[-96, 22], [-20, 22], [30, 14], [126, 8]], 6, C.basalt);
   B.when(80, Infinity); drape(B, world, 'slab', 180, -70, 420, 130, 10, (x, z) => { const q = Math.hypot((x - COL.cx) / (COL.a + 26), (z - COL.cz) / (COL.b + 26)); return q < 1 ? [0.04, shade(C.travertine, 0.9)] : null; });
-  for (let x = 520; x <= 940; x += 70) { B.cyl('marble', C.travertine, 0.26, 0.3, 1.9, x, H(x, -12.5), -12.5, 10); B.box('marble', C.travertine, 0.8, 0.5, 0.8, x, H(x, -12.5) - 0.1, -12.5); CB.circle(x, -12.5, 0.5); }   // milestones
+  for (let x = 520; x <= 940; x += 70) { B.cyl('marble', C.travertine, 0.26, 0.3, 1.9, x, H(x, -15), -15, 10); B.box('marble', C.travertine, 0.8, 0.5, 0.8, x, H(x, -15) - 0.1, -15); CB.circle(x, -15, 0.5); }   // milestones
 
   // ------------------------------------------------------------------ the Capitoline
   const jup = { x: -250, z: -20, ry: 0, w: 38, l: 44, nf: 6, colH: 13, d: 1.7, porch: 3, podium: 4, steps: 0, peripteral: false };
@@ -167,6 +167,7 @@ function build({ world, group }) {
   B.when(-121, Infinity); temple(K, side({ x: -159, z: -36, ry: 0, w: 22, l: 15, nf: 6, colH: 9.5, d: 1.1, porch: 1, order: 'corinthian', col: C.marble, paint: 'roman', podium: 3.5 }));   // Concord
   B.when(-29, Infinity); temple(K, side({ x: -8, z: 0, ry: PI, w: 17, l: 19, nf: 6, colH: 9.5, d: 1.05, order: 'corinthian', col: C.marble, paint: 'roman', podium: 5, stairW: 0.3 }));   // the deified Julius
   B.when(141, Infinity); temple(K, side({ x: 22, z: -52, ry: -PI / 2, w: 20, l: 28, nf: 6, colH: 13, d: 1.4, order: 'corinthian', col: C.marble, capCol: C.marble, paint: 'roman', podium: 5 }));   // Antoninus and Faustina
+  B.when(); insula(K, { x: 49, z: 47, ry: PI, w: 44, dp: 22, floors: 2, col: C.stucco }); insula(K, { x: 128, z: 42, ry: PI, w: 40, dp: 20, floors: 3, col: C.brick, shops: 1 });   // the house of the Vestals; warehouses
   // Vesta: a round shrine where the fire never goes out
   B.when(); B.push(12, F, 32, 0); B.cyl('marble', C.marble, 7.6, 7.8, 2.2, 0, -0.4, 0, 28); for (let i = 0; i < 20; i++) column(B, 'marble', C.marble, Math.cos(i * 0.314) * 6.7, 1.8, Math.sin(i * 0.314) * 6.7, 6.2, 0.7, 'corinthian', { lo: i % 2 });
   B.cyl('marble', C.stucco, 4.9, 4.9, 6.2, 0, 1.8, 0, 24); B.cyl('marble', C.marble, 7.5, 7.5, 0.9, 0, 8, 0, 28); B.cyl('tile', C.tile, 1.2, 7.8, 3, 0, 8.9, 0, 28); B.box('wood', C.bronze, 0.2, 3.6, 1.6, 4.86, 1.8, 0); B.pop(); CB.circle(12, 32, 8);
@@ -310,7 +311,7 @@ function build({ world, group }) {
   add('roman', 'sow', 0, 0, 0, undefined, undefined, { path: [[508, 108], [632, 108], [632, 111], [508, 111], [508, 108]] });
   for (let i = 0; i < 5; i++) add(i % 3 === 2 ? 'roman-f' : 'roman', 'reap', 606 + i * 5 + r() * 2, 62 + r() * 4, 0.3 * (r() - 0.5), undefined, i > 2 ? 455 : undefined);
   walkers(['roman', 'roman-f'], 'carry', [[612, 68], [600, 84], [590, 71]], 2); add('roman-f', 'spin', 566, 71, -PI / 2); add('roman-f', 'weave', 571, 70.5, PI / 2); add('roman', 'thresh', 592, 52, 0); add('roman', 'thresh', 595.5, 53.5, PI);
-  const lanes = [...beside(APPIA.slice(3).map(([x, z]) => [Math.min(x, 800), z]), -2.2), ...beside(APPIA.slice(3).map(([x, z]) => [Math.min(x, 800), z]), 2.2).reverse()]; lanes[0] = [484, lanes[0][1]]; lanes[lanes.length - 1] = [484, lanes[lanes.length - 1][1]]; lanes.push(lanes[0]);
+  const lanes = [...beside(APPIA.slice(3).map(([x, z]) => [Math.min(x, 800), z]), -0.8), ...beside(APPIA.slice(3).map(([x, z]) => [Math.min(x, 800), z]), 0.8).reverse()]; lanes[0] = [484, lanes[0][1]]; lanes[lanes.length - 1] = [484, lanes[lanes.length - 1][1]]; lanes.push(lanes[0]);
   const LL = loopOf(lanes).L;
   [['hay', 0.1], ['stone', 0.55], ['jars', 0.8]].forEach(([load, ph], i) => { beasts.trail(M.horse, lanes, 1.15, ph, -Infinity, i === 1 ? 410 : Infinity, { scale: 0.84, tow: cart(load, i + 3) }); add('roman', 'herd', 0, 0, 0, undefined, i === 1 ? 410 : undefined, { path: lanes, phase: ph + 5.4 / LL, speed: 1.15 }); });
 
@@ -336,8 +337,8 @@ function build({ world, group }) {
   for (let x = 510; x < 940; x += 17) for (const z of [8, -22]) if (!CB.inside(x, z, 100, 3)) T.push({ kind: (x / 17 | 0) % 3 ? 'cypress' : 'pine', x: x + r() * 3, z: z + (z > 0 ? 1 : -1) * r() * 3, s: 0.6 + r() * 0.4, tint: [0.55, 0.68, 0.5] });
   for (let i = 0; i < 26; i++) { const x = -165 + r() * 140, z = (r() < 0.5 ? -1 : 1) * (8 + r() * 20); if (!CB.inside(x, z, 480, 2)) T.push({ kind: 'shrub', x, z, s: 0.6 + r() * 0.9, tint: [0.7, 0.8, 0.5], y0: 440 + r() * 40 }); }
   const grove = trees(world, group, T, 11);
-  beasts.circle(M.crow, 6, -Infinity, Infinity, { cx: -60, cz: 0, spread: 150, R: [30, 80], speed: 8, fly: 34 }); beasts.circle(M.gull, 5, -Infinity, Infinity, { cx: -300, cz: 160, spread: 60, R: [30, 80], speed: 9, fly: 18 }); beasts.circle(M.hawk, 2, -Infinity, Infinity, { cx: 600, cz: 60, spread: 80, R: [80, 140], speed: 10, fly: 70 });
-  beasts.circle(M.horse, 3, -Infinity, Infinity, { cx: 600, cz: -110, spread: 30, R: [8, 20], speed: 0.9, scale: [0.8, 0.92] });
+  beasts.circle(M.crow, 3, -Infinity, Infinity, { cx: -60, cz: 0, spread: 150, R: [30, 80], speed: 8, fly: 34 }); beasts.circle(M.gull, 3, -Infinity, Infinity, { cx: -300, cz: 160, spread: 60, R: [30, 80], speed: 9, fly: 18 }); beasts.circle(M.hawk, 1, -Infinity, Infinity, { cx: 600, cz: 60, spread: 80, R: [80, 140], speed: 10, fly: 70 });
+  beasts.circle(M.horse, 2, -Infinity, Infinity, { cx: 600, cz: -110, spread: 30, R: [8, 20], speed: 0.9, scale: [0.8, 0.92] });
 
   B.when().build(group);
   const folk = actors(world, A, { seed: 9 }); group.add(...folk.meshes);
