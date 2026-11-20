@@ -3,11 +3,11 @@
 import * as THREE from 'three';
 import { rng, smooth, part, ball, cyl } from './util.js';
 import { shared } from './textures.js';
-import { Scatter, makeKinds } from './flora.js';
+import { makeKinds } from './flora.js';
 import { Builder, norm, tube, arc, foliage } from './flora-geo.js';
 import { leafMat, floraTextures } from './flora-tex.js';
 import { actors } from './people-actors.js';
-import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, thatchTex } from './site-africa-kit.js';
+import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, thatchTex } from './site-africa-kit.js';
 
 const sin = Math.sin, cos = Math.cos, exp = Math.exp;
 
@@ -20,19 +20,20 @@ function base(x, z) {
   let h = 9 + 1.6 * sin(x * 0.011 + z * 0.006 + 1) + 1.2 * sin(z * 0.014 - 0.5) * cos(x * 0.008);
   h -= 2.2 * exp(-(((z - streamZ(x)) / 20) ** 2)) * smooth((x + 290) / 60);              // a seasonal stream bed
   const dk = Math.hypot(x - KOPJE[0], z - KOPJE[1]); h += 13 * exp(-((dk / 36) ** 2));   // a granite kopje
+  h += 4.5 * exp(-((x + 2) ** 2 + (z - 8) ** 2) / 2200);                                   // the rise the visitor arrives on
   const e = smooth((x - shoreAt(z) + 95) / 160); h += (-6 - h) * e;                        // the lake basin
   h -= 11 * exp(-(((x - riverX(z)) / 17) ** 2));                                          // the river under the scarp
   if (x < -380) { const k = smooth((-x - 380) / 440); h += 135 * k + (7 * sin(z * 0.012 + x * 0.004) + 4 * sin(z * 0.031 - x * 0.02)) * smooth((-x - 380) / 160); }   // the rift wall
   const az = Math.abs(z); if (az > 760) h += 45 * smooth((az - 760) / 400) * (1 - e);
   return h;
 }
-const terrain = { base, relief: () => 0, bounds: { x: 290, z: 380 }, tint: (x, z, b) => (b < 4.2 ? 0.82 : b > 40 ? 0.9 : 1) };
+const terrain = { base, relief: () => 0, bounds: { x: 290, z: 380 }, tint: (x, z, b) => (b < 4.2 ? 0.82 : b > 22 ? 0.78 : 1) };
 
 // ---------- the years ----------
 const A0 = -4.2e6, LOM = -3.3e6, H0 = -2.6e6, H1 = -1.7e6, FIRE = -1.0e6, S0 = -300e3, FISH = -92e3;
 const LAKE = [[-7e6, 3.4], [-2.6e6, 3.2], [-1.95e6, 4.4], [-1.2e6, 3.4], [-300e3, 3.0], [-160e3, 2.8], [-132e3, 0.5], [-100e3, 0.7], [-92e3, 3.0], [-70e3, 2.8]];
 const DRY = [[-7e6, 0], [-3.4e6, 0.15], [-2.6e6, 0.6], [-1.7e6, 0.85], [-300e3, 0.8], [-160e3, 0.85], [-132e3, 1.25], [-100e3, 1.2], [-90e3, 0.75], [-70e3, 0.9]];
-const C = { green: rgb(0x6c8240), gold: rgb(0xb09a58), top: rgb(0x4a90d6), hor0: rgb(0xd8e4d8), hor1: rgb(0xecdcb8), water: rgb(0x5f8a80), sun: rgb(0xfff0d0) };
+const C = { green: rgb(0x77824c), gold: rgb(0xb09a58), top: rgb(0x4a90d6), hor0: rgb(0xd8e4d8), hor1: rgb(0xecdcb8), water: rgb(0x5f8a80), sun: rgb(0xfff0d0) };
 
 const events = [
   [-7e6, 'Before us', 'A wooded valley floor between a fault scarp and a rift lake. Elephant kin, three-toed horses, antelope. Nothing here walks upright.', 'The rift is tearing East Africa open, and forest is thinning to woodland. Somewhere on this continent the line to chimpanzees and the line to you are parting.'],
@@ -72,7 +73,7 @@ function acacia(seed, { h = 6.5, wide = 6, rad = 0.26 } = {}, barkMat, leaf) {
     for (let j = 2; j <= 6; j++) for (let m = 0; m < 2; m++) {
       const len = 1.3 + r() * 1.5, B = arc(pts[j], az + (m ? 1 : -1) * (0.5 + r() * 1.0), 0.75 - j * 0.07, -0.55, len, 2);
       tube(wood, B.map((q) => q[0]), (i) => rad * 0.16 * (1 - i / 3), 3, 1);
-      for (const t of [1, 2]) tips.push([B[t][0], norm(B[t][1][0], 0.12, B[t][1][2])]);
+      for (const t of [1, 2]) for (let q = 0; q < 2; q++) tips.push([[B[t][0][0] + (r() - 0.5) * 0.9, B[t][0][1], B[t][0][2] + (r() - 0.5) * 0.9], norm(B[t][1][0] + (r() - 0.5), 0.12, B[t][1][2] + (r() - 0.5))]);
     }
     tips.push([pts[6], norm(A[6][1][0], 0.1, A[6][1][2])]);
   }
@@ -106,10 +107,12 @@ function hearth(seed, stones) {
 }
 /** A big carcass on its side: hide, opened flank, ribs, skull and tusks. */
 function carcass() {
-  const g = [ball(1, HIDE_C, 0, 0.5, 0, 1.75, 0.62, 0.95, 2), ball(1, HIDE_C, -1.5, 0.42, 0.1, 0.8, 0.48, 0.7, 1), ball(1, MEAT, 0.45, 0.72, 0.25, 0.95, 0.42, 0.62, 1), ball(1, HIDE_C, 2.05, 0.45, -0.1, 0.6, 0.5, 0.5, 1)];
-  for (let i = 0; i < 7; i++) g.push(part(new THREE.TorusGeometry(0.55 - 0.02 * Math.abs(i - 3), 0.028, 4, 8, 2.5), BONE, -0.15 + i * 0.2, 0.55, 0.3, 0, 1.5708, 0.5));
+  const g = [ball(1, HIDE_C, 0, 0.55, 0, 1.7, 0.66, 0.95, 2), ball(1, HIDE_C, -1.45, 0.5, 0.05, 0.85, 0.55, 0.8, 2), ball(1, MEAT, 0.35, 0.8, 0.3, 0.9, 0.42, 0.6, 1), ball(1, HIDE_C, 2.0, 0.5, -0.1, 0.62, 0.55, 0.52, 2)];
+  for (let i = 0; i < 8; i++) g.push(part(new THREE.TorusGeometry(0.62 - 0.025 * Math.abs(i - 3.5), 0.03, 5, 10, 2.7), BONE, -0.3 + i * 0.19, 0.6, 0.32, 0, 1.5708, 0.45));
   for (const s of [1, -1]) g.push(part(new THREE.TorusGeometry(0.75, 0.05, 5, 8, 1.3), 0xe6dcc2, 2.6, 0.1, s * 0.32 - 0.1, 1.5708 - s * 0.25, 0, -0.2));   // tusks
-  for (const [x, z, a] of [[-1.7, 1.2, 0.4], [-0.6, 1.5, 1.9], [0.9, 1.4, 0.9]]) g.push(cyl(0.035, 0.045, 0.7, BONE, x, 0.04, z, 5, 1.5708, a, 0));
+  for (const [x, z, a, up] of [[-1.5, -1.0, 1.35, 0], [-1.2, -1.05, 1.75, 0.25], [0.9, -1.0, 1.3, 0], [1.25, -1.1, 1.8, 0.3]]) g.push(cyl(0.2, 0.26, 1.5, HIDE_C, x, 0.24 + up, z, 8, 1.5708 - up * 0.6, 0, a - 1.5708));   // legs
+  g.push(cyl(0.07, 0.16, 1.5, HIDE_C, 2.75, 0.12, 0.55, 7, 1.5708, 0.9, 0), part(new THREE.SphereGeometry(1, 10, 6), HIDE_C, 1.75, 0.82, 0.0, 0, 0, 0.3, 0.5, 0.06, 0.6));               // trunk, ear
+  for (const [x, z, a] of [[-1.7, 1.3, 0.4], [-0.6, 1.6, 1.9], [0.9, 1.5, 0.9]]) g.push(cyl(0.035, 0.045, 0.7, BONE, x, 0.04, z, 5, 1.5708, a, 0));
   return g;
 }
 /** Knapping waste: cores and flakes lying where they fell (with finished hand-axes among them when asked). */
@@ -121,16 +124,16 @@ function debitage(seed, n, spread, axes = 0) {
 }
 
 // ---------- the mountains beyond the lake (too far for the fog to leave anything but a shape) ----------
-function mountain(R, H, crater, seed) {
-  const r = rng(seed), prof = [], N = 14;
-  for (let i = 0; i <= N; i++) { const t = i / N, rr = R * (1 - t) ** 1.0 * (1 - 0.0 * t) + R * crater * t; prof.push(new THREE.Vector2(Math.max(rr, R * crater * 0.999), H * (1 - (1 - t) ** 2.2 * 1) )); }
+function mountain(R, H, crater, seed, rag = 1) {
+  const r = rng(seed), N = 14;
   const pts = []; for (let i = 0; i <= N; i++) { const t = i / N; pts.push(new THREE.Vector2(R * (crater + (1 - crater) * (1 - t) ** 1.7), H * t ** 0.85)); }
   pts.push(new THREE.Vector2(R * crater * 0.82, H * 0.93), new THREE.Vector2(0.01, H * 0.9));
   const g = new THREE.LatheGeometry(pts, 40), p = g.attributes.position, col = new Float32Array(p.count * 3), ph = [r() * 6, r() * 6];
   for (let i = 0; i < p.count; i++) {
     const a = Math.atan2(p.getZ(i), p.getX(i)), t = p.getY(i) / H, gul = 0.5 + 0.5 * sin(a * 23 + ph[0]) * sin(a * 9 + ph[1]);
-    const k = 1 + 0.035 * gul * (1 - t); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k);
-    const c = (0.9 - 0.16 * gul * t - 0.22 * t) * (0.86 + 0.14 * cos(a + 2.2)); col.set([c, c, c * 1.03], i * 3);
+    const k = 1 + 0.06 * gul * (1 - t); p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k);
+    p.setY(i, p.getY(i) * (1 + rag * t * t * (0.07 * sin(a * 3 + ph[1]) + 0.05 * sin(a * 7 + ph[0]) + 0.03 * sin(a * 13))));
+    const c = (0.98 - 0.2 * gul * (0.3 + t) - 0.3 * t) * (0.8 + 0.2 * cos(a + 2.2)); col.set([c, c, c * 1.03], i * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals(); return g;
 }
@@ -141,7 +144,7 @@ function build({ world, group }) {
   const CAMP = [45, -15], QUARRY = [-72, 78], DIG = [28, 118], PARAN = [-25, -112], TREE = [53, -27];
   let bx = 110; while (H(bx, 48) > 5.5 && bx < 260) bx += 0.5; const BUTCH = [bx, 48];          // the carcass lies just above the highest lake
   let fx = 110; while (H(fx, -70) > 3.25 && fx < 260) fx += 0.25;                                // where the fishers stand
-  const keep = [[...CAMP, 24], [...BUTCH, 9], [...QUARRY, 10], [...DIG, 14], [...PARAN, 10], [5, 5, 7]];
+  const keep = [[...CAMP, 24], [...BUTCH, 9], [...QUARRY, 10], [...DIG, 14], [...PARAN, 10], [14, 0, 7]];
   const open = (x, z, m = 1) => keep.every(([kx, kz, kr]) => Math.hypot(x - kx, z - kz) > kr * m);
   const dryLand = (x, z) => H(x, z) > 5.6 && x > -280 && x < 280;
 
@@ -149,29 +152,29 @@ function build({ world, group }) {
   const bark = new THREE.MeshStandardMaterial({ map: T.barkMap, normalMap: T.barkNormal, color: 0x6a5a48, roughness: 0.95 }), thorn = leafMat(X.elm, { sway: 0.008 });
   const sets = [], olive = () => { const g = 0.62 + r() * 0.3; return [g * (0.95 + r() * 0.3), g, g * (0.6 + r() * 0.25)]; }, lush = () => { const g = 0.7 + r() * 0.3; return [g * (0.85 + r() * 0.25), g, g * (0.7 + r() * 0.2)]; },
     grey = () => { const g = 0.55 + r() * 0.35; return [g * 1.08, g, g * 0.92]; };
-  const scatter = (parts, n, place, span, size, tint) => {
+  const scatter = (parts, n, place, span, size, tint, cast = true) => {
     const items = [];
-    for (let i = 0; i < n; i++) { const q = place(); if (!q) continue; const [a, b] = span(q[0], q[1]); items.push({ x: q[0], z: q[1], s: size[0] + r() * (size[1] - size[0]), rot: r() * TAU, u0: a === -Infinity ? -1 : Y(a), u1: b === Infinity ? 2 : Y(b), tint: tint() }); }
-    if (!items.length) return; const s = new Scatter(world, parts, items); sets.push(s); group.add(...s.meshes);
+    for (let i = 0; i < n; i++) { const q = place(); if (!q) continue; const [a, b] = span(q[0], q[1]); items.push({ x: q[0], z: q[1], s: size[0] + r() * (size[1] - size[0]), rot: r() * TAU, u0: a === -Infinity ? -1 : Y(a), u1: b === Infinity ? 2 : Y(b), tint: (q[2] || tint)() }); }
+    if (items.length) sets.push(new Field(world, group, parts, items, { cast, grid: items.length < 40 ? 1 : 3 }));
   };
-  const plain = (xr = 560, zr = 620) => () => { for (let k = 0; k < 30; k++) { const x = (r() * 2 - 1) * xr - 60, z = (r() * 2 - 1) * zr; if (H(x, z) > 5.8 && H(x, z) < 60 && open(x, z)) return [x, z]; } return null; };
-  const always = () => [-Infinity, Infinity];
-  const AC = [acacia(11, {}, bark, thorn), acacia(12, { h: 8, wide: 7.5, rad: 0.32 }, bark, thorn), acacia(13, { h: 5, wide: 5 }, bark, thorn)];
-  for (const a of AC) scatter(a, 46, plain(), (x, z) => [r() < 0.5 ? -Infinity : -6e6 + r() * 4e6, Infinity], [0.8, 1.35], olive);
+  const plain = (xr = 560, zr = 620, x0 = -60) => () => { for (let k = 0; k < 30; k++) { const x = (r() * 2 - 1) * xr + x0, z = (r() * 2 - 1) * zr; if (H(x, z) > 5.8 && H(x, z) < 60 && open(x, z)) return [x, z]; } return null; };
+  const scarp = () => [-340 - r() * 420, (r() * 2 - 1) * 620];
+  const always = () => [-Infinity, Infinity], some = (...fs) => () => fs[r() * fs.length | 0]();
+  const AC = [acacia(11, {}, bark, thorn), acacia(12, { h: 8, wide: 7.5, rad: 0.32 }, bark, thorn)];
+  for (const a of AC) scatter(a, 85, some(plain(), plain(250, 330, -30), scarp), () => [r() < 0.5 ? -Infinity : -6e6 + r() * 4e6, Infinity], [0.8, 1.35], olive);
   scatter(AC[1], 1, () => TREE, always, [1.45, 1.45], olive);                                       // the camp's shade tree
   // the older, wetter country: woodland that thins as Africa dries
-  scatter(K.broadleaf, 90, plain(), () => [-Infinity, -3.6e6 + r() * 1.8e6], [0.7, 1.3], lush);
-  scatter(K.broadleafB, 90, plain(), () => [-Infinity, -3.4e6 + r() * 2.2e6], [0.7, 1.3], lush);
+  scatter(K.broadleaf, 150, some(plain(), plain(240, 380, -50), plain(240, 380, -50)), () => [-Infinity, -3.8e6 + r() * 2.4e6], [0.7, 1.3], lush);
   // fig and fever trees along the stream and the river, doum palms by the lake
-  scatter(K.broadleafC, 46, () => { const x = -280 + r() * 440, z = streamZ(x) + (r() - 0.5) * 50; return H(x, z) > 5.5 ? [x, z] : null; }, always, [0.8, 1.4], lush);
-  scatter(K.elm, 40, () => { const z = (r() * 2 - 1) * 700, x = riverX(z) + (r() < 0.5 ? -1 : 1) * (30 + r() * 26); return [x, z]; }, always, [0.7, 1.2], lush);
+  scatter(K.broadleafC, 70, some(() => { const x = -280 + r() * 440, z = streamZ(x) + (r() - 0.5) * 50; return H(x, z) > 5.5 ? [x, z] : null; }, () => { const z = (r() * 2 - 1) * 700; return [riverX(z) + (r() < 0.5 ? -1 : 1) * (30 + r() * 26), z]; }), always, [0.7, 1.4], lush);
   scatter(K.palmB, 34, () => { for (let k = 0; k < 40; k++) { const z = (r() * 2 - 1) * 520, x = shoreAt(z) - 95 + r() * 75; if (H(x, z) > 5.2 && H(x, z) < 8 && open(x, z)) return [x, z]; } return null; }, always, [0.6, 1.0], lush);
-  scatter(K.shrub, 150, plain(480, 560), always, [0.7, 1.7], olive);
-  scatter(K.shrubB, 130, plain(480, 560), always, [0.8, 2.0], olive);
-  // granite: the kopje's piled boulders, and loose stone on the plain and along the stream
+  scatter(K.shrub, 380, some(plain(480, 560), plain(240, 300, -20), scarp), always, [0.8, 2.0], olive, false);
+  scatter(K.shrubB, 260, scarp, always, [2.2, 4.5], olive, false);                                   // thorn scrub up the rift wall
+  // granite: the kopje's piled boulders, loose stone on the plain and along the stream, dark lava cobbles at the outcrop
+  const dark = () => { const g = 0.16 + r() * 0.1; return [g, g * 0.96, g * 0.95]; };
   scatter(K.rockC, 34, () => { const a = r() * TAU, d = Math.sqrt(r()) * 34; return [KOPJE[0] + cos(a) * d, KOPJE[1] + sin(a) * d]; }, always, [1.6, 4.5], grey);
-  scatter(K.rock, 60, () => (r() < 0.5 ? plain(420, 500)() : (() => { const x = -270 + r() * 400; return [x, streamZ(x) + (r() - 0.5) * 16]; })()), always, [0.3, 1.1], grey);
-  scatter(K.rockB, 26, () => { const a = r() * TAU, d = 4 + Math.sqrt(r()) * 12; return [QUARRY[0] + cos(a) * d, QUARRY[1] + sin(a) * d]; }, always, [0.3, 1.0], () => [0.42, 0.4, 0.4]);
+  scatter(K.rockC, 100, some(plain(420, 500), () => { const x = -270 + r() * 400; return [x, streamZ(x) + (r() - 0.5) * 16]; }), always, [0.3, 1.1], grey);
+  scatter(K.rockB, 30, () => { const a = r() * TAU, d = 3.5 + Math.sqrt(r()) * 11; return [QUARRY[0] + cos(a) * d, QUARRY[1] + sin(a) * d]; }, always, [0.25, 0.7], dark);
 
   // ----- scenery -----
   const stuff = new Stuff(world, group), fires = new Fires(group);
@@ -210,7 +213,7 @@ function build({ world, group }) {
 
   // the volcano: a smoking cone until it founders into a caldera, with an older, quieter neighbour
   const farMat = new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }), haze = [0, 0, 0], BLUE = [0.36, 0.43, 0.56];
-  const cone = new THREE.Mesh(mountain(2700, 1500, 0.07, 3), farMat), caldera = new THREE.Mesh(mountain(2900, 760, 0.42, 4), farMat), other = new THREE.Mesh(mountain(1900, 700, 0.12, 5), farMat);
+  const cone = new THREE.Mesh(mountain(2700, 1500, 0.07, 3, 0.25), farMat), caldera = new THREE.Mesh(mountain(2900, 640, 0.5, 4), farMat), other = new THREE.Mesh(mountain(1900, 700, 0.12, 5, 0.4), farMat);
   cone.position.set(5200, -30, -1500); caldera.position.copy(cone.position); other.position.set(4300, -30, 2600);
   const pg = new THREE.CylinderGeometry(520, 60, 1500, 12, 6, true).translate(0, 750, 0), pp = pg.attributes.position, pc = new Float32Array(pp.count * 4);
   for (let i = 0; i < pp.count; i++) { const t = pp.getY(i) / 1500; pp.setX(i, pp.getX(i) + 900 * t * t); pc.set([1, 1, 1, sin(Math.PI * Math.min(1, t * 1.2)) * (1 - 0.6 * t)], i * 4); }
@@ -324,7 +327,7 @@ function build({ world, group }) {
   return {
     update(u, t, env, camera, view) {
       uNow = u;
-      for (const s of sets) s.update(u, camera);
+      for (const s of sets) s.update(u);
       stuff.update(u); fires.update(u, t); beasts.update(u, t, camera); cast.update(u, t, view);
       tone(haze, env.hor, BLUE, 0.42); farMat.color.setRGB(haze[0], haze[1], haze[2], THREE.SRGBColorSpace);
       cone.visible = u < U_COLLAPSE; caldera.visible = !cone.visible; plume.visible = u > U_SMOKE && u < U_COLLAPSE;
@@ -339,4 +342,4 @@ function build({ world, group }) {
   };
 }
 
-export default { place: 'East African Rift · Olduvai Gorge', coords: [-2.99, 35.35], terrain, spawn: { x: 5, z: 5, yaw: -1.2 }, env, events, build };
+export default { place: 'East African Rift · Olduvai Gorge', coords: [-2.99, 35.35], terrain, spawn: { x: 14, z: 0, yaw: -1.15 }, env, events, build };

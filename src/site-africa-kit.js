@@ -8,7 +8,7 @@ import { animTime } from './organic.js';
 import { canvasTex } from './textures.js';
 
 export const Y = yearToU, TAU = Math.PI * 2;
-const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), _c = new THREE.Color();
 
 /** The ground as it is drawn: the terrain is a 10 m grid of flat triangles (as in animals.js). */
 export function drawnGround(W, x, z) {
@@ -58,6 +58,43 @@ export class Stuff {
     this.buckets.clear(); return this;
   }
   update(u) { for (const m of this.meshes) m.visible = u >= m.userData.u0 && u < m.userData.u1; }
+}
+
+/**
+ * Plants and rocks: instances of one kind (parts sharing their transforms, as flora.js makes them), each there for its own
+ * span of the slider. The field is cut into a few cells so that what is behind the visitor is not drawn.
+ * items: [{ x, z, s, rot, u0, u1, tint }]
+ */
+export class Field {
+  constructor(world, group, parts, items, { cast = true, grid = 3 } = {}) {
+    this.world = world; this.cells = []; this.lastU = -9; this.lastV = -1;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, reach = 0; for (const it of items) { x0 = Math.min(x0, it.x); x1 = Math.max(x1, it.x + 0.01); z0 = Math.min(z0, it.z); z1 = Math.max(z1, it.z + 0.01); }
+    for (const { geo } of parts) { if (!geo.boundingSphere) geo.computeBoundingSphere(); reach = Math.max(reach, geo.boundingSphere.radius + geo.boundingSphere.center.length()); }
+    for (let q = 0; q < grid * grid; q++) {
+      const list = items.filter((it) => Math.floor((it.x - x0) / (x1 - x0) * grid) + grid * Math.floor((it.z - z0) / (z1 - z0) * grid) === q); if (!list.length) continue;
+      let cx = 0, cz = 0, rad = 0, big = 0; for (const it of list) { cx += it.x / list.length; cz += it.z / list.length; big = Math.max(big, it.s); }
+      for (const it of list) rad = Math.max(rad, Math.hypot(it.x - cx, it.z - cz));
+      const sphere = new THREE.Sphere(new THREE.Vector3(cx, world.heightAt(cx, cz), cz), rad + reach * big + 4), meshes = parts.map(({ geo, mat, tint = true, cast: c = true }) => {
+        const m = new THREE.InstancedMesh(geo, mat, list.length); m.boundingSphere = sphere; m.castShadow = cast && c; m.receiveShadow = true;
+        list.forEach((it, i) => m.setColorAt(i, tint ? _c.setRGB(it.tint[0], it.tint[1], it.tint[2]) : _c.setRGB(1, 1, 1))); group.add(m); return m;
+      });
+      for (let k = 1; k < meshes.length; k++) meshes[k].instanceMatrix = meshes[0].instanceMatrix;
+      this.cells.push({ list, meshes });
+    }
+  }
+  update(u) {
+    if (u === this.lastU && this.world.shapeVersion === this.lastV) return;
+    this.lastU = u; this.lastV = this.world.shapeVersion;
+    for (const c of this.cells) {
+      let alive = 0;
+      c.list.forEach((it, i) => {
+        const f = it.s * Math.min(1, Math.max(0, (u - it.u0) / 0.003)) * Math.min(1, Math.max(0, (it.u1 - u) / 0.003));
+        if (f <= 0.001) _m.makeScale(0, 0, 0); else { alive++; _m.compose(_p.set(it.x, drawnGround(this.world, it.x, it.z) - 0.1, it.z), _q.setFromAxisAngle(UP, it.rot), _s.setScalar(f)); }
+        c.meshes[0].setMatrixAt(i, _m);
+      });
+      c.meshes[0].instanceMatrix.needsUpdate = true; for (const m of c.meshes) m.visible = alive > 0;
+    }
+  }
 }
 
 /** Camp fires: flickering flames and a thread of smoke each, alight for their span of years. */
