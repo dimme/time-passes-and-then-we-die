@@ -287,7 +287,7 @@ function frame(B, mat, col, x0, x1, Z, y, h, bw) {
  */
 export function temple(K, o) {
   const { B, world } = K, r = K.r, { x, z, ry = 0, w, l, nf, ns = 0, colH, d, order = 'doric', steps = 3, podium = 0, peripteral = !podium, porch = 2, mat = 'marble', col = C.marble, roofCol = C.tile, paint = 'greek', stage = 1, ruin = 0, burnt = 0 } = o;
-  const y = o.y ?? world.heightAt(x, z), sH = 0.42, tread = 0.5, greek = paint === 'greek', stone = burnt ? shade(col, 0.55) : col, dim = shade(stone, 0.86);
+  const y = o.y ?? world.heightAt(x, z), sH = o.sH || 0.42, tread = 0.5, greek = paint === 'greek', stone = burnt ? shade(col, 0.55) : col, dim = shade(stone, 0.86);
   B.push(x, y, z, ry);
   B.box(mat, dim, l + 2 * tread * steps + 0.8, 4, w + 2 * tread * steps + 0.8, 0, -4, 0);
   let Y = 0;
@@ -354,7 +354,7 @@ export function temple(K, o) {
   } else if (ruin && up) for (let k = 0; k < 6; k++) B.box(mat, shade(stone, 0.7), 1 + r() * 2, 0.5 + r() * 0.6, 0.8 + r(), (r() - 0.5) * l * 0.8, Y, (r() - 0.5) * w * 0.7, r() * 3);
   B.pop();
   const ext = tread * steps + 0.3 + (podium ? 0.2 : 0);
-  K.C.rect(x, z, l / 2 + ext, w / 2 + ext, ry, ...B.span);
+  if (!o.pass) K.C.rect(x, z, l / 2 + ext, w / 2 + ext, ry, ...B.span);
   if (podium) { const n = Math.ceil(podium / 0.24) * 0.36; K.C.rect(x + Math.cos(ry) * (l / 2 + n / 2), z - Math.sin(ry) * (l / 2 + n / 2), n / 2, w / 2, ry, ...B.span); }
   return { top: y + Y, yE: y + Y + colH, X, Z };
 }
@@ -381,7 +381,14 @@ export function stoa(K, o) {
   B.box(mat, col, l, aH, d * 0.85, 0, yE, zf); B.box(mat, o.frieze || col, l, aH, d * 0.8, 0, yE + aH, zf); B.box(mat, col, l + 0.6, d * 0.25, d * 1.5, 0, yE + 2 * aH, zf);
   if (order === 'doric') for (let k = 0; k <= (n - 1) * 2; k++) B.box(mat, o.tri || C.blue, d * 0.4, aH, d * 0.9, -xs + (k * xs) / (n - 1), yE + aH, zf);
   B.box('plaster', wall, l, 2 * aH + d * 0.25, 0.6, 0, yE, -dp / 2 + 0.3);
-  const yR = yE + 2 * aH + d * 0.25, p = 0.3, S = dp / 2 + 0.5, rh = S * Math.tan(p), sl = S / Math.cos(p) + 0.2;
+  let yR = yE + 2 * aH + d * 0.25;
+  if (o.upper) {   // a second, lighter storey
+    const h2 = o.upper; B.box('wood', C.oldWood, l, 0.3, dp - 0.6, 0, yR - 0.3, 0);
+    for (let i = 0; i < n; i++) column(B, mat, col, -xs + (i * 2 * xs) / (n - 1), yR, zf, h2, d * 0.72, 'ionic', { ry: -Math.PI / 2, lo: 1 });
+    B.box(mat, col, l, 0.9, 0.2, 0, yR, zf); B.box('plaster', wall, l, h2 + aH, 0.6, 0, yR, -dp / 2 + 0.3); for (const e of [1, -1]) B.box('plaster', wall, 0.6, h2 + aH, dp - 0.6, e * (l / 2 - 0.3), yR, 0);
+    B.box(mat, col, l + 0.4, aH, d * 0.8, 0, yR + h2, zf); yR += h2 + aH;
+  }
+  const p = 0.3, S = dp / 2 + 0.5, rh = S * Math.tan(p), sl = S / Math.cos(p) + 0.2;
   for (const e of [1, -1]) { B.geo('tile', roofCol, BOX, 0, yR + rh / 2, (e * S) / 2, 0, e * p, 0, l + 1, 0.18, sl, [l + 1, sl]); B.geo('plaster', wall, gableGeo(dp, rh, 0.6), e * (l / 2 - 0.3), yR, 0); }
   B.box('wood', C.oldWood, l, 0.25, dp - 1, 0, yR - 0.25, 0);
   B.pop(); K.C.rect(x, z, l / 2 + 0.6, dp / 2 + 0.6, ry, ...B.span);
@@ -595,10 +602,41 @@ export function hullGeo(len, beam, depth, { sheer = 0.5, stern = 0.6, n = 12 } =
   const g = flatGeo(tris); return g;
 }
 
+/** A standing figure h high on a pedestal `base` high: bronze or painted marble. o: { mat, col, baseCol, spear, shield, robe (colour) } */
+export function statue(K, x, y, z, ry, h, o = {}) {
+  const { B } = K, mat = o.mat || 'metal', col = o.col || C.bronze, b = o.base ?? h * 0.5, k = h / 1.75;
+  B.push(x, y, z, ry);
+  if (b) { B.box('marble', o.baseCol || C.marble, 0.9 * k + 0.3, b, 0.9 * k + 0.3, 0, 0, 0); B.box('marble', o.baseCol || C.marble, 0.9 * k + 0.55, 0.14 * k + 0.05, 0.9 * k + 0.55, 0, b, 0); }
+  const Y = b + (b ? 0.14 * k + 0.05 : 0);
+  B.geo(mat, o.robe || col, shaftGeo(9, 0.35), 0, Y, 0, 0, 0, 0, 0.21 * k, 1.0 * k, 0.17 * k);
+  B.geo(mat, col, BALL, 0, Y + 1.2 * k, 0, 0, 0, 0, 0.2 * k, 0.3 * k, 0.15 * k); B.geo(mat, col, BALL, 0.01 * k, Y + 1.61 * k, 0, 0, 0, 0, 0.1 * k, 0.125 * k, 0.1 * k);
+  B.rod(mat, col, [0, Y + 1.4 * k, 0.2 * k], [0.02 * k, Y + 0.85 * k, 0.26 * k], 0.045 * k, 5);
+  if (o.spear) { B.rod(mat, col, [0, Y + 1.4 * k, -0.2 * k], [0.25 * k, Y + 1.5 * k, -0.34 * k], 0.045 * k, 5); B.rod(mat, col, [0.25 * k, Y, -0.36 * k], [0.25 * k, Y + 2.3 * k, -0.36 * k], 0.02 * k, 5); B.cyl(mat, col, 0.01, 0.07 * k, 0.2 * k, 0, Y + 1.72 * k, 0, 6); }
+  else B.rod(mat, col, [0, Y + 1.4 * k, -0.2 * k], [0.3 * k, Y + 1.25 * k, -0.24 * k], 0.045 * k, 5);
+  if (o.shield) B.geo(mat, col, BALL, 0.05 * k, Y + 0.95 * k, 0.33 * k, 0, 0, 0, 0.3 * k, 0.3 * k, 0.05 * k);
+  B.pop();
+  if (b) K.C.rect(x, z, 0.5 * k + 0.3, 0.5 * k + 0.3, ry, ...B.span);
+}
+/** A strip `width` wide laid on the ground along a path. */
+export function road(B, world, mat, path, width, col, lift = 0.05) {
+  const tris = [], hw = width / 2;
+  for (let i = 0; i < path.length - 1; i++) {
+    const [ax, az] = path[i], [bx, bz] = path[i + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, n = Math.max(1, Math.ceil((L + width) / 5));
+    let prev = null;
+    for (let k = 0; k <= n; k++) {
+      const t = -hw + ((L + width) * k) / n, cx = ax + ux * t, cz = az + uz * t, l = [cx + uz * hw, 0, cz - ux * hw], rr = [cx - uz * hw, 0, cz + ux * hw];
+      l[1] = world.heightAt(l[0], l[2]) + lift + i * 0.002; rr[1] = world.heightAt(rr[0], rr[2]) + lift + i * 0.002;
+      if (prev) tris.push([prev[0], prev[1], l], [prev[1], rr, l]); prev = [l, rr];
+    }
+  }
+  const T = B.T.clone(); B.T.identity(); B.add(mat, flatGeo(tris), col); B.T.copy(T);
+}
+
 /** Warn (once, in the console) about actors standing inside something or in the water: for checking a place while building it. */
 export function audit(name, list, blocks, world, sea, yearOf) {
   let bad = 0;
   for (const a of list) {
+    let hit = false;
     const year = a.u0 !== undefined && a.u0 > -1 ? yearOf(a.u0) + 1 : a.u1 !== undefined && a.u1 < 2 ? yearOf(a.u1) - 1 : null, pts = a.path || [[a.x, a.z]];
     const years = year === null ? [a.yr ?? 0] : [year];
     for (const yr of years) for (let i = 0; i < pts.length; i++) {
@@ -606,7 +644,7 @@ export function audit(name, list, blocks, world, sea, yearOf) {
       for (let s = 0; s < steps; s++) {
         const x = pts[i][0] + (a.path && steps > 1 ? ((pts[i + 1][0] - pts[i][0]) * s) / steps : 0), z = pts[i][1] + (a.path && steps > 1 ? ((pts[i + 1][1] - pts[i][1]) * s) / steps : 0);
         const b = blocks.inside(x, z, yr, 0.15), wet = !a.afloat && world.heightAt(x, z) < sea + 0.05;
-        if ((b || wet) && bad++ < 40) console.warn(`[audit ${name}] ${a.outfit} ${a.action} at ${x.toFixed(1)}, ${z.toFixed(1)} year ${yr.toFixed(0)}: ${b ? 'inside a footprint at ' + b.x.toFixed(0) + ', ' + b.z.toFixed(0) : 'in the water'}`);
+        if ((b || wet) && !hit && (hit = true) && bad++ < 60) console.warn(`[audit ${name}] ${a.outfit} ${a.action} at ${x.toFixed(1)}, ${z.toFixed(1)} year ${yr.toFixed(0)}: ${b ? 'inside a footprint at ' + b.x.toFixed(0) + ', ' + b.z.toFixed(0) : 'in the water'}`);
       }
     }
   }
