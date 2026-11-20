@@ -326,7 +326,7 @@ function build({ world, group }) {
 export default {
   place: 'Chartres · France', coords: [48.45, 1.49],
   terrain: { base, relief: () => 0, bounds: { x: 300, z: 440 }, tint: (x, z, b) => (b < 5.6 ? 0.8 : 1) },
-  spawn: { x: -150, z: 18, yaw: -1.35 },
+  spawn: { x: 70, z: 66, yaw: 0.76 },
   env(year, env) {
     hexA(0x4f86c8, env.top); hexA(0xc6d8e2, env.hor); hexA(0x5f7f3c, env.ground); hexA(0x4a5f35, env.far); hexA(0x4c6a52, env.water); hexA(0xfff2d8, env.sun); hexA(0xffffff, env.cloudCol);
     env.sea = WATER; env.hill = 1; env.ice = -60; env.cloud = 0.5; env.precip = 0; env.fogD = 0.0015; env.sunEl = 0.8; env.sunI = 2.1; env.amb = 1; env.exposure = 1; env.bloom = 0.25; env.glow = 0; env.meteor = 0; hexA(0, env.lava);

@@ -283,7 +283,7 @@ function build({ world, group }) {
 export default {
   place: 'Manchester · England', coords: [53.48, -2.24],
   terrain: { base, relief: () => 0, bounds: { x: 300, z: 330 }, tint: (x, z, b) => (b < 5.6 ? 0.75 : 1) },
-  spawn: { x: -6, z: 151, yaw: -0.7 },
+  spawn: { x: -135, z: -165, yaw: 0 },
   env(year, env) {
     const k = smooth((year - 1782) / 52), set = (h, o) => hexA(h, o, 1);   // how far the smoke has closed in
     set(0x5f8fc4, env.top); set(0xc8d8de, env.hor); set(0x6f7c50, env.ground); set(0x55603f, env.far); set(0x4a5a50, env.water); set(0xffeccc, env.sun); set(0xf0ece4, env.cloudCol);
