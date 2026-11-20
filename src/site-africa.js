@@ -7,7 +7,7 @@ import { makeKinds } from './flora.js';
 import { Builder, norm, tube, arc, foliage } from './flora-geo.js';
 import { leafMat, floraTextures } from './flora-tex.js';
 import { actors } from './people-actors.js';
-import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, thatchTex } from './site-africa-kit.js';
+import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, thatchTex, hearth, debitage } from './site-africa-kit.js';
 
 const sin = Math.sin, cos = Math.cos, exp = Math.exp;
 
@@ -84,7 +84,7 @@ function acacia(seed, { h = 6.5, wide = 6, rad = 0.26 } = {}, barkMat, leaf) {
 }
 
 // ---------- things people make and leave ----------
-const BONE = 0xd8d0b8, ASH = 0x8a8680, CHAR = 0x1c1a18, LAVA = 0x4a4642, MEAT = 0x6a1c14, HIDE_C = 0x5a5048, OCHRE = 0x8a2c14, LOG = 0x4a3524;
+const BONE = 0xd8d0b8, LAVA = 0x4a4642, MEAT = 0x6a1c14, HIDE_C = 0x5a5048, OCHRE = 0x8a2c14;
 /** A grid surface from P(i, j) → [position, normal, u, v, colour?], facing the side the normals point to. */
 function surf(b, P, NI, NJ) { for (let i = 0; i < NI; i++) for (let j = 0; j < NJ; j++) b.quad(P(i + 1, j), P(i, j), P(i, j + 1), P(i + 1, j + 1)); }
 /** A windbreak of bent branches covered with grass and leafy brush, open towards +x. */
@@ -98,13 +98,6 @@ function brushShelter(seed) {
   const bed = part(new THREE.SphereGeometry(1, 10, 5), 0xa89858, -0.35, 0.02, 0, 0, 0, 0, 1.1, 0.07, 0.95);
   return { thatch: th.build(), wood: wood.build(), bed };
 }
-/** A fire place: charred logs on a bed of ash, ringed with stones once people do that. */
-function hearth(seed, stones) {
-  const r = rng(seed), g = [part(new THREE.SphereGeometry(1, 10, 4), ASH, 0, 0, 0, 0, 0, 0, 0.62, 0.035, 0.6)];
-  for (let i = 0; i < 5; i++) { const a = i * 1.26 + r(); g.push(cyl(0.035, 0.05, 0.7 + r() * 0.3, i % 2 ? CHAR : LOG, cos(a) * 0.2, 0.09 + 0.03 * i, sin(a) * 0.2, 6, 1.25, a, 0)); }
-  if (stones) for (let i = 0; i < 9; i++) { const a = i * 0.698 + r() * 0.2; g.push(ball(0.11 + r() * 0.05, LAVA, cos(a) * 0.55, 0.05, sin(a) * 0.55, 1.2, 0.7, 1, 1)); }
-  return g;
-}
 /** A big carcass on its side: hide, opened flank, ribs, skull and tusks. */
 function carcass() {
   const g = [ball(1, HIDE_C, 0, 0.55, 0, 1.7, 0.66, 0.95, 2), ball(1, HIDE_C, -1.45, 0.5, 0.05, 0.85, 0.55, 0.8, 2), ball(1, MEAT, 0.35, 0.8, 0.3, 0.9, 0.42, 0.6, 1), ball(1, HIDE_C, 2.0, 0.5, -0.1, 0.62, 0.55, 0.52, 2)];
@@ -115,14 +108,6 @@ function carcass() {
   for (const [x, z, a] of [[-1.7, 1.3, 0.4], [-0.6, 1.6, 1.9], [0.9, 1.5, 0.9]]) g.push(cyl(0.035, 0.045, 0.7, BONE, x, 0.04, z, 5, 1.5708, a, 0));
   return g;
 }
-/** Knapping waste: cores and flakes lying where they fell (with finished hand-axes among them when asked). */
-function debitage(seed, n, spread, axes = 0) {
-  const r = rng(seed), g = [];
-  for (let i = 0; i < n; i++) { const a = r() * TAU, d = Math.sqrt(r()) * spread, s = 0.025 + r() * 0.05; g.push(ball(s, r() < 0.3 ? 0x2c2a2a : LAVA, cos(a) * d, s * 0.3, sin(a) * d, 1.3, 0.45, 1, 0)); }
-  for (let i = 0; i < axes; i++) { const a = r() * TAU, d = 0.5 + r() * spread; g.push(part(new THREE.SphereGeometry(1, 7, 5), 0x3a3836, cos(a) * d, 0.02, sin(a) * d, 0, r() * 6, 0, 0.085, 0.022, 0.05)); }
-  return g;
-}
-
 // ---------- the mountains beyond the lake (too far for the fog to leave anything but a shape) ----------
 function mountain(R, H, crater, seed, rag = 1) {
   const r = rng(seed), N = 14;

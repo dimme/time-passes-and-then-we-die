@@ -1,7 +1,7 @@
 // Shared by the two Stone Age places (site-africa.js, site-cave.js): scenery placed on the drawn ground and
 // shown for its span of years, camp fires with smoke, herds of animals, and a few hand-made textures.
 import * as THREE from 'three';
-import { rng, merge } from './util.js';
+import { rng, merge, part, ball, cyl } from './util.js';
 import { yearToU } from './timeline.js';
 import { species, pose } from './animals.js';
 import { animTime } from './organic.js';
@@ -184,6 +184,24 @@ export class Beasts {
     }
   }
 }
+
+// ---------- things left on the ground ----------
+const ASH = 0x8a8680, CHAR = 0x1c1a18, LOG = 0x4a3524, cos = Math.cos, sin = Math.sin;
+/** A fire place: charred logs on a bed of ash, ringed with stones once people do that. */
+export function hearth(seed, stones, STONE = 0x4a4642) {
+  const r = rng(seed), g = [part(new THREE.SphereGeometry(1, 10, 4), ASH, 0, 0, 0, 0, 0, 0, 0.62, 0.035, 0.6)];
+  for (let i = 0; i < 5; i++) { const a = i * 1.26 + r(); g.push(cyl(0.035, 0.05, 0.7 + r() * 0.3, i % 2 ? CHAR : LOG, cos(a) * 0.2, 0.09 + 0.03 * i, sin(a) * 0.2, 6, 1.25, a, 0)); }
+  if (stones) for (let i = 0; i < 9; i++) { const a = i * 0.698 + r() * 0.2; g.push(ball(0.11 + r() * 0.05, STONE, cos(a) * 0.55, 0.05, sin(a) * 0.55, 1.2, 0.7, 1, 1)); }
+  return g;
+}
+/** Knapping waste: cores and flakes lying where they fell (with finished hand-axes among them when asked). */
+export function debitage(seed, n, spread, axes = 0, LAVA = 0x4a4642) {
+  const r = rng(seed), g = [];
+  for (let i = 0; i < n; i++) { const a = r() * TAU, d = Math.sqrt(r()) * spread, s = 0.025 + r() * 0.05; g.push(ball(s, r() < 0.3 ? 0x2c2a2a : LAVA, cos(a) * d, s * 0.3, sin(a) * d, 1.3, 0.45, 1, 0)); }
+  for (let i = 0; i < axes; i++) { const a = r() * TAU, d = 0.5 + r() * spread; g.push(part(new THREE.SphereGeometry(1, 7, 5), 0x3a3836, cos(a) * d, 0.02, sin(a) * d, 0, r() * 6, 0, 0.085, 0.022, 0.05)); }
+  return g;
+}
+
 
 // ---------- textures ----------
 function canvas(size, fill) { const c = document.createElement('canvas'); c.width = c.height = size; const g = c.getContext('2d'); g.fillStyle = fill; g.fillRect(0, 0, size, size); return g; }
