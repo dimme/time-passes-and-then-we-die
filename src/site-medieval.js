@@ -295,12 +295,12 @@ function build({ world, group }) {
   const trees = (kinds, n, place, until, size) => { for (const kind of kinds) { const items = []; for (let i = 0; i < n / kinds.length; i++) { const p = place(); if (!p) continue; const g = 0.72 + r() * 0.3; items.push({ x: p[0], z: p[1], s: size[0] + r() * (size[1] - size[0]), rot: ang(), tint: [g * (0.85 + r() * 0.3), g, g * (0.7 + r() * 0.3)] }); } const meshes = grove(world, K[kind], items, { cz: CZ }); group.add(...meshes); woods.push({ meshes, until }); } };
   const dry = (x, z) => Math.abs(x - riverX(z)) > 24;
   const inField = (x, z) => (x > -645 && x < -236 && Math.abs(z) < 335) || (x > -235 && x < 295 && z < -186 && z > -475) || (x > -235 && x < 185 && z > 204 && z < 475);
-  trees(['broadleaf', 'elm'], 520, () => { const x = (r() * 2 - 1) * 900, z = (r() * 2 - 1) * 900; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.45) && Math.abs(z - CZ) > 8 ? [x, z] : null; }, INF, [0.7, 1.4]);
+  trees(['broadleaf', 'elm'], 300, () => { const x = (r() * 2 - 1) * 900, z = (r() * 2 - 1) * 900; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.45) && Math.abs(z - CZ) > 8 ? [x, z] : null; }, INF, [0.7, 1.4]);
   trees(['elmB'], 44, () => { const z = (r() * 2 - 1) * 700, s = r() < 0.5 ? -1 : 1; return Math.abs(z - CZ) < 12 || Math.abs(z - 60) < 14 ? null : [riverX(z) + s * (25 + r() * 10), z]; }, INF, [0.5, 0.9]);
   // the old woodland where the great fields will be, felled as the village grows
   const old = () => { const x = (r() * 2 - 1) * 640, z = (r() * 2 - 1) * 470; return (inField(x, z) || (inTown(x, z, 1.45) && !inTown(x, z, 0.78))) && dry(x, z) && !(x > -160 && x < -90 && z > 45 && z < 130) && Math.abs(z - CZ) > 8 ? [x, z] : null; };
-  trees(['broadleafB'], 200, old, 760, [0.7, 1.4]); trees(['elmC'], 200, old, 850, [0.7, 1.4]);
-  trees(['shrub'], 120, () => { const x = (r() * 2 - 1) * 600, z = (r() * 2 - 1) * 520; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.25) && Math.abs(z - CZ) > 6 ? [x, z] : null; }, INF, [0.8, 1.6]);
+  trees(['broadleafB'], 120, old, 760, [0.7, 1.4]); trees(['elmC'], 120, old, 850, [0.7, 1.4]);
+  trees(['shrub'], 70, () => { const x = (r() * 2 - 1) * 600, z = (r() * 2 - 1) * 520; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.25) && Math.abs(z - CZ) > 6 ? [x, z] : null; }, INF, [0.8, 1.6]);
 
   // ---------- assemble ----------
   kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });

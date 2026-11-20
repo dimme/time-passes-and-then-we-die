@@ -390,7 +390,7 @@ export function grove(world, parts, items, { wedges = 5, cx = 0, cz = 0 } = {}) 
   for (const list of by) {
     if (!list.length) continue; let first = null;
     for (const { geo, mat, tint = true, cast = true } of parts) {
-      const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = cast; m.receiveShadow = true;
+      const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = false; m.receiveShadow = true;
       list.forEach((it, i) => { if (!first) m.setMatrixAt(i, _m.compose(_v.set(it.x, world.heightAt(it.x, it.z) - 0.1, it.z), _q.setFromAxisAngle(UP, it.rot), _b.set(it.s, it.s, it.s))); m.setColorAt(i, tint ? col.setRGB(it.tint[0], it.tint[1], it.tint[2]) : col.setRGB(1, 1, 1)); });
       if (first) m.instanceMatrix = first.instanceMatrix; else first = m;
       m.computeBoundingSphere(); out.push(m);
