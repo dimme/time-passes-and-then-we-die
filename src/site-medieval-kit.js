@@ -31,7 +31,7 @@ function courses(g, S, r, h, w0, w1, colour, joint, jw = 2, bond) {
 }
 const vary = (base, amt) => (r) => { const k = 1 - amt + r() * amt * 2; return [base[0] * k, base[1] * k * (0.98 + r() * 0.04), base[2] * k]; };
 const DRAW = {
-  stone(g, S, r) { courses(g, S, r, S / 8, S / 5, S / 2.6, vary([206, 196, 172], 0.09), '#8a826e'); speckle(g, S, r, 5000, 0.02, 0.08); },
+  stone(g, S, r) { courses(g, S, r, S / 8, S / 5, S / 2.6, vary([214, 200, 172], 0.07), '#8a826e'); speckle(g, S, r, 5000, 0.02, 0.08); },
   rubble(g, S, r) { courses(g, S, r, S / 10, S / 12, S / 5, vary([150, 142, 126], 0.2), '#5e5a50', 3); speckle(g, S, r, 6000, 0.03, 0.12, 3); },
   brick(g, S, r) { const b = S / 5.2; courses(g, S, r, S / 16, 0, 0, (q) => (q() < 0.12 ? [98, 62, 52] : vary([158, 84, 60], 0.14)(q)), '#b8ab98', 2, [b, b / 2]); speckle(g, S, r, 4000, 0.02, 0.1); },
   thatch(g, S, r) {
@@ -53,28 +53,28 @@ const DRAW = {
     }
   },
   lead(g, S, r) {
-    for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${r() < 0.5 ? 255 : 0},${r() < 0.5 ? 255 : 0},255,${r() * 0.05})`; g.fillRect(r() * S, r() * S, 10 + r() * 50, 10 + r() * 50); }
+    for (let i = 0; i < 260; i++) { g.fillStyle = r() < 0.5 ? `rgba(255,255,255,${r() * 0.05})` : `rgba(0,0,10,${r() * 0.05})`; g.fillRect(r() * S, r() * S, 10 + r() * 50, 10 + r() * 50); }
     for (let x = 0; x < S; x += S / 4) { g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect(x, 0, 3, S); g.fillStyle = 'rgba(0,0,0,0.4)'; g.fillRect(x + 3, 0, 3, S); }
     for (let y = 0; y < S; y += S / 2) { g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, y, S, 2.5); }
   },
   frame(g, S, r) {
-    for (let i = 0; i < 700; i++) { g.fillStyle = `rgba(${r() < 0.5 ? 60 : 255},${r() < 0.5 ? 50 : 250},${r() < 0.5 ? 30 : 230},${r() * 0.07})`; g.fillRect(r() * S, r() * S, 4 + r() * 30, 4 + r() * 30); }
+    for (let i = 0; i < 700; i++) { g.fillStyle = r() < 0.5 ? `rgba(60,50,30,${r() * 0.07})` : `rgba(255,250,230,${r() * 0.07})`; g.fillRect(r() * S, r() * S, 4 + r() * 30, 4 + r() * 30); }
     const T = (x, y, w, h) => { g.fillStyle = shade([62, 46, 34], 0.85 + r() * 0.3); g.fillRect(x, y, w, h); g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(x, y + h - 1.5, w, 1.5); g.fillRect(x + w - 1.5, y, 1.5, h); }, t = S / 20;
     g.lineWidth = t * 0.8; g.strokeStyle = '#3e2e22';
     for (const [a, b] of [[0, 0], [2, 1]]) { g.beginPath(); g.moveTo((a * S) / 4 + t / 2, b ? S / 2 : S); g.lineTo(((a + 1) * S) / 4 + t / 2, b ? 0 : S / 2); g.stroke(); }
     for (let x = 0; x < S; x += S / 4) T(x, 0, t, S);
     T(0, 0, S, t * 0.9); T(0, S / 2 - t / 2, S, t); T(0, S - t * 0.5, S, t * 0.5);
   },
-  daub(g, S, r) { for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(${r() < 0.5 ? 70 : 255},${r() < 0.5 ? 55 : 245},${r() < 0.5 ? 30 : 220},${r() * 0.08})`; g.fillRect(r() * S, r() * S, 3 + r() * 36, 3 + r() * 26); } speckle(g, S, r, 3000, 0.02, 0.08); },
+  daub(g, S, r) { for (let i = 0; i < 900; i++) { g.fillStyle = r() < 0.5 ? `rgba(70,55,30,${r() * 0.08})` : `rgba(255,245,220,${r() * 0.08})`; g.fillRect(r() * S, r() * S, 3 + r() * 36, 3 + r() * 26); } speckle(g, S, r, 3000, 0.02, 0.08); },
   plank(g, S, r) {
     const w = S / 8;
     for (let x = 0; x < S; x += w) { g.fillStyle = shade([128, 98, 66], 0.75 + r() * 0.45); g.fillRect(x, 0, w, S); for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(30,18,8,${0.05 + r() * 0.12})`; g.fillRect(x + r() * w, 0, 1, S); } g.fillStyle = 'rgba(14,8,4,0.8)'; g.fillRect(x, 0, 2, S); }
   },
   cobble(g, S, r) {
     const n = 14, d = S / n;
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const x = (i + (j % 2) * 0.5) * d, y = j * d; for (const ox of [0, -S]) { g.fillStyle = rgb(...vary([150, 144, 134], 0.2)(r)); g.beginPath(); g.ellipse(x + ox + d / 2, y + d / 2, d * 0.46, d * 0.42, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,0.1)'; g.beginPath(); g.ellipse(x + ox + d * 0.42, y + d * 0.4, d * 0.22, d * 0.18, 0, 0, 7); g.fill(); } }
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) { const x = (i + (j % 2) * 0.5) * d, y = j * d; for (const ox of [0, -S]) { g.fillStyle = rgb(...vary([150, 144, 134], 0.1)(r)); g.beginPath(); g.ellipse(x + ox + d / 2, y + d / 2, d * 0.46, d * 0.42, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,0.05)'; g.beginPath(); g.ellipse(x + ox + d * 0.42, y + d * 0.4, d * 0.22, d * 0.18, 0, 0, 7); g.fill(); } }
   },
-  earth(g, S, r) { for (let i = 0; i < 1600; i++) { g.fillStyle = `rgba(${r() < 0.5 ? 40 : 255},${r() < 0.5 ? 30 : 240},${r() < 0.5 ? 16 : 200},${r() * 0.09})`; g.fillRect(r() * S, r() * S, 3 + r() * 40, 3 + r() * 14); } speckle(g, S, r, 5000, 0.03, 0.1, 3); },
+  earth(g, S, r) { for (let i = 0; i < 1600; i++) { g.fillStyle = r() < 0.5 ? `rgba(40,30,16,${r() * 0.09})` : `rgba(255,240,200,${r() * 0.09})`; g.fillRect(r() * S, r() * S, 3 + r() * 40, 3 + r() * 14); } speckle(g, S, r, 5000, 0.03, 0.1, 3); },
   // open-field strips (selions) across u, each a little different and ridged along v; the crop colour comes from the vertices
   strips(g, S, r) {
     const n = 8, w = S / n;
@@ -97,13 +97,13 @@ const DRAW = {
   lit(g, S, r) { g.fillStyle = '#2a1c10'; g.fillRect(0, 0, S, S); for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { g.fillStyle = shade([255, 200, 120], 0.7 + r() * 0.3); g.fillRect(i * S / 4 + 2, j * S / 4 + 2, S / 4 - 4, S / 4 - 4); } },
   wheat(g, S, r) {
     g.clearRect(0, 0, S, S);
-    for (let i = 0; i < 90; i++) { const x = r() * S, top = S * (0.08 + r() * 0.25), lean = (r() - 0.5) * 16; g.strokeStyle = shade([200, 168, 88], 0.7 + r() * 0.4); g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, S); g.quadraticCurveTo(x, S / 2, x + lean, top); g.stroke(); g.fillStyle = shade([222, 186, 96], 0.8 + r() * 0.3); g.beginPath(); g.ellipse(x + lean, top, 2.6, 11, lean * 0.03, 0, 7); g.fill(); }
+    for (let i = 0; i < 170; i++) { const x = r() * S, top = S * (0.08 + r() * 0.25), lean = (r() - 0.5) * 16; g.strokeStyle = shade([200, 168, 88], 0.7 + r() * 0.4); g.lineWidth = 1.3; g.beginPath(); g.moveTo(x, S); g.quadraticCurveTo(x, S / 2, x + lean, top); g.stroke(); g.fillStyle = shade([222, 186, 96], 0.8 + r() * 0.3); g.beginPath(); g.ellipse(x + lean, top, 1.7, 9, lean * 0.03, 0, 7); g.fill(); }
   },
   smoke(g, S) { g.clearRect(0, 0, S, S); const gr = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,0.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); },
 };
-const BASE = { stone: '#cec4ac', rubble: '#5e5a50', brick: '#b8ab98', thatch: '#8a7040', tile: '#b05c3a', slate: '#626874', lead: '#8a9096', frame: '#dcd0b4', daub: '#d4c4a0', plank: '#80623e', cobble: '#5a564e', earth: '#a08660', strips: '#ffffff', glass: '#000', pane: '#000', lit: '#000', wheat: 'rgba(0,0,0,0)', smoke: 'rgba(0,0,0,0)' };
+const BASE = { stone: '#cec4ac', rubble: '#5e5a50', brick: '#b8ab98', thatch: '#8a7040', tile: '#b05c3a', slate: '#626874', lead: '#8a9096', frame: '#dcd0b4', daub: '#d4c4a0', plank: '#80623e', cobble: '#7a756b', earth: '#a08660', strips: '#ffffff', glass: '#000', pane: '#000', lit: '#000', wheat: 'rgba(0,0,0,0)', smoke: 'rgba(0,0,0,0)' };
 /** How many metres one repeat of each texture covers. */
-export const TILE = { stone: 3, rubble: 3, brick: 1.2, thatch: 2.4, tile: 2.6, slate: 2.6, lead: 3, frame: 3, daub: 2.5, plank: 2, cobble: 2.4, earth: 5, strips: 44, glass: 1, pane: 0.9, lit: 0.9 };
+export const TILE = { stone: 3, rubble: 3, brick: 1.2, thatch: 2.4, tile: 2.6, slate: 2.6, lead: 3, frame: 3, daub: 2.5, plank: 2, cobble: 1.8, earth: 5, strips: 44, glass: 1, pane: 0.9, lit: 0.9 };
 const SIZE = { glass: 512, strips: 512, pane: 64, lit: 64, smoke: 64 };
 const texCache = {};
 export function texture(name) {
@@ -111,6 +111,13 @@ export function texture(name) {
   const S = SIZE[name] || 256, [c, g] = canvas(S, BASE[name]); DRAW[name](g, S, rng(name.length * 77 + name.charCodeAt(0)));
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace; return (texCache[name] = t);
 }
+/** The year on screen: geometry carries the span of years it stands for (aSpan) and is drawn only within it. */
+export const YEAR = { value: 0 };
+function chain(m, key, fn) { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, rd) => { if (prev) prev(sh, rd); fn(sh); }; m.customProgramCacheKey = () => key; return m; }
+const spanCode = (sh) => { sh.uniforms.uYear = YEAR; sh.vertexShader = 'attribute vec2 aSpan; uniform float uYear;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n if (uYear < aSpan.x || uYear >= aSpan.y) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);'); };
+export const spanned = (m, key = 'span') => chain(m, key, spanCode);
+let DEPTH;
+const depthMat = () => DEPTH || (DEPTH = spanned(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), 'span-depth'));
 let MATS;
 /** One material per texture, shared by every place built with this kit. */
 export function materials() {
@@ -122,23 +129,19 @@ export function materials() {
   std('glass', { roughness: 0.3, emissive: 0xffffff, emissiveMap: texture('glass'), emissiveIntensity: 0.55 });
   std('pane', { roughness: 0.25, metalness: 0.3 });
   std('lit', { emissive: 0xffffff, emissiveMap: texture('lit'), emissiveIntensity: 1.3 });
+  for (const n in M) spanned(M[n], 'span-' + n);
   for (const n of ['earth', 'strips', 'cobble']) { M[n].polygonOffset = true; M[n].polygonOffsetFactor = -2; M[n].polygonOffsetUnits = -2; }
   return (MATS = M);
 }
 /** Make a material (and its shadow) vanish above the world height in `uniform.value`: a building going up. */
-export function clipped(mat, uniform) {
-  const inject = (m) => {
-    const prev = m.onBeforeCompile;
-    m.onBeforeCompile = (sh, rd) => {
-      if (prev) prev(sh, rd);
-      sh.uniforms.uClipY = uniform;
-      sh.vertexShader = 'varying float vClipY;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vClipY = (modelMatrix * vec4(transformed, 1.0)).y;');
-      sh.fragmentShader = 'varying float vClipY; uniform float uClipY;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vClipY > uClipY) discard;');
-    };
-    m.customProgramCacheKey = () => 'clipY';
-    return m;
-  };
-  const m = inject(mat.clone()); m.userData.depth = inject(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }));
+export function clipped(mat, uniform, vehicle) {
+  const inject = (m, key) => chain(spanned(m), key, (sh) => {
+    sh.uniforms.uClipY = uniform;
+    sh.vertexShader = 'varying float vClipY;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vClipY = (modelMatrix * vec4(transformed, 1.0)).y;');
+    sh.fragmentShader = 'varying float vClipY; uniform float uClipY;\n' + sh.fragmentShader.replace('void main() {', 'void main() {\n if (vClipY > uClipY) discard;');
+  });
+  const plain = () => { const c = mat.clone(); c.onBeforeCompile = () => {}; return c; };   // (a clone must not inherit the span code twice)
+  const m = inject(vehicle ? vehicleMat({ side: THREE.DoubleSide }) : plain(),'clip-' + (vehicle ? 'veh' : mat.map ? mat.map.uuid : '')); m.userData.depth = inject(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), 'clip-depth');
   return m;
 }
 
@@ -167,7 +170,7 @@ export class Kit {
   constructor() { this.B = new Map(); this.M = new THREE.Matrix4(); this.stack = []; this.span = [-Infinity, Infinity]; this.tag = ''; this.solids = []; }
   /** Everything added inside fn stands from year a to year b. */
   during(a, b, fn) { const s = this.span, t = this.tag; this.span = [a, b]; fn(); this.span = s; this.tag = t; }
-  bucket(mat) { const k = mat + '|' + this.span[0] + '|' + this.span[1] + '|' + this.tag; let b = this.B.get(k); if (!b) this.B.set(k, b = { mat, span: this.span, tag: this.tag, p: [], n: [], uv: [], c: [] }); return b; }
+  bucket(mat) { const k = mat + '|' + this.tag; let b = this.B.get(k); if (!b) this.B.set(k, b = { mat, tag: this.tag, p: [], n: [], uv: [], c: [], sp: [] }); b.s0 = Math.max(-1e9, this.span[0]); b.s1 = Math.min(1e9, this.span[1]); return b; }
   /** Run fn with the local frame moved to (x, y, z) and turned ry about the vertical (local +x then points along (cos ry, −sin ry)). */
   at(x, y, z, ry, fn) { this.stack.push(this.M.clone()); this.M.multiply(mat4(x, y, z, ry)); fn(); this.M.copy(this.stack.pop()); }
   /** A frame whose +x runs along the ground from (x0, z0) to (x1, z1) with +z pointing out of the wall; fn(length). */
@@ -178,7 +181,7 @@ export class Kit {
     _a.set(Q[1][0] - Q[0][0], Q[1][1] - Q[0][1], Q[1][2] - Q[0][2]).normalize(); _b.set(Q[2][0] - Q[0][0], Q[2][1] - Q[0][1], Q[2][2] - Q[0][2]);
     _n.crossVectors(_a, _b).normalize(); _b.crossVectors(_n, _a);
     const uv = Q.map((q) => [uo + ((q[0] - Q[0][0]) * _a.x + (q[1] - Q[0][1]) * _a.y + (q[2] - Q[0][2]) * _a.z) / tile, vo + ((q[0] - Q[0][0]) * _b.x + (q[1] - Q[0][1]) * _b.y + (q[2] - Q[0][2]) * _b.z) / tile]);
-    for (let i = 1; i < Q.length - 1; i++) for (const k of [0, i, i + 1]) { b.p.push(Q[k][0], Q[k][1], Q[k][2]); b.n.push(_n.x, _n.y, _n.z); b.uv.push(uv[k][0], uv[k][1]); b.c.push(c[0], c[1], c[2]); }
+    for (let i = 1; i < Q.length - 1; i++) for (const k of [0, i, i + 1]) { b.p.push(Q[k][0], Q[k][1], Q[k][2]); b.n.push(_n.x, _n.y, _n.z); b.uv.push(uv[k][0], uv[k][1]); b.c.push(c[0], c[1], c[2]); b.sp.push(b.s0, b.s1); }
     return this;
   }
   /** Any three.js geometry, placed by matrix m in the local frame; its own UVs are multiplied by (su, sv). */
@@ -188,7 +191,7 @@ export class Kit {
     for (let i = 0; i < P.count; i++) {
       _v.fromBufferAttribute(P, i).applyMatrix4(mm); b.p.push(_v.x, _v.y, _v.z);
       _v.fromBufferAttribute(N, i).applyMatrix3(_n3).normalize(); b.n.push(_v.x, _v.y, _v.z);
-      b.uv.push(U ? U.getX(i) * su : 0, U ? U.getY(i) * sv : 0); b.c.push(c[0], c[1], c[2]);
+      b.uv.push(U ? U.getX(i) * su : 0, U ? U.getY(i) * sv : 0); b.c.push(c[0], c[1], c[2]); b.sp.push(b.s0, b.s1);
     }
     return this;
   }
@@ -244,16 +247,16 @@ export class Kit {
       if (!b.p.length) continue;
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(b.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(b.n, 3));
-      g.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(b.c, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2)); g.setAttribute('color', new THREE.Float32BufferAttribute(b.c, 3)); g.setAttribute('aSpan', new THREE.Float32BufferAttribute(b.sp, 2));
       const key = b.tag + '|' + b.mat, mat = b.tag && swap[b.tag] ? made[key] || (made[key] = swap[b.tag](M[b.mat])) : M[b.mat], mesh = new THREE.Mesh(g, mat);
       const flat = b.mat === 'earth' || b.mat === 'strips' || b.mat === 'cobble';
-      mesh.castShadow = !flat; mesh.receiveShadow = true; if (mat.userData.depth) mesh.customDepthMaterial = mat.userData.depth;
-      group.add(mesh); this.meshes.push({ mesh, y0: b.span[0], y1: b.span[1] });
+      mesh.castShadow = !flat; mesh.receiveShadow = true; mesh.customDepthMaterial = mat.userData.depth || depthMat();
+      group.add(mesh); this.meshes.push({ mesh });
     }
     this.B.clear(); return this;
   }
   get tris() { let n = 0; for (const m of this.meshes) n += m.mesh.geometry.attributes.position.count / 3; return n; }
-  update(year) { for (const m of this.meshes) m.mesh.visible = year >= m.y0 && year < m.y1; }
+  update(year) { YEAR.value = year; }
   /** collide(pos, year): push the visitor out of whatever stands in that year. */
   collider(extra) {
     const S = this.solids, R = 0.45;
@@ -286,21 +289,24 @@ export function append(dst, src, m) {
   return dst;
 }
 export class Props {
-  constructor() { this.bags = new Map(); this.mat = vehicleMat({ side: THREE.DoubleSide }); }
+  constructor() { this.bags = new Map(); this.mat = spanned(vehicleMat({ side: THREE.DoubleSide }), 'veh-span'); }
   bag(a = -Infinity, b = Infinity, tag = '') { const k = a + '|' + b + '|' + tag; if (!this.bags.has(k)) this.bags.set(k, { bag: new Bag(), y0: a, y1: b, tag }); return this.bags.get(k).bag; }
   /** Place a ready-made bag at (x, y, z) turned ry, for the years a..b. */
   put(src, x, y, z, ry = 0, a, b, tag) { append(this.bag(a, b, tag), src, mat4(x, y, z, ry)); return this; }
+  /** One mesh for everything (and one more per tag), each vertex knowing its years. */
   build(group, swap = {}) {
-    this.meshes = [];
-    for (const e of this.bags.values()) {
-      if (!e.bag.p.length) continue;
-      const mat = e.tag && swap[e.tag] ? swap[e.tag](this.mat) : this.mat, mesh = new THREE.Mesh(e.bag.geo(), mat); mesh.castShadow = mesh.receiveShadow = true;
-      if (mat.userData.depth) mesh.customDepthMaterial = mat.userData.depth;
-      group.add(mesh); this.meshes.push({ mesh, y0: e.y0, y1: e.y1 });
+    this.meshes = []; const tags = new Map();
+    for (const e of this.bags.values()) { if (!e.bag.p.length) continue; if (!tags.has(e.tag)) tags.set(e.tag, { all: new Bag(), sp: [] }); const t = tags.get(e.tag); for (const k of ['p', 'n', 'c', 's', 'w']) for (let i = 0; i < e.bag[k].length; i++) t.all[k].push(e.bag[k][i]); for (let i = 0; i < e.bag.p.length / 3; i++) t.sp.push(Math.max(-1e9, e.y0), Math.min(1e9, e.y1)); }
+    for (const [tag, t] of tags) {
+      const mat = tag && swap[tag] ? swap[tag](this.mat) : this.mat, geo = t.all.geo(); geo.setAttribute('aSpan', new THREE.Float32BufferAttribute(t.sp, 2));
+      const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = mesh.receiveShadow = true; mesh.customDepthMaterial = mat.userData.depth || depthMat();
+      group.add(mesh); this.meshes.push({ mesh });
     }
     return this;
   }
-  update(year) { for (const m of this.meshes) m.mesh.visible = year >= m.y0 && year < m.y1; }
+  /** A loose mesh (something that moves) drawn with the props' material: it needs the span attribute too. */
+  loose(geo, a = -1e9, b = 1e9) { const n = geo.attributes.position.count, sp = new Float32Array(n * 2); for (let i = 0; i < n; i++) { sp[i * 2] = a; sp[i * 2 + 1] = b; } geo.setAttribute('aSpan', new THREE.BufferAttribute(sp, 2)); return geo; }
+  update() {}
 }
 
 // =====================================================================================
@@ -331,7 +337,7 @@ export const loop = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1],
 /** Instances of one geometry that each follow a path in step with an actor: items [{ path, speed, phase, ahead?, side?, y?, u0?, u1? }]. */
 export class Followers {
   constructor(world, geo, mat, items) {
-    this.world = world; this.items = items.map((it) => ({ ahead: 0, side: 0, y: 0, u0: -Infinity, u1: Infinity, ...it, P: pathOf(it.path) }));
+    this.world = world; this.items = items.map((it) => ({ ahead: 0, side: 0, y: 0, ...it, u0: it.u0 ?? -Infinity, u1: it.u1 ?? Infinity, P: pathOf(it.path) }));
     this.mesh = new THREE.InstancedMesh(geo, mat, items.length); this.mesh.frustumCulled = false; this.mesh.castShadow = this.mesh.receiveShadow = true; this.o = { x: 0, z: 0, rot: 0 };
   }
   update(u, t) {
@@ -365,8 +371,30 @@ export function smoke(sources, { per = 9, rise = 5, wind = [3.2, 0.9], life = 14
         vUv = uv; vA = smoothstep(0.0, 0.06, age) * (1.0 - age) * (1.0 - age) * uAmount; vDark = aPar.w; vDist = -mv.z; gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `uniform sampler2D map; uniform vec3 uCol, uFog; uniform float uFogD; varying vec2 vUv; varying float vA, vDark, vDist;
       void main(){ float a = texture2D(map, vUv).a * vA; if (a < 0.004) discard; float f = 1.0 - exp(-uFogD * uFogD * vDist * vDist);
-        gl_FragColor = vec4(mix(mix(vec3(0.75), uCol, vDark), uFog, f * 0.8), a * 0.85); }`,
+        gl_FragColor = vec4(mix(mix(vec3(0.75), uCol, vDark), uFog, f * 0.8), a * 0.85);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
   });
   const mesh = new THREE.Mesh(g, mat); mesh.frustumCulled = false; mesh.renderOrder = 5;
   return { mesh, U, update(year, t, scene) { U.uT.value = t; U.uYear.value = year; if (scene && scene.fog) { U.uFog.value.copy(scene.fog.color); U.uFogD.value = scene.fog.density; } } };
+}
+
+/**
+ * Trees that stand still: one instanced mesh per kind and per wedge of the compass about (cx, cz), so that whatever is
+ * behind the visitor is not drawn. parts: [{ geo, mat, tint? }] as flora's kinds; items: [{ x, z, s, rot, tint }].
+ */
+export function grove(world, parts, items, { wedges = 5, cx = 0, cz = 0 } = {}) {
+  const out = [], by = Array.from({ length: wedges }, () => []), UP = new THREE.Vector3(0, 1, 0), col = new THREE.Color();
+  for (const it of items) by[Math.floor(((Math.atan2(it.z - cz, it.x - cx) + Math.PI) / (2 * Math.PI)) * wedges) % wedges].push(it);
+  for (const list of by) {
+    if (!list.length) continue; let first = null;
+    for (const { geo, mat, tint = true, cast = true } of parts) {
+      const m = new THREE.InstancedMesh(geo, mat, list.length); m.castShadow = cast; m.receiveShadow = true;
+      list.forEach((it, i) => { if (!first) m.setMatrixAt(i, _m.compose(_v.set(it.x, world.heightAt(it.x, it.z) - 0.1, it.z), _q.setFromAxisAngle(UP, it.rot), _b.set(it.s, it.s, it.s))); m.setColorAt(i, tint ? col.setRGB(it.tint[0], it.tint[1], it.tint[2]) : col.setRGB(1, 1, 1)); });
+      if (first) m.instanceMatrix = first.instanceMatrix; else first = m;
+      m.computeBoundingSphere(); out.push(m);
+    }
+  }
+  return out;
 }

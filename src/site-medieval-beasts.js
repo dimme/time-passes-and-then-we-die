@@ -123,7 +123,7 @@ export class Walkers {
     this.items = items.map((it) => {
       const a = it.make(); a.obj.traverse((o) => { if (o.isMesh) o.castShadow = true; }); if (it.scale) a.obj.scale.setScalar(it.scale); if (it.load) a.obj.add(it.load);
       a.obj.visible = false; group.add(a.obj);
-      return { ahead: 0, side: 0, u0: -Infinity, u1: Infinity, ...it, a, P: it.path ? pathOf(it.path) : null };
+      return { ahead: 0, side: 0, ...it, u0: it.u0 ?? -Infinity, u1: it.u1 ?? Infinity, a, P: it.path ? pathOf(it.path) : null };
     });
   }
   update(u, t) {
@@ -133,7 +133,7 @@ export class Walkers {
       let d = 0;
       if (it.P) { d = it.phase * it.P.route + it.speed * t + it.ahead; where(it.P, d, o); } else { o.x = it.x; o.z = it.z; o.rot = it.rot || 0; }
       const c = Math.cos(o.rot), s = Math.sin(o.rot), x = o.x + s * it.side, z = o.z + c * it.side;
-      it.a.obj.position.set(x, this.world.heightAt(x, z), z); it.a.obj.rotation.y = o.rot; it.x = x; it.z = z; it.rot = o.rot;
+      it.a.obj.position.set(x, this.world.heightAt(x, z), z); it.a.obj.rotation.y = o.rot;
       const def = it.a.def; pose(it.a, it.P ? (2 * Math.PI * def.gait.duty * d) / (def.gait.stride * (it.scale || 1)) : 0, t);
     }
   }
