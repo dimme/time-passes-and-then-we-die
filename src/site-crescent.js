@@ -32,7 +32,7 @@ const toStream = (x, z) => { let d = 1e9; for (let i = 0; i < STREAM.length - 1;
 const set = (c, r, g, b) => { c[0] = r; c[1] = g; c[2] = b; };
 
 const Y = yearToU;
-const MUD = lin(0xb89a70), MUD2 = lin(0xa88a62), LIME = lin(0xd8d0bc), CLAY = lin(0xa8683c), STONE = lin(0xc0b49c), STRAW = lin(0xd8b45c), TIMBER = lin(0x6a4c30), WATER = lin(0x2c5650);
+const MUD = lin(0xb89a70), MUD2 = lin(0xa88a62), LIME = lin(0xd8d0bc), CLAY = lin(0x9a7250), STONE = lin(0xc0b49c), STRAW = lin(0xd8b45c), TIMBER = lin(0x6a4c30), WATER = lin(0x2c5650);
 
 function build({ world, group }) {
   const r = rng(9600), H = (x, z) => world.heightAt(x, z), K = kinds(), L = livestock();

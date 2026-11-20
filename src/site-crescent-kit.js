@@ -140,7 +140,7 @@ function textures() {
 }
 
 /** Texture tile sizes in metres: geometry carries uv in metres ÷ tile. */
-const TILE = { brick: 2, plaster: 3.2, stone: 1.7, reed: 1.6, earth: 2.6, mosaic: 2.4, wood: 1.2, plain: 1, water: 1, crop: 1 };
+const TILE = { brick: 1.4, plaster: 3.2, stone: 1.7, reed: 1.6, earth: 2.6, mosaic: 2.4, wood: 1.2, plain: 1, water: 1, crop: 1 };
 let MATS;
 /** One material per surface; everything is tinted by vertex colour. */
 export function materials() {
@@ -263,7 +263,7 @@ export const local = (x, z, rot, px, pz) => { const c = Math.cos(rot), s = Math.
 // Fields
 // ---------------------------------------------------------------------------------------------
 const EARTH = { ploughed: lin(0x806a4e), sown: lin(0x927654), green: lin(0x7c6646), ripe: lin(0x9c8658), stubble: lin(0xb89a5e), fallow: lin(0xa48c62) };
-const CROP = { sown: [lin(0x66803a), 0.14], green: [lin(0x4e6a2a), 0.5], ripe: [lin(0xd8b45c), 0.95], stubble: [lin(0xc8a85a), 0.13] };
+const CROP = { sown: [lin(0x6c7a46), 0.14], green: [shade(lin(0x62703f), 0.85), 0.5], ripe: [lin(0xd8b45c), 0.95], stubble: [lin(0xc8a85a), 0.13] };
 /**
  * A plot of cereal w (along the furrows) × d at (x, z), turned by rot, lying on flat ground at height y.
  * stage: ploughed | sown | green | ripe | stubble | fallow. cut (0..1): the first part of a ripe plot is already reaped to stubble.
@@ -300,7 +300,7 @@ export function sheaf(S, x, y, z, r, s = 1) {
   S.lathe('reed', x, y, z, [[0.3 * s, 0], [0.16 * s, 0.5 * s], [0.13 * s, 0.62 * s], [0.3 * s, 0.98 * s]], 7, { col: c, cap: 'reed', capCol: shade(c, 1.1) });
 }
 /** A pile of threshed grain or chaff. */
-export function heap(S, x, y, z, rad, h, col, m = 'earth') {
+export function heap(S, x, y, z, rad, h, col, m = 'plaster') {
   S.lathe(m, x, y, z, [[rad, 0], [rad * 0.8, h * 0.45], [rad * 0.45, h * 0.85], [0.02, h]], 10, { col });
 }
 
