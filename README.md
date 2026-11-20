@@ -1,9 +1,13 @@
 # Time Passes, And Then We Die
 
-A small WebGL game. You stand on one patch of Manhattan and drag a timeline —
+A small WebGL game. You start on one patch of Manhattan and drag a timeline —
 from the formation of the Earth, 4.54 billion years ago, to the day the Sun swallows the
 Earth, 7.59 billion years from now. There is nothing to shoot and nothing to win.
 The point is to feel how little of the line is ours.
+
+Each age is shown where it left its mark, so the game travels: the place is named in the top corner,
+and you can zoom out (R / F, or the slider on the right) to see where it is on the Earth, then on out
+to the Moon, the planets and the whole solar system.
 
 ## Play
 
@@ -33,7 +37,7 @@ printed to the browser console.
 
 ## What you walk through
 
-| When | What this spot looks like | Meanwhile |
+| When | What you see | Meanwhile |
 |---|---|---|
 | 4.54–4.0 billion years ago | A magma ocean, the Moon-forming impact, the first rain and ocean, asteroid bombardment | No life anywhere |
 | 4.0–2.4 billion | Orange methane sky, green iron sea, black rock, microbial mounds | Life begins; nothing but microbes |
@@ -42,11 +46,18 @@ printed to the browser console.
 | 235–66 million years ago | Cycads, tree ferns, sauropods, pterosaurs; the Palisades erupt | Pangaea splits, the Atlantic opens |
 | 66 million years ago | The sky burns, then goes dark | The Chicxulub impact |
 | 66–2.6 million years ago | Hothouse jungle, then temperate forest; early mammals, mastodons | Apes; the human line splits off; first stone tools |
-| 2.6 million – 11,000 years ago | Ice sheets come and go; mammoths on tundra; you stand on top of the glacier | Homo sapiens, Out of Africa, cave art (Old Stone Age) |
-| 11,000 BCE | Spruce parkland and a Paleo-Indian campfire | Farming begins (New Stone Age) |
-| 9000 BCE – 1500 CE | The Mannahatta forest; a Lenape village | Bronze Age, pyramids, Iron Age, Rome, Middle Ages |
-| 1524–1776 | Sails, Fort Amsterdam, a windmill, the wall of Wall Street, a brick colonial town | Colonisation of the Americas |
-| 1776–1900 | The 1811 grid flattens the hills; tenements, factories, smog, the Brooklyn Bridge | Revolution, the Industrial Revolution |
+| 7 million – 70,000 years ago | **East African Rift**: savanna, a rift lake and a volcano; stone knappers, hand-axe makers, the first hearths, a Homo sapiens camp | Ice sheets come and go over Manhattan |
+| 70,000 – 14,000 years ago | **Ice-age Dordogne**: Neanderthals, then modern humans; hide tents, reindeer hunters, a painted cave | Out of Africa; the ice at its greatest |
+| 12,000 BCE | **Manhattan**: spruce parkland and a Paleo-Indian campfire | People reach the Americas |
+| 9600 – 4000 BCE | **Jericho**: the first fields, sown, reaped, threshed and ground by hand; round houses, the tower and wall, the first herds | Farming begins (New Stone Age) |
+| 4000 – 2700 BCE | **Uruk**: canals, ox ploughs, the White Temple, potters' wheels, scribes, the first carts | The first city, writing, the wheel |
+| 2700 – 1250 BCE | **Giza**: the pyramids rise course by course above the Nile's fields | Bronze Age |
+| 1250 – 150 BCE | **Athens**: a Mycenaean citadel, then the Parthenon under scaffolding; the agora, the harbour | Iron Age, democracy, philosophy |
+| 150 BCE – 500 CE | **Rome**: the Forum in tufa, then marble, then ruin; the Colosseum, aqueducts, legions | Empire and its fall |
+| 500 – 1500 | **Chartres**: a hamlet in Roman ruins grows into a walled town; the cathedral is built; the Black Death | Middle Ages; Lenape Mannahatta |
+| 1500 – 1770 | **Manhattan**: the Mannahatta forest and a Lenape village; then sails, Fort Amsterdam, a windmill, the wall of Wall Street, a brick colonial town | Colonisation of the Americas |
+| 1770 – 1840 | **Manchester**: weavers' cottages, canals, cotton mills, a forest of chimneys, the first railway | The Industrial Revolution |
+| 1840 – 1900 | **Manhattan**: the grid, tenements, factories, smog, the Brooklyn Bridge | Steam, steel, electricity |
 | 1900–2000 | Art Deco towers, the Empire State and Chrysler buildings, glass boxes, the Twin Towers | Two world wars, the Moon, the Web |
 | 2001–now | The towers fall; One World Trade Center | You are here |
 | 2050–2165 | Heat, rising water, self-driving pods | Everyone alive today is gone |
