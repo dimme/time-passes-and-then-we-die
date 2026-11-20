@@ -11,7 +11,7 @@ const FLAT = 3, CANAL = 135, RIVER = 310;
 const PX0 = -100, PX1 = -40, PZ0 = -120, PZ1 = -60, PH = 13, H0 = 7;   // the terrace of the sky god, and its height before it was raised
 const SX1 = -10, SZ0 = -100, SZ1 = -80, E = 0.01;                      // its stair
 const ROAD = 20, GATE_Z = 0, WALL_X = 240, WALL_N = -290;
-const SPAWN = { x: 24, z: 80, yaw: 0.36 };
+const SPAWN = { x: 31, z: 84, yaw: 0.36 };
 
 function base(x, z) {
   const river = FLAT - 7 * clamp((60 - Math.abs(x - RIVER)) / 20, 0, 1), canal = x < 262 ? FLAT - 4.5 * clamp((15 - Math.abs(z - CANAL)) / 10, 0, 1) : FLAT;
