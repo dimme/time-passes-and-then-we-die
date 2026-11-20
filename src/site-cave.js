@@ -28,7 +28,7 @@ const terrain = { base, relief: () => 0, bounds: { x: 215, z: 250 }, tint: (x, z
 // the cliff: how far its face stands back from the foot line at height y, with rock shelters hollowed under it
 const SHELTERS = [[-70, 30, 5.5], [58, 20, 4.2]];   // [centre z, half length, depth]
 const hollow = (z) => { let d = 0; for (const [c, half, deep] of SHELTERS) d = Math.max(d, deep * smooth((half - Math.abs(z - c)) / 8)); return d; };
-const cliffH = (z) => (38 + 3 * sin(z * 0.02 + 1)) * (1 - 0.86 * smooth((Math.abs(z) - 262) / 80));
+const cliffH = (z) => (35 + 4 * sin(z * 0.021 + 1) + 2.5 * sin(z * 0.057)) * (1 - 0.86 * smooth((Math.abs(z) - 262) / 80));
 function faceOff(z, y) {
   const strata = 0.55 * sin(y * 1.9 + 2 * sin(z * 0.013)) + 0.35 * sin(y * 0.73 + z * 0.02);
   return 0.085 * y + strata * smooth(y / 3) + 1.6 * sin(z * 0.047 + y * 0.11) * smooth(y / 6) + 0.7 * sin(z * 0.19 + y * 0.3) + hollow(z) * exp(-(((y - 1.3) / 2.3) ** 2));
@@ -44,7 +44,7 @@ let inside = 0;   // how far into the cave the visitor is (0 outside … 1 well 
 // ---------- the years ----------
 const N0 = -70e3, SAP = -42e3, N1 = -40e3, MARKS = -37e3, PAINT = -19e3, MAGD = -17e3, DOGS = -15e3;
 const COLD = [[-70e3, 0.55], [-60e3, 0.35], [-50e3, 0.3], [-40e3, 0.4], [-30e3, 0.6], [-25e3, 1], [-19e3, 0.92], [-16.5e3, 0.6], [-14.7e3, 0.3], [-14e3, 0.15]];
-const C = { steppe: rgb(0x7e8152), frost: rgb(0x989a7c), top: rgb(0x6a9cc8), hor: rgb(0xdde6ea), horCold: rgb(0xe8eef2), water: rgb(0x4f7068), sun: rgb(0xfff2dc) };
+const C = { steppe: rgb(0x8a8558), frost: rgb(0xa3a288), top: rgb(0x6a9cc8), hor: rgb(0xdde6ea), horCold: rgb(0xe8eef2), water: rgb(0x4f7068), sun: rgb(0xfff2dc) };
 
 const events = [
   [N0, 'Neanderthal valley', 'A limestone valley at the edge of the cold. Under the overhang a band of Neanderthals keeps a fire, flakes flint and scrapes hides. Their kind has lived along this river for two thousand centuries.', 'The ice is advancing again. In Africa a few thousand people of another kind are setting out.'],
@@ -82,10 +82,10 @@ function cliffGeo(world) {
       const k = (i * rows + j), top = j >= ROWS.length; let x, y;
       if (!top) { y = j === ROWS.length - 1 ? H : Math.min(ROWS[j], H * (0.4 + 0.04 * j)); x = xf + faceOff(z, y) * (1 - smooth((9 - Math.abs(z - CAVE_Z)) / 4) * smooth((8 - y) / 3)) + (j ? (r() - 0.5) * 0.25 : 0); }
       else { const b = BACKS[j - ROWS.length], f = b / BACKS[BACKS.length - 1]; x = xf + faceOff(z, H) + b; y = H + (world.heightAt(x, z) + 0.6 - T - H) * smooth(f * 1.15) + 1.2 * sin(z * 0.08 + b) * (1 - f); }
-      pos.set([x, T + y, z + (j && !top ? (r() - 0.5) * 0.5 : 0)], k * 3); uv.set([z / 5 + (top ? x / 5 : 0), y / 5], k * 2);
+      pos.set([x, T + y, z + (j && !top ? (r() - 0.5) * 0.5 : 0)], k * 3); uv.set([z / 16 + (top ? x / 16 : 0), y / 13], k * 2);
       // pale limestone in beds, rust-warm in places, with black streaks where water runs down and shade in the hollows
       const bed = 0.9 + 0.1 * sin(y * 2.3 + 2 * sin(z * 0.013)) + 0.06 * sin(y * 7.1 + z * 0.05), hol = hollow(z) * exp(-(((y - 1.6) / 2.6) ** 2)) / 5.5;
-      let c = 0.62 * bed * (1 - 0.42 * streak * smooth(y / 8)) * (1 - 0.5 * hol) * (y < 0.3 ? 0.8 : 1);
+      let c = 0.5 * bed * (1 - 0.28 * streak * smooth(y / 8)) * (1 - 0.5 * hol) * (y < 0.3 ? 0.8 : 1);
       if (top) { const f = smooth((BACKS[j - ROWS.length] - 6) / 30); col.set([c * (0.86 - 0.36 * f), c * (0.84 - 0.3 * f), c * (0.74 - 0.38 * f)], k * 3); }   // turf creeping over the top
       else col.set([c * (0.86 + 0.06 * warm), c * (0.82 + 0.02 * warm), c * (0.74 - 0.05 * warm)], k * 3);
     }
@@ -117,7 +117,7 @@ function wallAt(p, a, inset = 0) {
 const LAMPS = [[23, 0.72], [28.5, -0.7], [33, 0.74], [38.5, 0.66], [15, -0.6]];   // tallow lamps: [distance in, how far towards the left (+) or right wall]
 /** Light as it falls on a point in the cave: grey daylight near the mouth, warm lamplight in the hall. */
 function caveLight(P, x, y, z, d, lamps, out) {
-  const day = 0.6 * exp(-Math.max(0, d) / 5.5) + 0.012; let warm = 0;
+  const day = 0.42 * exp(-Math.max(0, d) / 5.5) + 0.012; let warm = 0;
   if (lamps) for (const [ld, side] of LAMPS) { const p = P.at(ld), lx = p.x + p.nx * p.w * side, lz = p.z + p.nz * p.w * side, q = ((x - lx) ** 2 + (y - T - 0.5) ** 2 + (z - lz) ** 2) / 7; warm += 0.95 / (1 + q * q * 0.8 + q); }
   out[0] = day * 0.92 + warm * 1.0; out[1] = day * 0.96 + warm * 0.62; out[2] = day + warm * 0.3; return out;
 }
@@ -125,7 +125,7 @@ function caveGeo(P, lamps) {
   const NA = 14, ring = NA + 1, pos = [], col = [], uv = [], idx = [], L = [0, 0, 0], r = rng(9);
   const push = (x, y, z, d, tintv, u, v) => { caveLight(P, x, y, z, d, lamps, L); pos.push(x, y, z); col.push(L[0] * tintv[0], L[1] * tintv[1], L[2] * tintv[2]); uv.push(u, v); };
   // a collar of rock round the mouth, then the passage itself
-  const m = P[0]; for (let j = 0; j <= NA; j++) { const a = j / NA * Math.PI, q = wallAt(m, a); push(m.x, T + (q[1] - T) * 1.55 + (j === 0 || j === NA ? -1 : 0), m.z + (q[2] - m.z) * 1.6, 0, [0.5, 0.47, 0.42], j / NA * 4, 0); }
+  const m = P[0]; for (let j = 0; j <= NA; j++) { const a = j / NA * Math.PI, q = wallAt(m, a); push(m.x, T + (q[1] - T) * 1.55 + (j === 0 || j === NA ? -1 : 0), m.z + (q[2] - m.z) * 1.6, 30, [0.5, 0.45, 0.4], j / NA * 4, 0); }
   P.forEach((p, i) => { for (let j = 0; j <= NA; j++) { const a = j / NA * Math.PI, q = wallAt(p, a), g = 0.5 + 0.12 * r() + 0.1 * sin(q[1] * 2.1 + p.d * 0.4); push(q[0], q[1] - (j === 0 || j === NA ? 0.3 : 0), q[2], p.d, [g * 1.06, g, g * 0.86], j / NA * 3, p.d / 5); } });
   for (let i = 0; i < P.length; i++) for (let j = 0; j < NA; j++) { const a = i * ring + j, b = a + ring; idx.push(a, b, a + 1, b, b + 1, a + 1); }
   // the floor: trodden clay
@@ -139,6 +139,20 @@ function panelGeo(P, d0, d1, a0, a1, flip = false) {
   for (let i = i0; i <= i1; i++) for (let j = 0; j <= NA; j++) { const a = a0 + (a1 - a0) * j / NA, q = wallAt(P[i], flip ? Math.PI - a : a, 0.04); caveLight(P, q[0], q[1], q[2], P[i].d, true, L); pos.push(...q); col.push(L[0] * 1.15, L[1] * 1.15, L[2] * 1.15); uv.push(flip ? 1 - (i - i0) / (i1 - i0) : (i - i0) / (i1 - i0), j / NA); }
   for (let i = 0; i < i1 - i0; i++) for (let j = 0; j < NA; j++) { const a = i * (NA + 1) + j, b = a + NA + 1; idx.push(a, b, a + 1, b, b + 1, a + 1); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return g;
+}
+
+/** Dordogne limestone: pale, bedded in level courses, pitted, with dark streaks where water comes down the face. */
+function limeTex() {
+  const S = 512, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d'), r = rng(77);
+  g.fillStyle = '#b9ad92'; g.fillRect(0, 0, S, S);
+  for (let i = 0; i < 900; i++) { const x = r() * S, y = r() * S, w = 20 + r() * 90, h = 3 + r() * 16, v = r(); g.fillStyle = v < 0.5 ? `rgba(120,104,80,${0.05 + r() * 0.1})` : `rgba(226,216,192,${0.05 + r() * 0.12})`; for (const ox of [0, S, -S]) { g.beginPath(); g.ellipse(x + ox, y, w, h, 0, 0, TAU); g.fill(); } }
+  for (let y = 6 + r() * 20; y < S - 4; y += 9 + r() * r() * 70) {   // bedding planes: a dark joint with a lit lip under it
+    const a = 2 + r() * 3, f = 0.01 + r() * 0.02, ph = r() * 6, k = Math.round(f * S / TAU) * TAU / S, lw = 1.2 + r() * 3.2;
+    for (const [dy, col] of [[0, `rgba(52,44,34,${0.45 + r() * 0.3})`], [lw, 'rgba(232,224,204,0.35)']]) { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); for (let x = 0; x <= S; x += 8) g.lineTo(x, y + dy + a * sin(x * k + ph)); g.stroke(); }
+  }
+  for (let i = 0; i < 12; i++) { const x = r() * S, w = 8 + r() * 26, gr = g.createLinearGradient(x - w, 0, x + w, 0); gr.addColorStop(0, 'rgba(40,36,32,0)'); gr.addColorStop(0.5, `rgba(40,36,32,${0.06 + r() * 0.14})`); gr.addColorStop(1, 'rgba(40,36,32,0)'); g.fillStyle = gr; g.fillRect(x - w, 0, w * 2, S); }
+  for (let i = 0; i < 2600; i++) { g.fillStyle = `rgba(60,50,40,${0.1 + r() * 0.25})`; const s2 = 0.6 + r() * 2.2; g.fillRect(r() * S, r() * S, s2 * (1 + r() * 2), s2); }
+  return canvasTex(c);
 }
 
 // ---------- the paintings ----------
@@ -200,7 +214,7 @@ function handsTex() {
 }
 
 // ---------- things people make ----------
-const BONE = 0xd9d2bc, FLINT = 0x6a6258, LIME = 0xb8b09c, HIDE = 0x8a6a48, FISH = 0xb06a50;
+const BONE = 0xd9d2bc, FLINT = 0x6a6258, LIME = 0x8c8474, FISH = 0xb09474, MEAT = 0x70382a, POST = 0xb09878;
 /** A cone of poles covered with sewn hides, its door towards +x, the skirt weighted with stones and mammoth bone. */
 function tent(seed, R = 2.3, H = 3.1) {
   const r = rng(seed), hide = new Builder(), wood = new Builder(), bones = [], NP = 9, door = 0.36;
@@ -223,8 +237,8 @@ function tent(seed, R = 2.3, H = 3.1) {
 /** A drying rack: two forked posts, a rail, split fish or strips of meat hanging from it. */
 function rack(what = FISH) {
   const g = [], w = [];
-  for (const s of [-1, 1]) w.push(cyl(0.035, 0.045, 1.7, 0x5a4630, 0, 0.85, s * 1.3, 6), cyl(0.03, 0.035, 1.75, 0x5a4630, 0.3, 0.8, s * 1.3, 6, 0, 0, 0.36));
-  w.push(cyl(0.028, 0.028, 2.9, 0x5a4630, 0.02, 1.62, 0, 6, 1.5708, 0, 0));
+  for (const s of [-1, 1]) w.push(cyl(0.035, 0.045, 1.7, POST, 0, 0.85, s * 1.3, 6), cyl(0.03, 0.035, 1.75, POST, 0.3, 0.8, s * 1.3, 6, 0, 0, 0.36));
+  w.push(cyl(0.028, 0.028, 2.9, POST, 0.02, 1.62, 0, 6, 1.5708, 0, 0));
   for (let i = 0; i < 9; i++) g.push(part(new THREE.SphereGeometry(1, 6, 4), what, 0.02, 1.32 - 0.03 * (i % 3), -1.05 + i * 0.26, 0, 0, 0, 0.035, 0.26, 0.08));
   return { wood: w, hung: g };
 }
@@ -249,7 +263,7 @@ function build({ world, group }) {
   const open = (x, z, m = 1) => keep.every(([kx, kz, kr]) => Math.hypot(x - kx, z - kz) > kr * m);
 
   // ----- cliff, cave, paintings -----
-  const cliff = new THREE.Mesh(cliffGeo(world), new THREE.MeshStandardMaterial({ vertexColors: true, map: TX.rockMap, normalMap: TX.rockNormal, normalScale: new THREE.Vector2(1.6, 1.6), roughness: 0.95 }));
+  const cliff = new THREE.Mesh(cliffGeo(world), new THREE.MeshStandardMaterial({ vertexColors: true, map: limeTex(), normalMap: TX.rockNormal, normalScale: new THREE.Vector2(1.2, 1.2), roughness: 0.95 }));
   cliff.castShadow = cliff.receiveShadow = true; group.add(cliff);
   const caveMat = new THREE.MeshBasicMaterial({ vertexColors: true, map: TX.rockMap, side: THREE.DoubleSide }), dark = new THREE.Mesh(caveGeo(P, false), caveMat), lit = new THREE.Mesh(caveGeo(P, true), caveMat);
   const paintMat = (map) => new THREE.MeshBasicMaterial({ map, vertexColors: true, transparent: true, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
@@ -261,17 +275,19 @@ function build({ world, group }) {
   const sets = [], sage = () => { const g = 0.62 + r() * 0.3; return [g * (0.95 + r() * 0.2), g, g * (0.78 + r() * 0.2)]; }, grey = () => { const g = 0.75 + r() * 0.35; return [g * 1.04, g, g * 0.92]; },
     russet = () => { const g = 0.6 + r() * 0.3, q = r(); return q < 0.3 ? [g * 1.5, g * 0.95, g * 0.5] : [g, g, g * 0.8]; };
   const scatter = (parts, n, place, span, size, tint, cast = true) => {
+    parts = cast ? parts : parts.map((q) => ({ ...q, cast: false }));
     const items = [];
     for (let i = 0; i < n; i++) { const q = place(); if (!q) continue; const [a, b] = span(); items.push({ x: q[0], z: q[1], s: size[0] + r() * (size[1] - size[0]), rot: r() * TAU, u0: a === -Infinity ? -1 : Y(a), u1: b === Infinity ? 2 : Y(b), tint: tint() }); }
     if (items.length) sets.push(new Field(world, group, parts, items, { cast, grid: items.length < 40 ? 1 : 3 }));
   };
   const valley = () => { for (let k = 0; k < 40; k++) { const z = (r() * 2 - 1) * 420, x = -150 + r() * (cliffX(z) - 6 + 150); if (H(x, z) > 2.4 && open(x, z)) return [x, z]; } return null; };
   const farBank = () => { const z = (r() * 2 - 1) * 520; return [riverX(z) - 44 - r() * 330, z]; }, top = () => { const z = (r() * 2 - 1) * 420; return [cliffX(z) + 122 + r() * 260, z]; };
+  const edge = () => { const z = (r() * 2 - 1) * 330; return [cliffX(z) + 14 + r() * 100, z]; };
   const some = (...fs) => () => fs[r() * fs.length | 0](), always = () => [-Infinity, Infinity], warm = () => (r() < 0.5 ? [-Infinity, -29e3 + r() * 3e3] : [-16.8e3 + r() * 1.5e3, Infinity]);
-  scatter(K.spruce, 60, some(farBank, farBank, top, valley), always, [0.5, 1.0], sage);
-  scatter(K.spruceB, 150, some(farBank, farBank, top, valley), warm, [0.6, 1.2], sage);
-  scatter(K.coniferB, 70, some(farBank, top, valley), warm, [0.5, 0.85], sage);
-  scatter(K.shrub, 330, some(valley, valley, farBank, top), always, [0.5, 1.3], russet, false);
+  scatter(K.spruce, 40, some(farBank, top, edge), always, [0.5, 1.0], sage, false); scatter(K.spruce, 24, valley, always, [0.5, 1.0], sage);
+  scatter(K.spruceB, 100, some(farBank, farBank, top), warm, [0.6, 1.2], sage, false); scatter(K.spruceB, 40, valley, warm, [0.6, 1.2], sage);
+  scatter(K.coniferB, 36, some(farBank, top), warm, [0.5, 0.85], sage, false); scatter(K.coniferB, 20, valley, warm, [0.5, 0.85], sage);
+  scatter(K.shrub, 380, some(valley, valley, farBank, top, edge), always, [0.5, 1.3], russet, false);
   scatter(K.rockB, 130, some(() => { const z = (r() * 2 - 1) * 330, x = footX(z) - 1 - r() * r() * 16; return open(x, z, 0.5) && Math.abs(z - CAVE_Z) > 9 ? [x, z] : null; }, () => { const z = (r() * 2 - 1) * 400; return [riverX(z) + (r() < 0.5 ? -1 : 1) * (26 + r() * 12), z]; }, valley), always, [0.4, 1.9], grey);
   // snow: drifts that lie in the hollows and under the cliff, growing and shrinking with the cold
   const DRIFT = 150, driftGeo = new THREE.SphereGeometry(1, 12, 6).scale(1, 0.11, 1), drifts = new THREE.InstancedMesh(driftGeo, new THREE.MeshStandardMaterial({ color: 0xf2f5f8, roughness: 0.7 }), DRIFT), driftAt = [];
@@ -306,8 +322,8 @@ function build({ world, group }) {
   stuff.add('rock', [0, 1, 2].flatMap((i) => markedBlock().map((g) => g.rotateY(i * 2.1).translate(i * 1.7 - 1.7, 0, sin(i * 4) * 0.8))), S1[0] - 0.5, S1[1] + 8, { from: MARKS });
   // tents
   pitch(TENTS_A, SAP, Infinity, 20); pitch(TENTS_M, MAGD, Infinity, 40);
-  for (const [x, z, rot, what] of [[CAMP[0] - 16, CAMP[1] - 6, 0.4, FISH], [CAMP[0] - 15, CAMP[1] + 12, 1.1, FISH], [CAMP[0] + 15, CAMP[1] + 4, 2.0, 0x7a2c20]]) { const k = rack(what); stuff.add('wood', k.wood, x, z, { rot, from: MAGD }); stuff.add('plain', k.hung, x, z, { rot, from: MAGD }); block(x, z, 1.2, MAGD); }
-  { const k = rack(0x7a2c20); stuff.add('wood', k.wood, S2[0] - 14, S2[1] + 16, { rot: 0.9, from: SAP }); stuff.add('plain', k.hung, S2[0] - 14, S2[1] + 16, { rot: 0.9, from: SAP }); block(S2[0] - 14, S2[1] + 16, 1.2, SAP); }
+  for (const [x, z, rot, what] of [[CAMP[0] - 16, CAMP[1] - 6, 0.4, FISH], [CAMP[0] - 15, CAMP[1] + 12, 1.1, FISH], [CAMP[0] + 15, CAMP[1] + 4, 2.0, MEAT]]) { const k = rack(what); stuff.add('wood', k.wood, x, z, { rot, from: MAGD }); stuff.add('plain', k.hung, x, z, { rot, from: MAGD }); block(x, z, 1.2, MAGD); }
+  { const k = rack(MEAT); stuff.add('wood', k.wood, S2[0] - 14, S2[1] + 16, { rot: 0.9, from: SAP }); stuff.add('plain', k.hung, S2[0] - 14, S2[1] + 16, { rot: 0.9, from: SAP }); block(S2[0] - 14, S2[1] + 16, 1.2, SAP); }
   // a heap of mammoth bone and tusks by the camp, firewood by the fires
   const heap = []; for (let i = 0; i < 9; i++) heap.push(cyl(0.06, 0.07, 0.9 + r() * 0.4, BONE, (r() - 0.5) * 1.6, 0.1 + i * 0.03, (r() - 0.5) * 1.2, 6, 1.5708, r() * 3, 0)); for (let i = 0; i < 3; i++) heap.push(part(new THREE.TorusGeometry(1.0, 0.07, 5, 10, 1.7), 0xe6dcc2, i * 0.3 - 0.3, 0.12, 0.4 - i * 0.4, 1.4, 0, i * 0.5));
   stuff.add('rock', heap, TF[0] + 1, TF[1] + 24, { from: SAP });

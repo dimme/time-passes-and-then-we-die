@@ -138,6 +138,7 @@ function build({ world, group }) {
   const sets = [], olive = () => { const g = 0.62 + r() * 0.3; return [g * (0.95 + r() * 0.3), g, g * (0.6 + r() * 0.25)]; }, lush = () => { const g = 0.7 + r() * 0.3; return [g * (0.85 + r() * 0.25), g, g * (0.7 + r() * 0.2)]; },
     grey = () => { const g = 0.55 + r() * 0.35; return [g * 1.08, g, g * 0.92]; };
   const scatter = (parts, n, place, span, size, tint, cast = true) => {
+    parts = cast ? parts : parts.map((q) => ({ ...q, cast: false }));
     const items = [];
     for (let i = 0; i < n; i++) { const q = place(); if (!q) continue; const [a, b] = span(q[0], q[1]); items.push({ x: q[0], z: q[1], s: size[0] + r() * (size[1] - size[0]), rot: r() * TAU, u0: a === -Infinity ? -1 : Y(a), u1: b === Infinity ? 2 : Y(b), tint: (q[2] || tint)() }); }
     if (items.length) sets.push(new Field(world, group, parts, items, { cast, grid: items.length < 40 ? 1 : 3 }));
@@ -146,7 +147,8 @@ function build({ world, group }) {
   const scarp = () => [-340 - r() * 420, (r() * 2 - 1) * 620];
   const always = () => [-Infinity, Infinity], some = (...fs) => () => fs[r() * fs.length | 0]();
   const AC = [acacia(11, {}, bark, thorn), acacia(12, { h: 8, wide: 7.5, rad: 0.32 }, bark, thorn)];
-  for (const a of AC) scatter(a, 85, some(plain(), plain(250, 330, -30), scarp), () => [r() < 0.5 ? -Infinity : -6e6 + r() * 4e6, Infinity], [0.8, 1.35], olive);
+  for (const a of AC) scatter(a, 28, scarp, always, [0.8, 1.35], olive, false);
+  for (const a of AC) scatter(a, 60, some(plain(), plain(250, 330, -30)), () => [r() < 0.5 ? -Infinity : -6e6 + r() * 4e6, Infinity], [0.8, 1.35], olive);
   scatter(AC[1], 1, () => TREE, always, [1.45, 1.45], olive);                                       // the camp's shade tree
   // the older, wetter country: woodland that thins as Africa dries
   scatter(K.broadleaf, 150, some(plain(), plain(240, 380, -50), plain(240, 380, -50)), () => [-Infinity, -3.8e6 + r() * 2.4e6], [0.7, 1.3], lush);
