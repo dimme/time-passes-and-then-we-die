@@ -7,7 +7,7 @@ import { actors } from './people-actors.js';
 import { species } from './animals.js';
 import { Batch, Blocks, Beasts, C, temple, stoa, house, column, scaffold, crane, drape, road, statue, trees, cart, hullGeo, gableGeo, beside, loopOf, toward, tone, shade, audit, BOX, BALL } from './site-greece-kit.js';
 
-const PLAIN = 9, TOP = 46, PI = Math.PI, U = yearToU;
+const PLAIN = 9, TOP = 46, PY = 50, PI = Math.PI, U = yearToU;
 const SEA = [-0.45, 0.893], SHORE = [0.893, 0.45], HARBOUR = [-297, 282];
 const sup = (x, z) => Math.pow(Math.abs(x / 125) ** 2.6 + Math.abs(z / 66) ** 2.6, 1 / 2.6);
 function acro(x, z) { const q = sup(x, z); if (q >= 1.7) return 0; const t = smooth((1.7 - q) / 0.7); return 10 * t * t + 27 * smooth((1 - q) / 0.2); }
@@ -65,8 +65,8 @@ function build({ world, group }) {
   drape(B, world, 'earth', -206, -9.5, -106, 9.5, 4.75, () => [0.05, 0x978a72]);
   for (const e of [1, -1]) B.beam('ashlar', C.poros, [-207, PLAIN - 4, e * 11.6], [-106, TOP - 4, e * 11.6], 2.4, 9.2);
   // the wall round the summit: boulders first, squared blocks after the Persians
-  for (const [mat, col, up, th, y0, y1] of [['cyclop', 0xb3a78f, 5, 4.6, -1250, -479], ['ashlar', C.poros, 2.4, 2.6, -479, Infinity]]) {
-    B.when(y0, y1); const N = 72, pt = (i) => { const a = (i / N) * 6.2832, c = Math.cos(a), s = Math.sin(a); return [125 * 0.8 * Math.sign(c) * Math.abs(c) ** (2 / 2.6), 66 * 0.8 * Math.sign(s) * Math.abs(s) ** (2 / 2.6)]; };
+  for (const [mat, col, up, th, y0, y1] of [['cyclop', 0xb3a78f, 6.5, 4.6, -1250, -479], ['ashlar', C.poros, 4.6, 2.6, -479, Infinity]]) {
+    B.when(y0, y1); const N = 72, pt = (i) => { const a = (i / N) * 6.2832, c = Math.cos(a), s = Math.sin(a); return [125 * 0.83 * Math.sign(c) * Math.abs(c) ** (2 / 2.6), 66 * 0.83 * Math.sign(s) * Math.abs(s) ** (2 / 2.6)]; };
     for (let i = 0; i < N; i++) {
       const a = pt(i), b = pt(i + 1), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2; if (mx < -90 && Math.abs(mz) < 15) continue;
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]); B.box(mat, tone(col, r, 0.06), L + 1, 12 + up, th, mx, TOP - 12, mz, toward(a[0], a[1], b[0], b[1]));
@@ -90,18 +90,19 @@ function build({ world, group }) {
   const old = { x: 5, z: -22, w: 18, l: 40, nf: 6, ns: 12, colH: 7.6, d: 1.55, mat: 'ashlar', col: C.poros, y: TOP };
   B.when(-570, -480); temple(K, old);
   B.when(-480, -421); temple(K, { ...old, ruin: 0.9, burnt: 1 });
-  const parth = { x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: TOP };
+  const parth = { x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
+  B.when(-488, Infinity); B.box('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.rect(22, 24, 39.8, 21.2, 0, -488);
   B.when(-488, -480); temple(K, { ...parth, stage: 0.08 });
   B.when(-480, -447); temple(K, { ...parth, stage: 0.08, burnt: 1 });
   const works = (x0, z0, x1, z1, h, cranes) => {   // scaffolding round a building and cranes on its floor
-    scaffold(K, [x0, z0], [x1, z0], h, TOP); scaffold(K, [x1, z1], [x0, z1], h, TOP); scaffold(K, [x1, z0], [x1, z1], h, TOP);
-    for (const [x, z, ry, ch] of cranes) crane(K, x, TOP + 1.3, z, ry, ch);
+    scaffold(K, [x0, z0], [x1, z0], h, PY); scaffold(K, [x1, z1], [x0, z1], h, PY); scaffold(K, [x1, z0], [x1, z1], h, PY);
+    for (const [x, z, ry, ch] of cranes) crane(K, x, PY + 1.3, z, ry, ch);
   };
-  B.when(-447, -443); temple(K, { ...parth, stage: 0.3 }); works(-14, 7, 58, 41, 6.5, [[0, 24, 0, 9], [40, 24, PI, 9]]);
-  B.when(-443, -440); temple(K, { ...parth, stage: 0.62 }); works(-14, 7, 58, 41, 12.8, [[10, 24, PI / 2, 14], [44, 24, -PI / 2, 14]]);
-  B.when(-440, -438); temple(K, { ...parth, stage: 0.9 }); scaffold(K, [58.5, 7], [58.5, 41], 15, TOP); scaffold(K, [-14.5, 41], [-14.5, 7], 15, TOP);
+  B.when(-447, -443); temple(K, { ...parth, stage: 0.3 }); works(-13, 8, 57, 40, 6.5, [[0, 24, 0, 9], [40, 24, PI, 9]]);
+  B.when(-443, -440); temple(K, { ...parth, stage: 0.62 }); works(-13, 8, 57, 40, 12.8, [[10, 24, PI / 2, 14], [44, 24, -PI / 2, 14]]);
+  B.when(-440, -438); temple(K, { ...parth, stage: 0.9 }); scaffold(K, [59, 8], [59, 40], 15, PY); scaffold(K, [-15, 40], [-15, 8], 15, PY);
   B.when(-438, Infinity); temple(K, parth);
-  B.when(-438, -432); scaffold(K, [58.5, 12], [58.5, 36], 16.5, TOP);   // the sculptors are still at the pediments
+  B.when(-438, -432); scaffold(K, [59, 12], [59, 36], 16.5, PY);   // the sculptors are still at the pediments
   B.when(-447, -432);   // the masons' yard west of the temple
   for (let i = 0; i < 14; i++) { const x = -48 + r() * 26, z = 9 + r() * 30; if (i % 2) B.cyl('marble', C.pentelic, 0.95, 0.95, 1.05, x, TOP, z, 16); else B.box('marble', C.pentelic, 1.6 + r(), 0.7 + r() * 0.5, 0.9 + r() * 0.5, x, TOP, z, r() * 3); }
   B.when(-456, Infinity); statue(K, -64, TOP, -20, PI, 7.5, { base: 2, spear: 1, shield: 1 });   // Athena Promachos, in bronze, looking to the gate
@@ -214,11 +215,11 @@ function build({ world, group }) {
   add('greek', 'stand', 127, -94.5, 0.4); add('greek-f', 'crouch', 115.5, -94.4, 0.3);
   // the groves
   const T = [];
-  for (let gx = 130; gx <= 400; gx += 15) for (let gz = -150; gz <= 110; gz += 15) { const x = gx + (r() - 0.5) * 7, z = gz + (r() - 0.5) * 7; if (sup(x, z) < 2 || !clear(x, z, 3) || CB.inside(x, z, -430, 4) || r() < 0.12) continue; const g = 0.8 + r() * 0.3; T.push({ kind: r() < 0.5 ? 'olive' : 'oliveB', x, z, s: 0.8 + r() * 0.5, tint: [g * 0.82, g * 0.95, g * 0.86] }); }
-  for (let i = 0; i < 150; i++) { const x = -420 + r() * 840, z = -420 + r() * 700, d = Math.hypot(x + 60, z + 60); if (d < 235 || base(x, z) < 4 || base(x, z) > 60 || (x > 120 && z > -160 && z < 120)) continue; const g = 0.75 + r() * 0.3; T.push({ kind: r() < 0.6 ? 'olive' : 'oliveB', x, z, s: 0.7 + r() * 0.6, tint: [g * 0.82, g * 0.95, g * 0.86] }); }
-  for (let i = 0; i < 110; i++) { const x = -330 + r() * 600, z = -300 + r() * 520; if (!clear(x, z, 2) || CB.inside(x, z, -430, 2.5) || CB.inside(x, z, -1200, 2.5) || Math.abs(H(x, z) - PLAIN) > 3 || (x > 100 && x < 250 && z < -150)) continue; const g = 0.5 + r() * 0.2; T.push({ kind: 'cypress', x, z, s: 0.6 + r() * 0.6, tint: [g * 0.8, g, g * 0.8], y0: r() < 0.5 ? -1250 : -700 }); }
-  for (let i = 0; i < 90; i++) { const a = r() * 6.283, q = 1.2 + r() * 0.45, x = Math.cos(a) * 125 * q, z = Math.sin(a) * 66 * q * (0.9 + r() * 0.3); if (sup(x, z) < 1.15 || (x < -90 && Math.abs(z) < 24) || CB.inside(x, z, -430, 2) || (z > 60 && Math.abs(x - 25) < 40)) continue; const g = 0.7 + r() * 0.3; T.push({ kind: 'shrub', x, z, s: 0.8 + r() * 1.1, tint: [g * 0.9, g, g * 0.75] }); }
-  for (let i = 0; i < 70; i++) { const a = r() * 6.283, d = 60 + r() * 150, x = 340 + Math.cos(a) * d, z = -360 + Math.sin(a) * d, g = 0.6 + r() * 0.25; T.push({ kind: 'pine', x, z, s: 0.6 + r() * 0.5, tint: [g * 0.85, g, g * 0.8] }); }
+  for (let gx = 130; gx <= 400; gx += 18) for (let gz = -150; gz <= 110; gz += 18) { const x = gx + (r() - 0.5) * 7, z = gz + (r() - 0.5) * 7; if (sup(x, z) < 2 || !clear(x, z, 3) || CB.inside(x, z, -430, 4) || r() < 0.12) continue; const g = 0.8 + r() * 0.3; T.push({ kind: 'olive', x, z, s: 0.8 + r() * 0.5, tint: [g * 0.82, g * 0.95, g * 0.86] }); }
+  for (let i = 0; i < 90; i++) { const x = -420 + r() * 840, z = -420 + r() * 700, d = Math.hypot(x + 60, z + 60); if (d < 235 || base(x, z) < 4 || base(x, z) > 60 || (x > 120 && z > -160 && z < 120)) continue; const g = 0.75 + r() * 0.3; T.push({ kind: 'olive', x, z, s: 0.7 + r() * 0.6, tint: [g * 0.82, g * 0.95, g * 0.86] }); }
+  for (let i = 0; i < 80; i++) { const x = -330 + r() * 600, z = -300 + r() * 520; if (!clear(x, z, 2) || CB.inside(x, z, -430, 2.5) || CB.inside(x, z, -1200, 2.5) || Math.abs(H(x, z) - PLAIN) > 3 || (x > 100 && x < 250 && z < -150)) continue; const g = 0.5 + r() * 0.2; T.push({ kind: 'cypress', x, z, s: 0.6 + r() * 0.6, tint: [g * 0.8, g, g * 0.8], y0: r() < 0.5 ? -1250 : -700 }); }
+  for (let i = 0; i < 60; i++) { const a = r() * 6.283, q = 1.2 + r() * 0.45, x = Math.cos(a) * 125 * q, z = Math.sin(a) * 66 * q * (0.9 + r() * 0.3); if (sup(x, z) < 1.15 || (x < -90 && Math.abs(z) < 24) || CB.inside(x, z, -430, 2) || (z > 60 && Math.abs(x - 25) < 40)) continue; const g = 0.7 + r() * 0.3; T.push({ kind: 'shrub', x, z, s: 0.8 + r() * 1.1, tint: [g * 0.9, g, g * 0.75] }); }
+  for (let i = 0; i < 45; i++) { const a = r() * 6.283, d = 60 + r() * 150, x = 340 + Math.cos(a) * d, z = -360 + Math.sin(a) * d, g = 0.6 + r() * 0.25; T.push({ kind: 'pine', x, z, s: 0.6 + r() * 0.5, tint: [g * 0.85, g, g * 0.8] }); }
   const grove = trees(world, group, T);
   // olive harvest: beating the branches with poles, gathering, carrying
   const OL = T.filter((t) => t.kind.startsWith('olive') && t.x > 135 && t.x < 215 && t.z > -100 && t.z < -20).slice(0, 7);
@@ -276,10 +277,10 @@ function build({ world, group }) {
   for (let i = 0; i < 5; i++) add(i % 2 ? 'himation' : 'greek-f', 'pray', 66 + (i % 3) * 1.6, -13.5 - Math.floor(i / 3) * 1.5, PI / 2 + (r() - 0.5) * 0.3, -560);
   // building the Parthenon
   for (let i = 0; i < 9; i++) add('greek', 'chisel', -48 + (i % 5) * 5.6 + r(), 11 + Math.floor(i / 5) * 9 + r() * 4, r() * 6.28, -447, -432);
-  add('himation', 'point', -18, 5, -0.9, -447, -432); add('himation', 'talk', -16.5, 4, 2.4, -447, -432); add('greek', 'write', -15, 6.2, 2.9, -447, -432);
+  add('himation', 'point', -24, 5, -0.5, -447, -432); add('himation', 'talk', -22.5, 4, 2.4, -447, -432); add('greek', 'write', -21, 6.2, 2.9, -447, -432);
   for (let i = 0; i < 2; i++) add('greek', 'saw', -30 + i * 7, 41, 1.5, -447, -438);
-  walkers(['greek'], 'carry', [[-22, 5], [20, 5.6], [60, 5.4]], 3, -447, -438, { prop: 'sack' }); walkers(['greek'], 'carry2', [[-205, 3], [-108, 3], [-84, 4], [-50, 6]], 2, -447, -438);
-  for (let i = 0; i < 4; i++) add('greek', 'paint', 61.2, 14 + i * 6.5, PI, -438, -432, { y: 0, ok: 1 });
+  walkers(['greek'], 'carry', [[-22, 1.6], [20, 1.4], [60, 1.6]], 3, -447, -438, { prop: 'sack' }); walkers(['greek'], 'carry2', [[-205, 3], [-108, 3], [-84, 4], [-50, 6]], 2, -447, -438);
+  for (let i = 0; i < 4; i++) add('greek', 'paint', 60, 14 + i * 6.5, PI, -438, -432, { y: PY - TOP + 4.3, ok: 1 });
   const HAUL = [[-203, 4.5], [-108, 4.5], [-84, 5.5], [-56, 10], [-50, 14], [-56, 13], [-84, 8.2], [-108, 7.8], [-203, 7.8], [-203, 4.5]], HL = loopOf(HAUL);
   for (let i = 0; i < 8; i++) add('greek', 'haul', 0, 0, 0, -447, -438, { path: i % 2 ? beside(HAUL, 0.55) : beside(HAUL, -0.55), speed: 0.7, phase: 0.1 - (Math.floor(i / 2) * 1.25) / HL.L });
   const sledge = new THREE.Group(), sb = new Batch(); sb.box('wood', C.oldWood, 3.2, 0.16, 0.2, 0, 0, 0.6); sb.box('wood', C.oldWood, 3.2, 0.16, 0.2, 0, 0, -0.6); for (let k = -1; k <= 1; k++) sb.box('wood', C.wood, 0.2, 0.12, 1.5, k * 1.2, 0.16, 0); sb.build(sledge);
@@ -294,10 +295,10 @@ function build({ world, group }) {
   const q0 = sea(-5, -3), q1 = sea(-30, -8); walkers(['greek'], 'carry', [q0, q1, sea(-55, -14)], 4, -480, undefined, { prop: 'amphora' }); add('himation', 'point', q0[0] - 3, q0[1] - 4, 1, -480); add('greek', 'stand', q0[0] - 4.4, q0[1] - 3, 3.6, -480);
 
   // ------------------------------------------------------------------ beasts and birds
-  beasts.circle(M.gull, 7, -Infinity, Infinity, { cx: HARBOUR[0], cz: HARBOUR[1] + 40, spread: 70, R: [30, 90], speed: 9, fly: 16 });
-  beasts.circle(M.crow, 5, -Infinity, Infinity, { cx: 60, cz: -60, spread: 150, R: [30, 80], speed: 8, fly: 30 });
-  beasts.circle(M.hawk, 2, -Infinity, Infinity, { cx: 0, cz: 0, spread: 60, R: [80, 140], speed: 10, fly: 75 });
-  beasts.circle(M.horse, 3, -Infinity, Infinity, { cx: 300, cz: -200, spread: 30, R: [8, 20], speed: 0.9, scale: [0.78, 0.9] });
+  beasts.circle(M.gull, 4, -Infinity, Infinity, { cx: HARBOUR[0], cz: HARBOUR[1] + 40, spread: 70, R: [30, 90], speed: 9, fly: 16 });
+  beasts.circle(M.crow, 3, -Infinity, Infinity, { cx: 60, cz: -60, spread: 150, R: [30, 80], speed: 8, fly: 30 });
+  beasts.circle(M.hawk, 1, -Infinity, Infinity, { cx: 0, cz: 0, spread: 60, R: [80, 140], speed: 10, fly: 75 });
+  beasts.circle(M.horse, 2, -Infinity, Infinity, { cx: 300, cz: -200, spread: 30, R: [8, 20], speed: 0.9, scale: [0.78, 0.9] });
 
   B.when().build(group);
   const folk = actors(world, A, { seed: 7 }); group.add(...folk.meshes);
@@ -322,7 +323,7 @@ export default {
   terrain: { base, relief: () => 0, bounds: { x: 400, z: 400 }, tint },
   spawn: { x: -172, z: -196, yaw: 3.9 },
   env(year, e) {
-    e.hill = 1; e.sea = 0; e.ice = -60; e.grass = 0.1; e.precip = 0; e.cloud = 0.16; e.fogD = 0.0011; e.sunI = 2.2; e.sunEl = 0.95; e.amb = 1.05; e.glow = 0;
+    e.hill = 1; e.sea = 0; e.ice = -60; e.grass = 0.06; e.precip = 0; e.cloud = 0.16; e.fogD = 0.0011; e.sunI = 2.2; e.sunEl = 0.95; e.amb = 1.05; e.glow = 0;
     put(e.top, SKY); put(e.hor, HOR); put(e.ground, GROUND); put(e.water, WATER); put(e.far, FAR); put(e.lava, [0, 0, 0]);
     if (year > -481 && year < -478) { const k = 1 - Math.abs(year + 479.7) / 1.4; if (k > 0) { e.fogD += 0.002 * k; e.sunI -= 0.9 * k; put(e.hor, [HOR[0] - 0.25 * k, HOR[1] - 0.38 * k, HOR[2] - 0.5 * k]); } }   // the smoke of the Persian fire
   },

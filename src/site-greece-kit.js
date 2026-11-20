@@ -272,7 +272,7 @@ export class Blocks {
 // Temples
 // =====================================================================================
 export const C = {
-  marble: 0xf4f0e6, pentelic: 0xf3ead8, poros: 0xd9c9a2, tufa: 0x9a8468, travertine: 0xe2d8c0, stucco: 0xe8dcc0, mud: 0xb9a07a, limewash: 0xe9e2d0, brick: 0xb86a48, tile: 0xb5593a, tileOld: 0x9a5a40, tileMarble: 0xe6e0d0,
+  marble: 0xdcd7cb, pentelic: 0xe0d5be, poros: 0xc4b48e, tufa: 0x8c775c, travertine: 0xc9bea5, stucco: 0xd4c8ac, mud: 0xa89068, limewash: 0xd6cfbb, brick: 0xb86a48, tile: 0xb5593a, tileOld: 0x9a5a40, tileMarble: 0xe6e0d0,
   blue: 0x1f3f8a, red: 0xa32a1c, gold: 0xd8a83a, bronze: 0x6a5a34, door: 0x4a3420, wood: 0x8a6a44, oldWood: 0x6a5238, dark: 0x1a1612, soot: 0x3a3430, basalt: 0x55565c, earth: 0xa08a64, green: 0x3c6a4a, ochre: 0xc9953c,
 };
 /** Four beams round a rectangle (x0..x1, −Z..Z) at height y: h high, bw wide. */
@@ -496,7 +496,7 @@ function treeKinds() {
 }
 /** items: [{ kind, x, z, s, rot?, tint?, y0?, y1? }]. Returns { update(year) }. */
 export function trees(world, group, items, seed = 3) {
-  const K = treeKinds(), r = rng(seed), sets = [], CH = 320;
+  const K = treeKinds(), r = rng(seed), sets = [], CH = 700;
   const by = new Map(); for (const it of items) { const key = it.kind + ':' + Math.floor(it.x / CH) + ':' + Math.floor(it.z / CH); if (!by.has(key)) by.set(key, []); by.get(key).push(it); }
   for (const [key, list] of by) {
     const parts = K[key.split(':')[0]], meshes = parts.map((p) => { const m = new THREE.InstancedMesh(p.geo, p.mat, list.length); m.castShadow = m.receiveShadow = true; return m; });
@@ -644,7 +644,7 @@ export function audit(name, list, blocks, world, sea, yearOf) {
       for (let s = 0; s < steps; s++) {
         const x = pts[i][0] + (a.path && steps > 1 ? ((pts[i + 1][0] - pts[i][0]) * s) / steps : 0), z = pts[i][1] + (a.path && steps > 1 ? ((pts[i + 1][1] - pts[i][1]) * s) / steps : 0);
         const b = blocks.inside(x, z, yr, 0.15), wet = !a.afloat && world.heightAt(x, z) < sea + 0.05;
-        if ((b || wet) && !hit && (hit = true) && bad++ < 60) console.warn(`[audit ${name}] ${a.outfit} ${a.action} at ${x.toFixed(1)}, ${z.toFixed(1)} year ${yr.toFixed(0)}: ${b ? 'inside a footprint at ' + b.x.toFixed(0) + ', ' + b.z.toFixed(0) : 'in the water'}`);
+        if ((b || wet) && !hit && (hit = true) && bad++ < 400) console.warn(`[audit ${name}] ${a.outfit} ${a.action} at ${x.toFixed(1)}, ${z.toFixed(1)} year ${yr.toFixed(0)}: ${b ? 'inside a footprint at ' + b.x.toFixed(0) + ', ' + b.z.toFixed(0) : 'in the water'}`);
       }
     }
   }
