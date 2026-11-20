@@ -140,7 +140,7 @@ function textures() {
 }
 
 /** Texture tile sizes in metres: geometry carries uv in metres ÷ tile. */
-const TILE = { brick: 2, plaster: 3.2, stone: 2.4, reed: 1.6, earth: 2.6, mosaic: 2.4, wood: 1.2, plain: 1, water: 1, crop: 1 };
+const TILE = { brick: 2, plaster: 3.2, stone: 1.7, reed: 1.6, earth: 2.6, mosaic: 2.4, wood: 1.2, plain: 1, water: 1, crop: 1 };
 let MATS;
 /** One material per surface; everything is tinted by vertex colour. */
 export function materials() {
@@ -150,7 +150,7 @@ export function materials() {
     brick: std(T.brick), plaster: std(T.plaster, { normalScale: new THREE.Vector2(0.7, 0.7) }), stone: std(T.stone, { roughness: 0.9 }), reed: std(T.reed, { side: THREE.DoubleSide }),
     earth: std(T.earth, { roughness: 1 }), mosaic: std(T.mosaic, { roughness: 0.7 }), wood: std({ map: G.barkMap, normalMap: G.barkNormal }, { roughness: 0.9 }),
     plain: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }),
-    water: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.08, metalness: 0.1 }),
+    water: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.22, metalness: 0 }),
     crop: leafMat(T.crop, { sway: 0.035 }),
   };
   return MATS;
@@ -195,7 +195,7 @@ export class Shape {
   prism(m, plan, y0, y1, o = {}) {
     let P = plan.slice(); const n = P.length;
     let area = 0; for (let i = 0; i < n; i++) { const a = P[i], b = P[(i + 1) % n]; area += a[0] * b[1] - b[0] * a[1]; }
-    if (area > 0 && !o.open) P.reverse();
+    if ((area > 0) !== !!o.inward && !o.open) P.reverse();   // inward: the faces look into the ring (a parapet's inner side)
     let cx = 0, cz = 0; for (const p of P) { cx += p[0] / n; cz += p[1] / n; }
     let rad = 0; for (const p of P) rad += Math.hypot(p[0] - cx, p[1] - cz) / n;
     const k = 1 - (o.batter || 0) / (rad || 1), top = o.open ? P : P.map((p) => [cx + (p[0] - cx) * k, cz + (p[1] - cz) * k]), col = o.col || W;
@@ -262,8 +262,8 @@ export const local = (x, z, rot, px, pz) => { const c = Math.cos(rot), s = Math.
 // ---------------------------------------------------------------------------------------------
 // Fields
 // ---------------------------------------------------------------------------------------------
-const EARTH = { ploughed: lin(0x7a5c40), sown: lin(0x927654), green: lin(0x7c6646), ripe: lin(0x9c8658), stubble: lin(0xb89a5e), fallow: lin(0xa48c62) };
-const CROP = { sown: [lin(0x7a9a3a), 0.14], green: [lin(0x5c8a2c), 0.5], ripe: [lin(0xd8b45c), 0.95], stubble: [lin(0xc8a85a), 0.13] };
+const EARTH = { ploughed: lin(0x806a4e), sown: lin(0x927654), green: lin(0x7c6646), ripe: lin(0x9c8658), stubble: lin(0xb89a5e), fallow: lin(0xa48c62) };
+const CROP = { sown: [lin(0x66803a), 0.14], green: [lin(0x4e6a2a), 0.5], ripe: [lin(0xd8b45c), 0.95], stubble: [lin(0xc8a85a), 0.13] };
 /**
  * A plot of cereal w (along the furrows) × d at (x, z), turned by rot, lying on flat ground at height y.
  * stage: ploughed | sown | green | ripe | stubble | fallow. cut (0..1): the first part of a ripe plot is already reaped to stubble.
@@ -296,7 +296,7 @@ export function field(S, r, x, z, w, d, rot, y, stage, { cut = 0, bund = true, t
 }
 /** A stook: sheaves of cut corn stood together to dry. */
 export function sheaf(S, x, y, z, r, s = 1) {
-  const c = shade(lin(0xd0aa58), 0.85 + r() * 0.3);
+  const c = shade(lin(0xd8c080), 0.85 + r() * 0.3); s *= 0.72;
   S.lathe('reed', x, y, z, [[0.3 * s, 0], [0.16 * s, 0.5 * s], [0.13 * s, 0.62 * s], [0.3 * s, 0.98 * s]], 7, { col: c, cap: 'reed', capCol: shade(c, 1.1) });
 }
 /** A pile of threshed grain or chaff. */
@@ -348,4 +348,72 @@ export class Solids {
       }
     }
   }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Plants and houses
+// ---------------------------------------------------------------------------------------------
+const _pm = new THREE.Matrix4(), _pq = new THREE.Quaternion(), _pv = new THREE.Vector3(), _ps = new THREE.Vector3(), _pp = new THREE.Vector3(), UPY = new THREE.Vector3(0, 1, 0);
+/**
+ * Copies of one of the game's plants or rocks (`parts` from kinds()) merged into one mesh per part, standing on the ground as it is now.
+ * items: [{ x, z, s, rot, tint [r, g, b], sy? }]
+ */
+export function planted(group, parts, items, heightAt) {
+  if (!items.length) return [];
+  return parts.map(({ geo, mat, tint = true, cast = true }) => {
+    const src = geo.index ? geo.toNonIndexed() : geo, n = src.attributes.position.count, N = n * items.length, sp = src.attributes.position, sn = src.attributes.normal, su = src.attributes.uv, sc = src.attributes.color;
+    const pos = new Float32Array(N * 3), nor = new Float32Array(N * 3), uv = new Float32Array(N * 2), col = new Float32Array(N * 3);
+    items.forEach((it, k) => {
+      _pm.compose(_pp.set(it.x, heightAt(it.x, it.z) - 0.1, it.z), _pq.setFromAxisAngle(UPY, it.rot || 0), _ps.set(it.s, it.s * (it.sy || 1), it.s));
+      const t = tint && it.tint ? it.tint : W;
+      for (let i = 0; i < n; i++) {
+        const o = (k * n + i) * 3;
+        _pv.fromBufferAttribute(sp, i).applyMatrix4(_pm); pos[o] = _pv.x; pos[o + 1] = _pv.y; pos[o + 2] = _pv.z;
+        _pv.fromBufferAttribute(sn, i).applyQuaternion(_pq); nor[o] = _pv.x; nor[o + 1] = _pv.y; nor[o + 2] = _pv.z;
+        if (su) { uv[(k * n + i) * 2] = su.getX(i); uv[(k * n + i) * 2 + 1] = su.getY(i); }
+        col[o] = (sc ? sc.getX(i) : 1) * t[0]; col[o + 1] = (sc ? sc.getY(i) : 1) * t[1]; col[o + 2] = (sc ? sc.getZ(i) : 1) * t[2];
+      }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const m = new THREE.Mesh(g, mat); m.castShadow = cast; m.receiveShadow = true; group.add(m); return m;
+  });
+}
+
+const DARK = lin(0x1a140e), TIMBER = lin(0x6a4c30);
+/** A point on face f (0: −z side, 1: +x, 2: +z, 3: −x) of a w × d block at (x, z) turned by rot: `along` the face (to the right, seen from outside), `out` from it. Returns [x, z]. */
+export function onFace(x, z, w, d, rot, f, along, out) {
+  const p = f === 0 ? [-along, -d / 2 - out] : f === 1 ? [w / 2 + out, -along] : f === 2 ? [along, d / 2 + out] : [-w / 2 - out, along];
+  return local(x, z, rot, p[0], p[1]);
+}
+/** A dark opening framed in the wall on face f: a doorway (y0 = 0) or a window. */
+export function opening(S, x, y, z, w, d, rot, f, along, ow, oh, y0, frame, o = {}) {
+  const P = (a, out, h) => { const q = onFace(x, z, w, d, rot, f, a, out); return [q[0], y + h, q[1]]; }, e = o.out || 0.05;
+  S.quad('plain', P(along - ow / 2, e, y0), P(along + ow / 2, e, y0), P(along + ow / 2, e, y0 + oh), P(along - ow / 2, e, y0 + oh), o.col || DARK);
+  if (o.lintel !== false) S.beam('wood', P(along - ow / 2 - 0.22, e + 0.05, y0 + oh + 0.07), P(along + ow / 2 + 0.22, e + 0.05, y0 + oh + 0.07), 0.075, 0.075, 5, TIMBER);
+  if (frame) for (const k of [-1, 1]) {   // jambs standing proud of the wall
+    const a0 = along + k * (ow / 2 + 0.11), q = onFace(x, z, w, d, rot, f, a0, e * 0.5);
+    S.box(frame.m, q[0], y + y0, q[1], f % 2 ? e + 0.12 : 0.22, oh, f % 2 ? 0.22 : e + 0.12, rot, { col: frame.col });
+  }
+}
+/**
+ * A flat-roofed house of mud brick: w × d × h at (x, z) on ground y, turned by rot.
+ * o: { m ('plaster' | 'brick'), col, footing (stone course), parapet (m), beams (ends showing under the roof), door (face), windows, roofCol, batter }
+ */
+export function house(S, r, x, y, z, w, d, h, rot, o = {}) {
+  const m = o.m || 'plaster', col = o.col || lin(0xb89a70), bat = o.batter ?? 0.1, par = o.parapet ?? 0.3;
+  if (o.footing !== false) S.box('stone', x, y - 0.3, z, w + 0.2, 0.75, d + 0.2, rot, { col: lin(0xb8ac98), cap: 'stone' });
+  S.box(m, x, y, z, w, h + par, d, rot, { col, batter: bat, cap: false });
+  const k = 1 - bat / (Math.hypot(w, d) / 2), tw = w * k, td = d * k, th = 0.32;
+  S.cap('plaster', rect(x, z, tw - th, td - th, rot), y + h, o.roofCol || shade(col, 1.08));   // the roof, a hand's depth below the parapet
+  S.prism(m, rect(x, z, tw - th * 2, td - th * 2, rot), y + h, y + h + par, { col: shade(col, 0.9), cap: false, inward: true });
+  { const A = rect(x, z, tw, td, rot), B = rect(x, z, tw - th * 2, td - th * 2, rot), Y = y + h + par;   // the top of the parapet
+    for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; S.quad(m, [B[i][0], Y, B[i][1]], [B[j][0], Y, B[j][1]], [A[j][0], Y, A[j][1]], [A[i][0], Y, A[i][1]], shade(col, 1.05), null, [0, 1, 0]); } }
+  if (o.beams !== false) for (const f of [0, 2]) for (let a = -w / 2 + 0.5; a < w / 2 - 0.3; a += 0.75 + r() * 0.15) {
+    const p = onFace(x, z, w, d, rot, f, a, -0.3), q = onFace(x, z, w, d, rot, f, a, 0.28 + r() * 0.1); S.beam('wood', [p[0], y + h - 0.16, p[1]], [q[0], y + h - 0.18, q[1]], 0.07, 0.06, 5, TIMBER);
+  }
+  const f = o.door ?? 2, span = f % 2 ? d : w;
+  opening(S, x, y, z, w, d, rot, f, (r() - 0.5) * span * 0.4, 0.8, Math.min(1.6, h - 0.7), 0, { m, col: shade(col, 0.92) });
+  for (let i = 0; i < (o.windows ?? 2); i++) { const wf = (f + 1 + ((r() * 3) | 0)) % 4, sp = wf % 2 ? d : w; opening(S, x, y, z, w, d, rot, wf, (r() - 0.5) * sp * 0.6, 0.32, 0.36, h - 1.0, null, { lintel: false, out: 0.07 }); }
+  return { x, z, w, d, h, rot };
 }
