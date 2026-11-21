@@ -367,7 +367,15 @@ export function column(B, mat, col, x, y, z, h, d, order = 'doric', o = {}) {
 // =====================================================================================
 export class Blocks {
   constructor() { this.list = []; this.year = 0; }
-  rect(x, z, hx, hz, ry = 0, y0 = -Infinity, y1 = Infinity) { this.list.push({ x, z, hx, hz, c: Math.cos(ry), s: Math.sin(ry), y0, y1, R: Math.hypot(hx, hz) + 1 }); }
+  rect(x, z, hx, hz, ry = 0, y0 = -Infinity, y1 = Infinity) { const b = { x, z, hx, hz, c: Math.cos(ry), s: Math.sin(ry), y0, y1, R: Math.hypot(hx, hz) + 1 }; this.list.push(b); return b; }
+  /** A block with a walkable top at height `top`: it stops you from below, and once you are up on it you walk on it. */
+  platform(x, z, hx, hz, top, y0 = -Infinity, y1 = Infinity) { this.rect(x, z, hx, hz, 0, y0, y1).top = top; }
+  /** The highest walkable top under (x, z) this year, or −Infinity. */
+  floorAt(x, z) {
+    let h = -Infinity;
+    for (const b of this.list) if (b.top !== undefined && this.year >= b.y0 && this.year < b.y1 && Math.abs(x - b.x) < b.hx && Math.abs(z - b.z) < b.hz && b.top > h) h = b.top;
+    return h;
+  }
   circle(x, z, r, y0 = -Infinity, y1 = Infinity) { this.list.push({ x, z, r, y0, y1, R: r + 1 }); }
   /** Is (x, z) inside something standing in `year`? (pad widens every footprint.) */
   inside(x, z, year, pad = 0) {
@@ -377,9 +385,11 @@ export class Blocks {
     }
     return null;
   }
-  collide(pos, rad = 0.6) {
+  collide(pos, r0 = 0.6) {
     for (const b of this.list) {
-      if (this.year < b.y0 || this.year >= b.y1) continue; const dx = pos.x - b.x, dz = pos.z - b.z; if (Math.abs(dx) > b.R || Math.abs(dz) > b.R) continue;
+      if (this.year < b.y0 || this.year >= b.y1) continue;
+      if (b.top !== undefined && pos.y - 1.7 > b.top - 0.6) continue;   // already up on it, or a step low enough to climb
+      const rad = b.top !== undefined ? 0.1 : r0, dx = pos.x - b.x, dz = pos.z - b.z; if (Math.abs(dx) > b.R || Math.abs(dz) > b.R) continue;
       if (b.r) { const d = Math.hypot(dx, dz), R = b.r + rad; if (d < R && d > 1e-4) { pos.x = b.x + (dx / d) * R; pos.z = b.z + (dz / d) * R; } continue; }
       let lx = dx * b.c - dz * b.s, lz = dx * b.s + dz * b.c; const px = b.hx + rad - Math.abs(lx), pz = b.hz + rad - Math.abs(lz);
       if (px <= 0 || pz <= 0) continue;

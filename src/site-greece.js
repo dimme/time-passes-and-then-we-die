@@ -91,8 +91,15 @@ function build({ world, group }) {
   const old = { x: 5, z: -22, w: 18, l: 40, nf: 6, ns: 12, colH: 7.6, d: 1.55, mat: 'ashlar', col: C.poros, y: TOP };
   B.when(-570, -480); temple(K, old);
   B.when(-480, -421); temple(K, { ...old, ruin: 0.9, burnt: 1 });
-  const parth = { x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
-  B.when(-488, Infinity); B.slab('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.rect(22, 24, 39.8, 21.2, 0, -488);
+  const parth = { pass: 1, x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
+  B.when(-488, Infinity); B.slab('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.platform(22, 24, 39.5, 21, PY, -488);
+  // the visitor can climb the west stair onto the foundation, then the three steps onto the floor of the Parthenon, and walk round inside the colonnade
+  for (let k = 0; k < 10; k++) CB.platform(-18 - k * 0.5, 24, 0.5, 6, PY - k * 0.4, -488);
+  { const sH = 0.42, steps = 3, m = parth.d * 0.78, X = parth.l / 2 - m, Z = parth.w / 2 - m, sz = (2 * Z) / (parth.nf - 1), sx = (2 * X) / (parth.ns - 1);
+    for (let i = 0; i < steps; i++) { const e = 2 * 0.5 * (steps - 1 - i); CB.platform(parth.x, parth.z, (parth.l + e) / 2, (parth.w + e) / 2, PY + (i + 1) * sH, -447); }
+    for (let i = 0; i < parth.nf; i++) for (const e of [1, -1]) CB.circle(parth.x + e * X, parth.z - Z + i * sz, parth.d / 2, -447);
+    for (let j = 1; j < parth.ns - 1; j++) for (const e of [1, -1]) CB.circle(parth.x - X + j * sx, parth.z + e * Z, parth.d / 2, -447);
+    const xb = -X + sx * 1.5, xf = X - sx * 1.5, cz = Z - sz * 0.95; CB.rect(parth.x + (xb + xf) / 2, parth.z, (xf - xb) / 2 + 0.4, cz, 0, -447); }   // the cella: walls all round
   B.when(-488, -480); temple(K, { ...parth, stage: 0.08 });
   B.when(-480, -447); temple(K, { ...parth, stage: 0.08, burnt: 1 });
   const works = (x0, z0, x1, z1, h, cranes) => {   // scaffolding round a building and cranes on its floor
@@ -325,6 +332,7 @@ function build({ world, group }) {
       }
     },
     collide: (pos) => CB.collide(pos),
+    floorAt: (x, z) => CB.floorAt(x, z),
   };
 }
 
