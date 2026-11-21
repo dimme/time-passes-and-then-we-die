@@ -173,9 +173,9 @@ function build({ world, group }) {
   // ---------- the railway, 1830: viaduct, bridge over the Irwell, Liverpool Road station and its warehouse ----------
   kit.during(1826, INF, () => {
     kit.tag = 'clip';
-    for (const z of [12, 26]) kit.along(z === 12 ? -44 : -290, z === 12 ? 12 : 26, z === 12 ? -290 : -44, z, G, (l) => kit.panel('brick', l, DECK + 1, Array.from({ length: Math.floor(l / 11) }, (_, i) => ({ x: 6 + i * 11, y: 0, w: 8.4, h: 5.4, arch: 'round' })), 0.6, 0xb8a498));
+    for (const z of [12, 26]) kit.along(z === 12 ? -44 : -290, z === 12 ? 12 : 26, z === 12 ? -290 : -44, z, G, (l) => kit.panel('brick', l, DECK + 0.45, Array.from({ length: Math.floor(l / 11) }, (_, i) => ({ x: 6 + i * 11, y: 0, w: 8.4, h: 5.4, arch: 'round' })), 0.6, 0xb8a498));
     kit.poly('cobble', [[-640, G + DECK, 12], [-44, G + DECK, 12], [-44, G + DECK, 26], [-640, G + DECK, 26]], 0xc8c4bc);
-    for (const z of [10.6, 26.8]) kit.along(-620, z, -290, z, -3, (l) => kit.panel('stone', l, 9 + DECK + 1, [{ x: l - 20, y: 0, w: 19, h: 13, arch: 'round' }, { x: l - 44, y: 0, w: 19, h: 13, arch: 'round' }, ...Array.from({ length: 22 }, (_, i) => ({ x: 8 + i * 11.5, y: 9, w: 8.6, h: 5.4, arch: 'round' }))], 0.6, 0xa8a298));
+    for (const z of [10.6, 26.8]) kit.along(-620, z, -290, z, -3, (l) => kit.panel('stone', l, 9 + DECK + 0.45, [{ x: l - 20, y: 0, w: 19, h: 13, arch: 'round' }, { x: l - 44, y: 0, w: 19, h: 13, arch: 'round' }, ...Array.from({ length: 22 }, (_, i) => ({ x: 8 + i * 11.5, y: 9, w: 8.6, h: 5.4, arch: 'round' }))], 0.6, 0xa8a298));
     for (let x = -284.5; x < -46; x += 11) kit.at(0, 0, 0, 0, () => kit.solid(x - 1.3, 12, x + 1.3, 26));
   });
   kit.during(1830, INF, () => {
