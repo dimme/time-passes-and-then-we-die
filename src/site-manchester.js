@@ -23,6 +23,27 @@ function base(x, z) {
   const far = Math.hypot(x, z); if (far > 700) h += smooth((far - 700) / 300) * (14 + 10 * Math.sin(x * 0.005) * Math.cos(z * 0.006 + 1));   // the Pennine foothills
   return h;
 }
+// the canal bridges: humped, so the barges pass under, with each end meeting the street at its own level
+const HC = 1.9, RAMP = 14, BW = 3.5;   // the crown's height over the street, the length of each ramp, the half-width between the parapets
+const HUMPS = [62, 285].map((bx) => { const q = quay(bx), C = q + 1.5; return { bx, q, L: C + RAMP }; });
+const humpTop = (h, z) => G + 0.06 + HC * Math.min(1, Math.max(0, (h.L - Math.abs(z - CANAL)) / RAMP));
+const humpSoffit = (h, z) => { const d = Math.abs(z - CANAL); return d < h.q ? WATER + 0.2 + (humpTop(h, CANAL) - 0.55 - WATER - 0.2) * Math.sqrt(1 - (d / h.q) ** 2) : 2; };
+/** Walkable ground the terrain does not give: the cobbled towpaths over the quay walls, and the canal bridges. */
+function towFloor(x, z) {
+  let h = -Infinity; const d = Math.abs(z - CANAL);
+  if (x > -312 && x < 620 && d <= 38 && d >= quay(x) - 0.05) h = G + 0.06;
+  for (const b of HUMPS) if (Math.abs(x - b.bx) < BW + 0.35 && Math.abs(z - CANAL) < b.L) h = Math.max(h, humpTop(b, z));
+  return h;
+}
+/** The canal bridges as solids: parapets keep you on the deck, and from below (the towpath, the water) the bridge is a wall. */
+function humpHit(pos) {
+  for (const b of HUMPS) {
+    if (Math.abs(pos.z - CANAL) >= b.L) continue;
+    const dx = pos.x - b.bx, ax = Math.abs(dx); if (ax >= BW + 0.8) continue;
+    if (pos.y - 1.7 > humpTop(b, pos.z) - 0.6 && ax < BW) pos.x = b.bx + Math.max(-(BW - 0.45), Math.min(BW - 0.45, dx));
+    else pos.x = b.bx + Math.sign(dx || 1) * (BW + 0.8);
+  }
+}
 const hexA = (h, o, k = 1) => { o[0] += ((h >> 16 & 255) / 255 - o[0]) * k; o[1] += ((h >> 8 & 255) / 255 - o[1]) * k; o[2] += ((h & 255) / 255 - o[2]) * k; };
 const eye = { x: 0, z: 0 };
 const LIT = ['lit', 0xffffff, 'tile'], PANE = ['pane', 0x56606a, 'tile'];
@@ -62,14 +83,16 @@ function terrace(kit, r, len, { kind = 'back', col = 0xffffff, lit = 0.3, late =
   return { n, u, d };
 }
 /** A cotton mill: seven storeys of brick and regular windows under a stone cornice, a hoist bay, a stair tower, an engine house and its chimney. Local x 0..len, z ±9. */
-function mill(kit, r, len, { floors = 7, col = 0xffffff, lit = 0.75, tall = 44, chimneys }) {
+function mill(kit, r, len, { floors = 7, col = 0xffffff, lit = 0.75, tall = 44, chimneys, hands }) {
+  const open = !!hands;   // a mill whose door stands open, with its weaving floor inside
   const fh = 3.3, W = 9, H = floors * fh, bays = Math.floor(len / 3.1), D = 0.5, SILL = ['stone', ST, 0.12, 0.13, 0.08], HEAD = ['stone', ST2, 0.24, 0.03, 0.09];
   let doorX = len / 2;
+  kit.shell = !open;
   walls(kit, 'brick', 0, -W, len, W, 0, H, D, col, (s, l) => {
     const n = s === 's' || s === 'n' ? bays : 5, o = [];
     for (let k = 0; k < floors; k++) for (let i = 0; i < n; i++) {
       const x = (l * (i + 0.5)) / n; let h;
-      if (k === 0 && s === 's' && i === Math.floor(n / 2)) { h = { x, y: 0, w: 1.9, h: 2.9, arch: 'round', fill: ['plank', 0x2a2620, 'tile'], back: 0.7 }; doorX = x; kit.trim(h, D, { head: ['stone', ST, 0.3, 0.06], jambs: ['stone', ST, 0.24, 0.06], step: ['stone', ST2, 0.5, 0.16] }); o.push(h); continue; }
+      if (k === 0 && s === 's' && i === Math.floor(n / 2)) { h = open ? { x, y: 0, w: 1.9, h: 2.9, arch: 'round' } : { x, y: 0, w: 1.9, h: 2.9, arch: 'round', fill: ['plank', 0x2a2620, 'tile'], back: 0.7 }; doorX = x; kit.trim(h, D, { head: ['stone', ST, 0.3, 0.06], jambs: ['stone', ST, 0.24, 0.06], step: ['stone', ST2, 0.5, 0.16] }); o.push(h); continue; }
       const fill = r() < lit ? LIT : PANE;
       if (s === 's' && i === 1 && k > 0) {   // the hoist bay: a loading door on every floor under a cat-head beam
         h = { x, y: k * fh + 0.14, w: 1.6, h: 2.5, arch: 'flat', fill: ['plank', 0x3a3228, 'tile'], back: 0.6 }; kit.trim(h, D, { sill: ['stone', ST2, 0.4, 0.14, 0.12], head: HEAD });
@@ -79,6 +102,7 @@ function mill(kit, r, len, { floors = 7, col = 0xffffff, lit = 0.75, tall = 44, 
     }
     return o;
   });
+  kit.shell = true;
   // stone plinth (broken at the door) and the eaves cornice
   kit.box('stone', -D - 0.07, 0, -W - D - 0.07, len + D + 0.07, 0.8, W + D, ST2, 'tbs').box('stone', -D - 0.07, 0, W, doorX - 1.25, 0.8, W + D + 0.07, ST2, 'bn').box('stone', doorX + 1.25, 0, W, len + D + 0.07, 0.8, W + D + 0.07, ST2, 'bn');
   kit.box('stone', -D - 0.2, H - 0.42, -W - D - 0.2, len + D + 0.2, H - 0.1, W + D + 0.2, ST, 't').box('brick', -D - 0.02, H - 0.1, -W - D - 0.02, len + D + 0.02, H + 0.2, W + D + 0.02, col, 'tb');
@@ -94,7 +118,32 @@ function mill(kit, r, len, { floors = 7, col = 0xffffff, lit = 0.75, tall = 44, 
   kit.box('brick', cx - 2.6, 0, cz - 2.6, cx + 2.6, 5, cz + 2.6, col, 'bt').box('stone', cx - 2.74, 0, cz - 2.74, cx + 2.74, 0.8, cz + 2.74, ST2, 'b').box('stone', cx - 2.85, 4.7, cz - 2.85, cx + 2.85, 5.15, cz + 2.85, ST, '');
   kit.cyl('brick', cx, cz, 5.15, tall, 2.2, 1.25, 8, col).cyl('stone', cx, cz, 5.15, 5.6, 2.34, 2.28, 8, ST2);
   kit.cyl('brick', cx, cz, tall - 3.2, tall - 2.4, 1.32, 1.72, 8, col).cyl('stone', cx, cz, tall - 2.4, tall - 2, 1.72, 1.72, 8, ST).cyl('brick', cx, cz, tall - 2, tall, 1.55, 1.45, 8, 0x74645c);   // the oversailing cap, sooted at the lip
-  kit.solid(-5, -W, len + 9, W).solid(cx - 2.6, cz - 2.6, cx + 2.6, cz + 2.6);
+  kit.solid(cx - 2.6, cz - 2.6, cx + 2.6, cz + 2.6);
+  if (!open) kit.solid(-5, -W, len + 9, W);
+  else {
+    // the weaving shed on the ground floor: power looms in four rows, driven by belts from line shafts under the joists, cast-iron columns down the middle
+    const IRONC = 0x3a3e42, e = kit.M.elements, at = (x, z) => [e[0] * x + e[8] * z + e[12], e[2] * x + e[10] * z + e[14]];
+    kit.poly('plank', [[0, 0.05, -W], [0, 0.05, W], [len, 0.05, W], [len, 0.05, -W]], 0x8a7a64).poly('plank', [[0, fh - 0.02, -W], [len, fh - 0.02, -W], [len, fh - 0.02, W], [0, fh - 0.02, W]], 0xc8c0b0);
+    for (let x = 1.55; x < len; x += 3.1) kit.box('plank', x - 0.14, fh - 0.36, -W, x + 0.14, fh - 0.02, W, 0x6a5a48, 't');
+    for (let x = 3.1; x < len - 1; x += 6.2) { kit.cyl('lead', x, 0, 0, fh - 0.36, 0.13, 0.1, 8, IRONC); kit.solid(x - 0.2, -0.2, x + 0.2, 0.2); }
+    for (const lz of [-6.9, -3.9, 3.9, 6.9]) {
+      const f = lz > 0 ? 1 : -1, front = lz - f * 0.55, back = lz + f * 0.55;
+      kit.box('lead', 0.5, fh - 0.62, lz - 0.05, len - 0.5, fh - 0.52, lz + 0.05, IRONC, '');   // the line shaft
+      let run = null;
+      for (let lx = 2; lx < len - 1.5; lx += 2.3) {
+        if (Math.abs(lx - doorX) < 2.6) { if (run) { kit.solid(run, lz - 0.55, lx - 2.3 + 0.85, lz + 0.55); run = null; } continue; }
+        if (run === null) run = lx - 0.85;
+        for (const sx of [-1, 1]) kit.box('lead', lx + sx * 0.8 - 0.05, 0, lz - 0.55, lx + sx * 0.8 + 0.05, 1.3, lz + 0.55, IRONC, 'b');
+        kit.box('lead', lx - 0.85, 1.2, back - f * 0.12, lx + 0.85, 1.3, back, IRONC, '').box('lead', lx - 0.85, 0.88, front, lx + 0.85, 0.98, front + f * 0.12, IRONC, '');
+        kit.poly('daub', [[lx - 0.72, 0.97, front + f * 0.1], [lx + 0.72, 0.97, front + f * 0.1], [lx + 0.72, 1.12, back - f * 0.1], [lx - 0.72, 1.12, back - f * 0.1]], 0xf4f0e4);
+        kit.cyl('plank', lx, back - f * 0.25, 0.3, 0.32, 0.16, 0.16, 8, 0xe8e0cc, { open: false });
+        kit.box('plank', lx + 0.82, 1.3, lz - 0.03, lx + 0.86, fh - 0.57, lz + 0.03, 0x2a2018, '');   // the belt
+        if (Math.round((lx - 2) / 2.3) % 3 === 0) { const [wx, wz] = at(lx, front - f * 0.45); hands.push({ x: wx, z: wz, rot: f > 0 ? -Math.PI / 2 : Math.PI / 2 }); }
+      }
+      if (run !== null) kit.solid(run, lz - 0.55, len - 1.5, lz + 0.55);
+    }
+    kit.solid(-D, -W - D, len + D, -W).solid(-D, W, doorX - 0.95, W + D).solid(doorX + 0.95, W, len + D, W + D).solid(-D, -W, 0, W).solid(-5, -3, 0, 3).solid(len, -W, len + D, W).solid(len, -W, len + 9, -W + 11);
+  }
   const e = kit.M.elements; chimneys.push({ x: e[0] * cx + e[8] * cz + e[12], y: G + tall + 1, z: e[2] * cx + e[10] * cz + e[14], size: 3.4, from: kit.span[0] });
 }
 function build({ world, group }) {
@@ -118,6 +167,21 @@ function build({ world, group }) {
     kit.poly('cobble', [[x0, G + 0.06, z0], [x1, G + 0.06, z1], [x1, G + 0.06, zo], [x0, G + 0.06, zo]], 0xe8e4dc);
     for (let x = x0 + 6; x < x1 && x < 300; x += 14) { const t = (x - x0) / (x1 - x0), z = z0 + (z1 - z0) * t - s * 0.5; kit.cyl('stone', x, z, G, G + 0.75, 0.16, 0.2, 8, 0x4a4a4a, { open: false }); }   // mooring posts
   }
+  for (const h of HUMPS) {
+    const x0 = h.bx - BW, x1 = h.bx + BW, n = Math.ceil(h.L * 2), st = (2 * h.L) / n;
+    for (let i = 0; i < n; i++) {
+      const za = CANAL - h.L + i * st, zb = za + st, ta = humpTop(h, za), tb = humpTop(h, zb), sa = humpSoffit(h, za), sb = humpSoffit(h, zb);
+      kit.poly('cobble', [[x0, ta, za], [x0, tb, zb], [x1, tb, zb], [x1, ta, za]], 0xd8d4cc);
+      for (const [xo, xi] of [[x0 - 0.35, x0], [x1 + 0.35, x1]]) kit.poly('stone', [[xo, sa, za], [xo, sb, zb], [xo, tb + 1, zb], [xo, ta + 1, za]], ST2).poly('stone', [[xi, ta, za], [xi, tb, zb], [xi, tb + 1, zb], [xi, ta + 1, za]], ST2).poly('stone', [[xo, ta + 1, za], [xo, tb + 1, zb], [xi, tb + 1, zb], [xi, ta + 1, za]], ST);
+      if (Math.abs(za - CANAL) < h.q + 0.6) kit.poly('stone', [[x0 - 0.35, sa, za], [x1 + 0.35, sa, za], [x1 + 0.35, sb, zb], [x0 - 0.35, sb, zb]], 0x8a8478);
+    }
+  }
+  // the old bridge over the Irwell, carrying the street west out of the town: three arches, the deck level with the road at both ends
+  { const RX = RIVER + 10 * Math.sin(-120 / 150), x0 = RX - 25, x1 = RX + 25;
+    for (const s of [1, -1]) kit.along(x0, -120 + s * 4, x1, -120 + s * 4, -3, (l) => kit.panel('stone', l, 10.1, [l / 6, l / 2, (5 * l) / 6].map((x) => ({ x, y: 0, w: 12, h: 8.4, arch: 'round' })), 0.5, 0xb0aa9e));
+    kit.box('stone', x0 - 8, G - 0.6, -124, x1 + 8, G + 0.1, -116, 0x9a948a, '').box('cobble', x0 - 8, G + 0.1, -123.5, x1 + 8, G + 0.11, -116, 0xe8e4dc, 'b');
+    flat('cobble', -400, -124, x0 - 8, -116, 0xf0ece4, 0.07); flat('cobble', x1 + 8, -124, -300, -116, 0xf0ece4, 0.07);
+    kit.platform(x0 - 8, -124, x1 + 8, -116, G + 0.11); kit.solid(x0, -124, x1, -123.5, { lo: G, hi: G + 2 }).solid(x0, -116, x1, -115.5, { lo: G, hi: G + 2 }); }
   // ---------- meadows and tenter grounds that the town will swallow ----------
   kit.during(1770, 1797, () => flat('strips', 76, -40, 300, 80, 0x7f9a55)); kit.during(1770, 1800, () => flat('strips', 60, 160, 300, 330, 0x86a05a)); kit.during(1770, 1826, () => flat('strips', -290, -22, -30, 60, 0x8aa25c));
   kit.during(1770, INF, () => { flat('cobble', -190, -230, -80, -150, 0xffffff, 0.07); flat('cobble', -300, -124, 300, -116, 0xf0ece4, 0.07); flat('cobble', -34, -330, -26, 82, 0xf0ece4, 0.07); flat('cobble', -204, -330, -196, -20, 0xf0ece4, 0.07); });
@@ -130,13 +194,24 @@ function build({ world, group }) {
   // ---------- the old town: the collegiate church, the market place, Georgian streets ----------
   kit.at(-250, G, -262, 0, () => {   // the Collegiate Church (the cathedral to be): a Perpendicular nave and a tall west tower
     const C = 0x9a9488, GL = ['glass', 0xffffff, 'fit', [0.03, 0, 0.47, 1]];
-    walls(kit, 'stone', 12, -9, 60, 9, 0, 13, 0.8, C, (s, l) => (s === 's' || s === 'n' ? Array.from({ length: 7 }, (_, i) => ({ x: (l * (i + 0.5)) / 7, y: 3, w: 3.2, h: 8, arch: 'point', sharp: 0.5, fill: GL })) : s === 'e' ? [{ x: l / 2, y: 3, w: 6, h: 9, arch: 'point', sharp: 0.5, fill: GL }] : []));
+    kit.shell = false;
+    walls(kit, 'stone', 12, -9, 60, 9, 0, 13, 0.8, C, (s, l) => (s === 's' || s === 'n' ? Array.from({ length: 7 }, (_, i) => ({ x: (l * (i + 0.5)) / 7, y: 3, w: 3.2, h: 8, arch: 'point', sharp: 0.5, fill: GL })) : s === 'e' ? [{ x: l / 2, y: 3, w: 6, h: 9, arch: 'point', sharp: 0.5, fill: GL }] : [{ x: l / 2, y: 0, w: 4, h: 7, arch: 'point', sharp: 0.5 }]));
     kit.gable('lead', 'stone', 12, -9, 60, 9, 13, 3.4, { over: 0.2, wcol: C, col: 0x9aa0a6 });
     for (let i = 0; i <= 7; i++) for (const s of [1, -1]) { kit.box('stone', 12 + (i * 48) / 7 - 0.5, 0, s * 9.8 - 0.9, 12 + (i * 48) / 7 + 0.5, 12, s * 9.8 + 0.9, C); kit.cyl('stone', 12 + (i * 48) / 7, s * 10, 13, 16, 0.5, 0.05, 4, C); }
-    walls(kit, 'stone', 0, -6, 12, 6, 0, 36, 0.9, C, (s, l) => [...(s === 'w' ? [{ x: l / 2, y: 0, w: 2.6, h: 5, arch: 'point', fill: ['plank', 0x3a2a1c, 'tile'], back: 0.8 }, { x: l / 2, y: 8, w: 4, h: 9, arch: 'point', sharp: 0.5, fill: GL }] : []), { x: l * 0.3, y: 25, w: 1.6, h: 7, arch: 'point', fill: ['plank', 0x2a221c, 'tile'] }, { x: l * 0.7, y: 25, w: 1.6, h: 7, arch: 'point', fill: ['plank', 0x2a221c, 'tile'] }]);
+    walls(kit, 'stone', 0, -6, 12, 6, 0, 36, 0.9, C, (s, l) => [...(s === 'w' ? [{ x: l / 2, y: 0, w: 2.6, h: 5, arch: 'point' }, { x: l / 2, y: 8, w: 4, h: 9, arch: 'point', sharp: 0.5, fill: GL }] : s === 'e' ? [{ x: l / 2, y: 0, w: 4, h: 7, arch: 'point', sharp: 0.5 }] : []), { x: l * 0.3, y: 25, w: 1.6, h: 7, arch: 'point', fill: ['plank', 0x2a221c, 'tile'] }, { x: l * 0.7, y: 25, w: 1.6, h: 7, arch: 'point', fill: ['plank', 0x2a221c, 'tile'] }]);
     for (let x = -0.2; x < 12; x += 1.9) for (const z of [-6.6, 6.2]) kit.box('stone', x, 36, z, x + 1, 37.2, z + 0.5, C, 'b');
     for (const [x, z] of [[0, -6], [0, 6], [12, -6], [12, 6]]) { kit.box('stone', x - 0.9, 0, z - 0.9, x + 0.9, 37, z + 0.9, C); kit.cyl('stone', x, z, 37, 42, 0.9, 0.05, 4, C, { a0: Math.PI / 4 }); }
-    kit.solid(0, -6.5, 12, 6.5).solid(12, -10.5, 60, 10.5);
+    kit.shell = true;
+    // inside: flags, a flat panelled ceiling under the leads, box pews either side of the aisle, a pulpit, the altar behind its rail, a ringing floor in the tower
+    kit.poly('stone', [[0, 0.05, -6], [0, 0.05, 6], [12, 0.05, 6], [12, 0.05, -6]], 0x8a857c).poly('stone', [[12, 0.05, -9], [12, 0.05, 9], [60, 0.05, 9], [60, 0.05, -9]], 0x8a857c);
+    kit.poly('plank', [[12, 12.9, -9], [60, 12.9, -9], [60, 12.9, 9], [12, 12.9, 9]], 0x6a5038).poly('plank', [[0, 9, -6], [12, 9, -6], [12, 9, 6], [0, 9, 6]], 0x6a5038);
+    for (let x = 12; x <= 60; x += 6) kit.box('plank', x - 0.2, 12.4, -9, x + 0.2, 12.9, 9, 0x4a3828, 't');
+    for (let x = 18; x < 50; x += 1.6) for (const s of [-1, 1]) { const z0 = s * 1.3, z1 = s * 8.2; kit.box('plank', x, 0, Math.min(z0, z1), x + 0.06, 1.15, Math.max(z0, z1), 0x5a4030, 'b').box('plank', x + 0.06, 0, Math.min(z0, z1), x + 1.5, 0.45, Math.max(z0, z1), 0x6a4a34, 'b').box('plank', x + 1.2, 0.45, Math.min(z0, z1), x + 1.28, 1.15, Math.max(z0, z1), 0x5a4030, 'b'); }
+    kit.box('plank', 18, 0, 1.2, 50, 1.15, 1.3, 0x5a4030, 'b').box('plank', 18, 0, -1.3, 50, 1.15, -1.2, 0x5a4030, 'b');
+    kit.box('plank', 52, 0, 6.2, 53.6, 2.6, 7.8, 0x5a4030, 'b').box('plank', 51.8, 2.6, 6, 53.8, 3.6, 8, 0x6a4a34, 'b').box('plank', 52.2, 5.4, 6.3, 53.4, 5.6, 7.6, 0x5a4030, '');   // the pulpit and its sounding board
+    kit.box('stone', 54, 0, -8.2, 60, 0.3, 8.2, 0xa8a298, 'b').box('plank', 54.2, 0.3, -6, 54.35, 1.05, 6, 0x4a3828, 'b').box('stone', 58, 0.3, -2.2, 59.4, 1.3, 2.2, 0xd8d0c0, 'b').box('daub', 57.95, 1.3, -2.3, 59.45, 1.36, 2.3, 0x8a2a22, '');
+    kit.solid(-0.9, -6.9, 12.9, -6).solid(-0.9, 6, 12.9, 6.9).solid(-0.9, -6, 0, -1.3).solid(-0.9, 1.3, 0, 6).solid(11.2, -9.8, 12.9, -2).solid(11.2, 2, 12.9, 9.8);
+    kit.solid(12, -10.7, 60.8, -9).solid(12, 9, 60.8, 10.7).solid(60, -9, 60.8, 9).solid(18, 1.2, 50, 8.2).solid(18, -8.2, 50, -1.2).solid(52, 6, 53.8, 8).solid(54.2, -6, 54.35, 6).solid(58, -2.2, 59.4, 2.2);
   });
   // street rows: [x, z, length, facing ry, kind, from year, tint]
   const ROWS = [
@@ -199,8 +274,9 @@ function build({ world, group }) {
   }
 
   // ---------- the mills of Ancoats ----------
+  const looms = [];
   const MILLS = [[84, 84, 58, 1798, 0xc8b0a0, 44], [168, 84, 60, 1798, 0xc0aa9c, 40], [78, 22, 62, 1806, 0xb8a498, 48], [170, 22, 68, 1818, 0xa89488, 52], [250, 84, 56, 1824, 0xa08c82, 56]];
-  for (const [x, z, len, from, col, tall] of MILLS) kit.during(from, INF, () => kit.at(x, G, z, 0, () => mill(kit, r, len, { col, tall, chimneys, lit: 0.8 })));
+  for (const [x, z, len, from, col, tall] of MILLS) kit.during(from, INF, () => kit.at(x, G, z, 0, () => mill(kit, r, len, { col, tall, chimneys, lit: 0.8, hands: x === 84 && z === 84 ? looms : undefined })));
   kit.during(1798, INF, () => { for (const [x0, x1] of [[60, 78], [152, 162]]) kit.box('brick', x0, G, 63, x1, G + 3, 63.5, 0xc0aa9c, 'b'); kit.at(0, 0, 0, 0, () => kit.solid(60, 63, 78, 63.5)); });
   // the forest of chimneys beyond: more of them every decade, each with its mill
   for (let i = 0; i < 64; i++) {
@@ -222,7 +298,7 @@ function build({ world, group }) {
     for (const z of [12, 26]) kit.along(z === 12 ? -44 : -290, z === 12 ? 12 : 26, z === 12 ? -290 : -44, z, G, (l) => { const A = Array.from({ length: Math.floor(l / 11) }, (_, i) => ({ x: 6 + i * 11, y: 0, w: 8.4, h: 5.4, arch: 'round' })); kit.panel('brick', l, DECK + 0.45, A, 0.6, 0xb8a498); dressed(l, A, 0xc4bcae, DECK + 0.45); });
     kit.poly('cobble', [[-640, G + DECK, 12], [-44, G + DECK, 12], [-44, G + DECK, 26], [-640, G + DECK, 26]], 0xc8c4bc);
     for (const z of [10.6, 26.8]) kit.along(-620, z, -290, z, -3, (l) => { const A = [{ x: l - 20, y: 0, w: 19, h: 13, arch: 'round' }, { x: l - 44, y: 0, w: 19, h: 13, arch: 'round' }, ...Array.from({ length: 22 }, (_, i) => ({ x: 8 + i * 11.5, y: 9, w: 8.6, h: 5.4, arch: 'round' }))]; kit.panel('stone', l, 9 + DECK + 0.45, A, 0.6, 0xa8a298); dressed(l, A, 0xbcb6aa, 9 + DECK + 0.45, 9); });
-    for (let x = -284.5; x < -46; x += 11) kit.at(0, 0, 0, 0, () => kit.solid(x - 1.3, 12, x + 1.3, 26));
+    for (let x = -284.5; x < -46; x += 11) kit.at(0, 0, 0, 0, () => kit.solid(x - 1.3, 12, x + 1.3, 26, { lo: -50, hi: G + DECK - 1 }));   // the piers stand below the deck
   });
   kit.during(1830, INF, () => {
     // the station: a stuccoed front on Liverpool Road, the platform behind it at the level of the rails
@@ -241,6 +317,12 @@ function build({ world, group }) {
     walls(kit, 'brick', -40, 2, 36, 30, G, 13, 0.5, 0xb8a498, (s, l) => { const o = [], n = Math.floor(l / 3.6); for (let k = 0; k < 4; k++) for (let i = 0; i < n; i++) { const h = { x: (l * (i + 0.5)) / n, y: k * 3.2 + 1, w: 1, h: 1.5, arch: 'round', fill: r() < 0.25 ? LIT : PANE }; kit.trim(h, 0.5, { head: ['brick', 0x988474, 0.24, 0.03], sill: ['stone', ST, 0.1, 0.12, 0.08] }); o.push(h); } return o; });
     kit.box('stone', -40.68, G + 12.62, 1.32, 36.68, G + 12.92, 30.68, ST, 't').box('brick', -40.52, G + 12.92, 1.48, 36.52, G + 13.2, 30.52, 0xb8a498, 'tb');
     kit.gable('slate', 'brick', -40, 2, 36, 30, G + 13.2, 4, { over: 0.9, wcol: 0xb8a498, col: 0xa8a8a8, barge: ['stone', ST2, 0.3] }); kit.at(0, 0, 0, 0, () => kit.solid(-40, 2, 36, 30));
+    // the stair up to the platform, between the end of the viaduct and the warehouse, and the platform along the back of the station
+    for (let k = 1; k <= 13; k++) { const z0 = 4 + (k - 1) * 1.3, y = G + k * 0.5; kit.box('stone', -44, G, z0, -40.5, y, z0 + 1.3, k % 2 ? ST2 : ST, 'b').platform(-44, z0, -40.5, z0 + 1.3, y); }
+    kit.box('stone', -44, G, 20.9, -40.5, G + DECK, 26, ST2, 'b').platform(-44, 20.9, -40.5, 26, G + DECK).box('brick', -44, G + DECK, 26, -40.5, G + DECK + 1.1, 26.35, 0xb8a498, 'b');
+    kit.poly('brick', [[-44.2, G, 3.6], [-44.2, G, 22.4], [-44.2, G + DECK + 1.1, 22.4], [-44.2, G + 1.1, 3.6]], 0xb8a498).box('stone', -44.4, G, 3.6, -44, G + 1.1, 4, ST, 'b');
+    kit.box('stone', -112, G + DECK, 22.35, -44, G + DECK + 0.2, 22.65, 0xd8d0c0, 'b').platform(-112, 22.6, -44, 26, G + DECK);
+    kit.solid(-44.4, 4, -44, 22.4, { lo: G + 0.35, hi: G + DECK + 3 }).solid(-112, 22.2, -44.4, 22.6, { lo: G + DECK - 0.3, hi: G + DECK + 3 }).solid(-112.4, 22.6, -112, 26, { lo: G + DECK - 0.3, hi: G + DECK + 3 }).solid(-44, 26, -40.5, 26.4, { lo: G + DECK - 0.3, hi: G + DECK + 3 });
   });
   { const b = props.bag(1830, INF); track(b, -640, -44, G + DECK + 0.02, RAILZ); track(b, -640, -44, G + DECK + 0.02, RAILZ + 5); }
   const TR = trainParts(), train = new THREE.InstancedMesh(TR.geo, vehicleMat(), 1); train.frustumCulled = false; train.castShadow = true; group.add(train);
@@ -290,18 +372,18 @@ function build({ world, group }) {
   const hand = (path, from, o = {}) => { const kid = r() < 0.28; walker(path, from, INF, { outfit: late(), speed: 1.25 + r() * 0.3, ...(kid ? { s: 0.6 + r() * 0.14 } : {}), ...o }); };
   for (let i = 0; i < 16; i++) hand([[62 + r() * 3, 46 + r() * 12], [296, 46 + r() * 12]], i < 9 ? 1798 : 1812);
   for (let i = 0; i < 12; i++) hand([[143 + r() * 6, -112], [143 + r() * 6, 40], [150 + r() * 20, 52]], i < 6 ? 1798 : 1815);
-  for (let i = 0; i < 12; i++) hand([[58 - r() * 6, 160 + r() * 150], [56 - r() * 4, 148], [62, 104], [62 + r() * 4, 60]].map(([x, z], k) => (k === 0 ? [x, z] : [x, z])).filter(() => true), i < 6 ? 1802 : 1820);
+  for (let i = 0; i < 12; i++) hand([[58 - r() * 6, 160 + r() * 150], [60.6 + r() * 2.8, 152], [62, 104], [61 + r() * 2, 60]].map(([x, z], k) => (k === 0 ? [x, z] : [x, z])).filter(() => true), i < 6 ? 1802 : 1820);
   for (let i = 0; i < 22; i++) { const kid = i % 4 === 1; P(i % 2 ? 'dress' : i % 4 ? 'hat' : 'millhand', ['stand', 'talk', 'stand', 'talk'][i % 4], 144 + (r() - 0.5) * 16, 57 + r() * 5.5, -1.57 + (r() - 0.5) * 1.4, i < 12 ? 1798 : 1816, INF, kid ? { s: 0.6 + r() * 0.12 } : {}); }
   { const b = props.bag(1798, INF); b.box(IRON, 0.12, 5, 0.12, 163, G + 2.5, 63).box(IRON, 0.9, 0.08, 0.08, 162.6, G + 5, 63).cyl(fin(0xb08a34, 0.4, 0.8), 0.12, 0.3, 0.45, 162.2, G + 4.7, 63, 10); }   // the factory bell
   // ---------- streets: walkers, packhorses, carts ----------
-  for (let i = 0; i < 26; i++) { const o = (r() - 0.5) * 5, late = i % 3 === 0; walker(i % 2 ? [[-296, -120 + o], [296, -120 + o]] : i % 4 ? [[-30 + o, -326], [-30 + o, 78]] : [[-200 + o, -326], [-200 + o, -24]], late ? 1810 : 1770, late ? INF : i % 3 === 1 ? 1815 : INF, late && i % 2 ? { outfit: 'hat', fine: 1 } : r() < 0.2 ? { action: 'carry', prop: 'basket' } : {}); }
+  for (let i = 0; i < 26; i++) { const o = (r() - 0.5) * 5, late = i % 3 === 0; walker(i % 2 ? [[-392, -120 + o], [296, -120 + o]] : i % 4 ? [[-30 + o, -326], [-30 + o, 78]] : [[-200 + o, -326], [-200 + o, -24]], late ? 1810 : 1770, late ? INF : i % 3 === 1 ? 1815 : INF, late && i % 2 ? { outfit: 'hat', fine: 1 } : r() < 0.2 ? { action: 'carry', prop: 'basket' } : {}); }
   for (let i = 0; i < 10; i++) { const z = 187 + (i % 6) * 22 + (i % 2 ? 0 : 22); walker([[66 + r() * 10, z], [290, z]], 1803 + (i % 6) * 6, INF, i % 3 === 0 ? { s: 0.62 } : {}); }
   const packPath = [[-296, -118], [-204, -118], [-204, -196], [-180, -196], [-180, -122], [-296, -122], [-296, -118]], packs = [];
   { const pk = new Bag(); for (const s of [1, -1]) { pk.box(BALE, 0.7, 0.5, 0.34, -0.05, 1.3, s * 0.48); pk.ball(SACK, -0.05, 1.62, s * 0.2, 0.36, 0.2, 0.26); } pk.box(fin(0x3a2a1c, 0.8), 0.5, 0.05, 0.9, -0.05, 1.5, 0);
     const geo = props.loose(pk.geo()); for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(geo, props.mat); m.castShadow = true; packs.push({ make: horse, path: packPath, speed: 1.1, phase: 0.3, ahead: -i * 3.2, u0: Y(1770), u1: Y(1802), load: m, scale: 0.86 }); } }
   P('millhand', 'herd', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 + 2.4 / pathOf(packPath).L }); P('millhand', 'walk', 0, 0, 0, 1770, 1802, { path: packPath, speed: 1.1, phase: 0.3 - 12 / pathOf(packPath).L });
   const cartGeo = cartParts(species(), { horse: false })[0], cartRoutes = [{ path: [[-290, -121.5], [290, -121.5], [290, -118.5], [-290, -118.5], [-290, -121.5]], speed: 1.5, phase: 0.1 }, { path: [[-28.5, -320], [-28.5, 72], [-31.5, 72], [-31.5, -320], [-28.5, -320]], speed: 1.4, phase: 0.55 }, { path: [[70, 49], [290, 49], [290, 53], [70, 53], [70, 49]], speed: 1.4, phase: 0.3, u0: Y(1798) }, { path: [[-60, 150], [58, 150], [58, 153], [-60, 153], [-60, 150]], speed: 1.2, phase: 0.7 }];
-  const carts = new Followers(world, cartGeo.geo, cartGeo.mat, cartRoutes); group.add(carts.mesh);
+  const carts = new Followers({ heightAt: (x, z) => ground.heightAt(x, z), get sea() { return world.sea; } }, cartGeo.geo, cartGeo.mat, cartRoutes); group.add(carts.mesh);
 
   // ---------- trees and hedges of the country town, most of them gone by the end ----------
   const K = globalThis.__floraKinds || (globalThis.__floraKinds = makeKinds()), woods = [];
@@ -310,12 +392,22 @@ function build({ world, group }) {
   trees('broadleaf', 70, ring(340, 520), 1802, [0.7, 1.3]); trees('elm', 70, ring(420, 700), 1818, [0.7, 1.3]); trees('broadleafB', 80, ring(560, 900), 1832, [0.7, 1.3]); trees('elmB', 60, ring(700, 950), INF, [0.7, 1.2]);
   trees('elmC', 40, () => [60 + r() * 240, r() < 0.5 ? -36 + r() * 110 : 164 + r() * 160], 1796, [0.5, 1.1]);
 
+  // ---------- inside, and on the bridges: weavers at the looms, a congregation in the pews, travellers up the station stair (their own random sequence) ----------
+  const rq = rng(5181), add = (outfit, action, x, z, rot, a, b, o = {}) => list.push({ outfit, action, x, z, rot, tint: lin(DRAB[Math.floor(rq() * DRAB.length)]), legs: lin(DRAB[Math.floor(rq() * DRAB.length)]), ...o, u0: Y(a), u1: Y(b) });
+  for (const q of looms) add('dress', 'weave', q.x, q.z, q.rot, 1798, INF, rq() < 0.25 ? { s: 0.66 + rq() * 0.1 } : {});
+  for (let i = 0; i < 16; i++) { const s = i % 2 ? 1 : -1; add(rq() < 0.5 ? 'dress' : 'georgian', 'sit', -250 + 18.75 + Math.floor(rq() * 20) * 1.6, -262 + s * (2 + rq() * 5.6), 0, 1770, INF, { seat: 0.45 }); }
+  add('georgian', 'stand', -250 + 52.8, -262 + 7, Math.PI, 1770, INF, { tint: lin(0x18181c) });
+  for (let i = 0; i < 4; i++) { const up = i % 2 === 0, path = [[-42.2, -8], [-42.2, 3], [-42.2, 21.6], [-46, 24.2], [-104, 24.2]]; add(i < 2 ? 'hat' : 'dress', 'walk', -42, 0, 0, 1830, INF, { path: up ? path : path.slice().reverse(), speed: 0.9, phase: rq() }); }
+  for (let i = 0; i < 3; i++) add(rq() < 0.5 ? 'millhand' : 'dress', 'walk', 285, 96, 0, 1798, INF, { path: [[320, 96], [285 + (i - 1) * 1.4, 96], [285 + (i - 1) * 1.4, 150], [300, 160]], speed: 1.2, phase: rq() });
   // ---------- assemble ----------
   kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group);
-  const people = actors(world, list, { seed: 11 }); group.add(...people.meshes);
-  const horses = new Walkers(world, group, [...towing, ...packs, ...cartRoutes.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, ahead: 2.8, u0: q.u0 }))]);
+  const floorK = kit.floor(); let year = 1800;
+  const floorAt = (x, z) => Math.max(floorK(x, z, year), towFloor(x, z));
+  const ground = Object.create(world); ground.heightAt = (x, z) => Math.max(world.heightAt(x, z), floorAt(x, z));   // people walk on decks, towpaths and stairs, not under them
+  const people = actors(ground, list, { seed: 11 }); group.add(...people.meshes);
+  const horses = new Walkers(ground, group, [...towing, ...packs, ...cartRoutes.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, ahead: 2.8, u0: q.u0 }))]);
   const soot = smoke(chimneys, { per: 9, rise: 4.5, wind: [3.4, 1.1], life: 16, grey: 0.045 }); group.add(soot.mesh);
-  const hit = kit.collider(); let year = 1800; const o = { x: 0, z: 0, rot: 0 }, _m = new THREE.Matrix4();
+  const hit = kit.collider(humpHit); const o = { x: 0, z: 0, rot: 0 }, _m = new THREE.Matrix4();
   return {
     update(u, t, env, camera, view) {
       year = uToYear(u); eye.x = camera.position.x; eye.z = camera.position.z;
@@ -334,12 +426,13 @@ function build({ world, group }) {
       for (const w of woods) { const on = year < w.until; for (const m of w.meshes) m.visible = on; }
     },
     collide(pos) { hit(pos, year); },
+    floorAt,
   };
 }
 
 export default {
   place: 'Manchester · England', coords: [53.48, -2.24],
-  terrain: { base, relief: () => 0, bounds: { x: 300, z: 330 }, tint: (x, z, b) => (b < 5.6 ? 0.75 : 1) },
+  terrain: { base, relief: () => 0, bounds: { x: 400, z: 330 }, tint: (x, z, b) => (b < 5.6 ? 0.75 : 1) },
   spawn: { x: -135, z: -165, yaw: 0 },
   env(year, env) {
     const k = smooth((year - 1782) / 52), set = (h, o) => hexA(h, o, 1);   // how far the smoke has closed in

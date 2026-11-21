@@ -47,10 +47,11 @@ function house(kit, r, { w, d, floors, late }) {
   const D = 0.22, tc = TIMBER[Math.floor(rd() * 4)], sc = SHUT[Math.floor(rd() * 6)], framed = wallM === 'frame', xo = w / 2 + D, shop = late && rd() < 0.45, PALE = 0xcfc7b6;
   kit.shell = true;
   for (let k = 0; k < floors; k++) {
+    kit.shell = !(shop && k === 0);   // a shop's ground floor can be walked into: its walls keep their inner faces
     const z1 = d / 2 + jet * k, y = k * fh, stone = k === 0 && stoneBase;
     walls(kit, stone ? 'stone' : wallM, -w / 2, -d / 2, w / 2, z1, y, fh, D, stone ? 0xe0d8c8 : tint, (s, l) => {
       if (s === 's') {
-        const o = k === 0 ? [{ x: l * 0.28, y: 0, w: 1.05, h: 2.1, arch: stoneBase ? 'point' : 'flat', fill: ['plank', 0x5a3c28, 'tile'], back: 0.7 }, { x: l * 0.7, y: 1, w: 1.5, h: 1.2, arch: 'flat', fill: DARK }] : [{ x: l * 0.28, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }, { x: l * 0.72, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }];
+        const o = k === 0 ? [shop ? { x: l * 0.28, y: 0, w: 1.3, h: 2.2, arch: stoneBase ? 'point' : 'flat' } : { x: l * 0.28, y: 0, w: 1.05, h: 2.1, arch: stoneBase ? 'point' : 'flat', fill: ['plank', 0x5a3c28, 'tile'], back: 0.7 }, { x: l * 0.7, y: 1, w: 1.5, h: 1.2, arch: 'flat', fill: DARK }] : [{ x: l * 0.28, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }, { x: l * 0.72, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }];
         o.forEach((h, i) => {
           const m = stone ? 'stone' : 'plank', c = stone ? PALE : tc;
           if (k === 0 && i === 0) kit.trim(h, D, { head: [m, c, stone ? 0.3 : 0.2, 0.06, 0.16], jambs: stone ? undefined : ['plank', tc, 0.14, 0.06], step: ['stone', 0xb0a898, 0.42, 0.16] });
@@ -84,8 +85,18 @@ function house(kit, r, { w, d, floors, late }) {
     for (const sx of [-1, 1]) kit.poly('plank', [[gx + sx * 1.05, 2.3, z + 0.72], [gx + sx * 1.05, 2.7, z], [gx + sx * 1.05, 1.85, z]], tc);
   }
   if (late && floors > 1 && rd() < 0.3) { const sx = -w / 2 + w * 0.5, z = zf + D; kit.box('plank', sx - 0.035, fh + 2.5, z, sx + 0.035, fh + 2.57, z + 1, tc, 'n'); kit.box('plank', sx - 0.025, fh + 1.9, z + 0.4, sx + 0.025, fh + 2.44, z + 0.95, [0x8a3a2a, 0x2a4a6a, 0xb89a3a, 0x3a5a3a][Math.floor(rd() * 4)], ''); }   // a hanging sign
-  kit.solid(-w / 2, -d / 2, w / 2, d / 2);
+  if (!shop) { kit.solid(-w / 2, -d / 2, w / 2, d / 2); return; }
+  // inside the shop: a boarded floor, the joists of the room above, a counter under the window, a bench, and the stock on shelves
+  const dx = -w / 2 + w * 0.28, gx = -w / 2 + w * 0.7, zb = d / 2, WARES = [0x8a3a2a, 0x3a5a7a, 0xc8b070, 0x6a7a4a];
+  kit.poly('plank', [[-w / 2, 0.12, -d / 2], [-w / 2, 0.12, zb], [w / 2, 0.12, zb], [w / 2, 0.12, -d / 2]], 0x9a8a70).poly('plank', [[-w / 2, fh - 0.02, -d / 2], [w / 2, fh - 0.02, -d / 2], [w / 2, fh - 0.02, zb], [-w / 2, fh - 0.02, zb]], 0x7a6a54);
+  for (let z = -d / 2 + 0.8; z < zb - 0.3; z += 1.1) kit.box('plank', -w / 2, fh - 0.24, z - 0.08, w / 2, fh - 0.02, z + 0.08, tc, 't');
+  kit.box('plank', gx - 1.1, 0, zb - 1.6, gx + 1.1, 0.95, zb - 1.05, 0x8a6a48, 'b').box('plank', -w / 2 + 0.1, 0, -d / 2 + 1, -w / 2 + 0.5, 0.45, d / 4, 0x6a5038, 'b');
+  let q = 0; for (const y of [0.9, 1.6, 2.3]) { kit.box('plank', -w / 2 + 1, y, -d / 2, w / 2 - 0.4, y + 0.05, -d / 2 + 0.45, 0x7a5a3a, 'b'); for (let x = -w / 2 + 1.2; x < w / 2 - 0.8; x += 0.7) kit.box('plank', x, y + 0.05, -d / 2 + 0.06, x + 0.45, y + 0.42, -d / 2 + 0.4, WARES[q++ % 4], 'b'); }
+  kit.solid(-w / 2 - D, -d / 2 - D, w / 2 + D, -d / 2).solid(-w / 2 - D, -d / 2, -w / 2, zb + D).solid(w / 2, -d / 2, w / 2 + D, zb + D).solid(-w / 2, zb, dx - 0.65, zb + D).solid(dx + 0.65, zb, w / 2, zb + D);
+  kit.solid(gx - 1.1, zb - 1.6, gx + 1.1, zb - 1.05).solid(-w / 2, -d / 2, w / 2 - 0.4, -d / 2 + 0.45);
+  const e = kit.M.elements, pz = zb - 2.1; SHOPS.push({ x: e[0] * gx + e[8] * pz + e[12], z: e[2] * gx + e[10] * pz + e[14], ry: Math.atan2(e[8], e[10]), from: kit.span[0], door: [e[0] * dx + e[8] * zb + e[12], e[2] * dx + e[10] * zb + e[14]] });
 }
+const SHOPS = [];
 
 function build({ world, group }) {
   const r = rng(1194), kit = new Kit(), props = new Props(), Y = yearToU, list = [], INF = Infinity;
@@ -144,6 +155,12 @@ function build({ world, group }) {
   kit.during(1230, INF, () => kit.at(CX, G, CZ0, 0, () => northSpire(kit, false)));
   kit.during(1194, INF, () => { kit.tag = 'clip'; kit.at(CX, G, CZ0, 0, () => cathedralBody(kit)); });
   append(props.bag(1194, 1226, 'clip'), scaffold(new Bag()), mat4(CX, G, CZ0));
+  kit.during(1226, INF, () => kit.at(CX, G, CZ0, 0, () => {   // the high altar in the choir, on two steps, and a rail of candles before it
+    kit.box('stone', 96, 0, -4, 103, 0.3, 4, 0xd0c8b8, 'b').box('stone', 97, 0.3, -3, 102, 0.6, 3, 0xd0c8b8, 'b').box('stone', 98.6, 0.6, -1.6, 100, 1.65, 1.6, 0xe8e0d0, 'b').box('stone', 98.4, 1.65, -1.8, 100.2, 1.78, 1.8, 0xd8d0c0, 'b');
+    kit.solid(98.4, -1.8, 100.2, 1.8);
+  }));
+  { const b = props.bag(1226, INF); for (const z of [-1.2, 1.2]) b.box(GOLD, 0.08, 0.5, 0.08, CX + 99.3, G + 2.03, CZ0 + z).box(EMBER, 0.05, 0.12, 0.05, CX + 99.3, G + 2.34, CZ0 + z); b.box(GOLD, 0.05, 0.9, 0.05, CX + 99.3, G + 2.23, CZ0).box(GOLD, 0.5, 0.05, 0.05, CX + 99.3, G + 2.45, CZ0); b.box(fin(0xd8d0bc, 1), 1.5, 0.04, 3.4, CX + 99.3, G + 1.8, CZ0);
+    for (let i = 0; i < 9; i++) b.box(EMBER, 0.04, 0.1, 0.04, CX + 93, G + 1.1, CZ0 - 2 + i * 0.5).box(fin(0xe8e0c8, 1), 0.06, 0.25, 0.06, CX + 93, G + 0.93, CZ0 - 2 + i * 0.5); b.box(IRON, 0.06, 0.05, 4.4, CX + 93, G + 0.78, CZ0); for (const z of [-2.2, 2.2]) b.box(IRON, 0.05, 0.78, 0.05, CX + 93, G + 0.39, CZ0 + z); }
   props.put(crane(), -2, G, -9, Math.PI / 2, 1194, 1226);
   kit.during(1194, 1262, () => kit.at(-36, G, -10, 0, () => {   // the masons' lodge: an open-fronted shed, with stone waiting round it
     walls(kit, 'plank', 0, -3, 14, 0, 0, 2.6, 0.15, 0xa89878, () => []); kit.poly('thatch', [[-0.6, 2.4, 3.6], [14.6, 2.4, 3.6], [14.6, 3.8, -3.4], [-0.6, 3.8, -3.4]]);
@@ -236,7 +253,7 @@ function build({ world, group }) {
   walker([[15, 47], [6, 30], [0, 20], [-40, 18]], 1100, INF, { outfit: 'medieval-f', action: 'fetch-water' }); walker([[16, 46], [40, 70], [60, 100], [88, 104]], 1100, INF, { outfit: 'medieval-f', action: 'fetch-water' });
   // people in the streets
   for (const [x0, z0, x1, z1] of STREETS) for (let k = 0; k < (x1 - x0 + z1 - z0 > 200 ? 5 : 2); k++) { const o = (r() - 0.5) * 3; walker(x0 === x1 ? [[x0 + o, z0 + 2], [x0 + o, z1 - 2]] : [[x0 + 2, z0 + o], [x1 - 2, z0 + o]], 1100, INF, r() < 0.25 ? { action: 'carry', prop: r() < 0.5 ? 'sack' : 'basket' } : {}); }
-  walker([[-640, 17], [-176, 17]], 850, INF, { action: 'carry', prop: 'sack' }); walker([[-176, 19], [-400, 19]], 850, INF); walker([[176, 19], [312, 19]], 900, INF, { action: 'carry', prop: 'sack', outfit: 'medieval' }); walker([[1, 172], [1, 400]], 850, INF);
+  walker([[-640, 17], [-176, 17]], 850, INF, { action: 'carry', prop: 'sack' }); walker([[-176, 19], [-400, 19]], 850, INF); walker([[176, 19], [395, 19]], 900, INF, { action: 'carry', prop: 'sack', outfit: 'medieval' }); walker([[392, 17.2], [182, 17.2]], 1100, INF, { action: 'carry', prop: 'basket' }); walker([[1, 172], [1, 400]], 850, INF);
 
   // ---------- the canons' cloister ----------
   kit.during(1050, INF, () => kit.at(-132, G, -60, 0, () => {
@@ -312,7 +329,8 @@ function build({ world, group }) {
   wheelBag.rod(WOOD, [-1.6, 0, 0], [1, 0, 0], 0.14, 6);
   const wheel = new THREE.Mesh(props.loose(wheelBag.geo()), props.mat); wheel.position.set(MX + 11.2, WATER + 1.5, 60); wheel.castShadow = true; group.add(wheel);
   for (let i = 0; i < 3; i++) walker([[MX - 1.2, 60], [MX - 30, 40], [178, 20]], 900, INF, { action: 'carry', prop: 'sack', outfit: 'medieval', phase: i / 3 });
-  kit.during(1100, INF, () => { const bx = riverX(CZ) - 24; for (const s of [1, -1]) kit.along(bx, CZ + s * 2.8, bx + 48, CZ + s * 2.8, -3, (l) => kit.panel('stone', l, 10.1, [8, 24, 40].map((x) => ({ x, y: 0, w: 12, h: 8.4, arch: 'round' })), 0.5, 0xe8e2d4)); kit.box('earth', bx - 8, G - 0.6, CZ - 2.8, bx + 56, G + 0.1, CZ + 2.8, 0xc8b898, ''); });
+  kit.during(1100, INF, () => { const bx = riverX(CZ) - 24; for (const s of [1, -1]) kit.along(bx, CZ + s * 2.8, bx + 48, CZ + s * 2.8, -3, (l) => kit.panel('stone', l, 10.1, [8, 24, 40].map((x) => ({ x, y: 0, w: 12, h: 8.4, arch: 'round' })), 0.5, 0xe8e2d4)); kit.box('earth', bx - 8, G - 0.6, CZ - 2.8, bx + 56, G + 0.1, CZ + 2.8, 0xc8b898, ''); flat('earth', bx + 56, CZ - 2.5, 400, CZ + 2.5, 0xc8b898, 0.08);
+    kit.platform(bx - 8, CZ - 2.8, bx + 56, CZ + 2.8, G + 0.1); kit.solid(bx, CZ - 2.8, bx + 48, CZ - 2.3, { lo: G, hi: G + 2 }).solid(bx, CZ + 2.8, bx + 48, CZ + 3.3, { lo: G, hi: G + 2 }); });
 
   // ---------- the plague ----------
   { const b = props.bag(PLAGUE, 1420), CR = fin(0x5a4630, 0.9);
@@ -352,12 +370,21 @@ function build({ world, group }) {
   trees(['broadleafB'], 120, old, 760, [0.7, 1.4]); trees(['elmC'], 120, old, 850, [0.7, 1.4]);
   trees(['shrub'], 70, () => { const x = (r() * 2 - 1) * 600, z = (r() * 2 - 1) * 520; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.25) && Math.abs(z - CZ) > 6 ? [x, z] : null; }, INF, [0.8, 1.6]);
 
+  // ---------- inside: shopkeepers behind their counters, people at prayer in the churches (their own random sequence, so the town keeps its layout) ----------
+  const rq = rng(4471), add = (outfit, action, x, z, rot, a, b) => list.push({ outfit, action, x, z, rot, u0: Y(a), u1: Y(b) }), sex = () => (rq() < 0.5 ? 'medieval' : 'medieval-f');
+  for (const q of SHOPS) add(sex(), rq() < 0.6 ? 'trade' : 'stand', q.x, q.z, q.ry - Math.PI / 2, q.from, INF);
+  for (let i = 0; i < 9; i++) add(i % 4 === 0 ? 'monk' : sex(), i % 3 ? 'kneel' : 'pray', CX + 24 + rq() * 34, CZ0 + (rq() - 0.5) * 9, (rq() - 0.5) * 0.3, 1226, INF);
+  add('monk', 'pray', CX + 95, CZ0, 0, 1226, INF);
+  for (let i = 0; i < 4; i++) add(sex(), i % 2 ? 'kneel' : 'pray', -4 + rq() * 12, -40 + (rq() - 0.5) * 6, 0, 1000, 1194);
+  for (let i = 0; i < 3; i++) add(sex(), 'kneel', -1 + rq() * 6, -40 + (rq() - 0.5) * 4, 0, 500, 1000);
   // ---------- assemble ----------
   kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });
-  const people = actors(world, list, { seed: 7 }); group.add(...people.meshes);
-  const mounts = new Walkers(world, group, [...oxen, ...rides.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, u0: Y(q.from), load: q.load }))]);
+  const floorK = kit.floor(); let year = 1000;
+  const ground = Object.create(world); ground.heightAt = (x, z) => Math.max(world.heightAt(x, z), floorK(x, z, year));   // people walk on decks and floors, not under them
+  const people = actors(ground, list, { seed: 7 }); group.add(...people.meshes);
+  const mounts = new Walkers(ground, group, [...oxen, ...rides.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, u0: Y(q.from), load: q.load }))]);
   const fumes = smoke(hearths, { per: 5, rise: 1.6, wind: [0.9, 0.3], life: 9, grey: 0.5 }); group.add(fumes.mesh);
-  const hit = kit.collider(); let year = 1000;
+  const hit = kit.collider();
   const RISE = [[1194, 0.3], [1200, 14.5], [1208, 24], [1215, 36.5], [1221, 51], [1226, 60]];
   return {
     update(u, t, env, camera, view) {
@@ -370,12 +397,13 @@ function build({ world, group }) {
       for (const w of woods) { const on = year < w.until; for (const m of w.meshes) m.visible = on; }
     },
     collide(pos) { hit(pos, year); },
+    floorAt(x, z) { return floorK(x, z, year); },
   };
 }
 
 export default {
   place: 'Chartres · France', coords: [48.45, 1.49],
-  terrain: { base, relief: () => 0, bounds: { x: 300, z: 440 }, tint: (x, z, b) => (b < 5.6 ? 0.8 : 1) },
+  terrain: { base, relief: () => 0, bounds: { x: 400, z: 440 }, tint: (x, z, b) => (b < 5.6 ? 0.8 : 1) },
   spawn: { x: 70, z: 66, yaw: 0.76 },
   env(year, env) {
     hexA(0x4f86c8, env.top); hexA(0xc6d8e2, env.hor); hexA(0x5f7f3c, env.ground); hexA(0x4a5f35, env.far); hexA(0x4c6a52, env.water); hexA(0xfff2d8, env.sun); hexA(0xffffff, env.cloudCol);

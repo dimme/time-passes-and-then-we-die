@@ -33,23 +33,36 @@ const lancets = (l, n, y, w, h, fill = GLASS, arch = 'point') => Array.from({ le
 // =====================================================================================
 /** A timber church of the early Franks: plank walls, a thatched roof, a porch and a wooden cross. 16 × 7 m. */
 export function woodenChurch(kit, props) {
-  walls(kit, 'plank', 0, -3.5, 12, 3.5, 0, 4.2, 0.25, 0xb8a888, (s, l) => (s === 'w' ? [{ x: l / 2, y: 0, w: 1.5, h: 2.6, arch: 'flat', fill: ['plank', 0x4a3424, 'tile'] }] : s === 'e' ? [] : lancets(l, 3, 2.2, 0.5, 1.2, DARK, 'round')));
+  walls(kit, 'plank', 0, -3.5, 12, 3.5, 0, 4.2, 0.25, 0xb8a888, (s, l) => (s === 'w' ? [{ x: l / 2, y: 0, w: 1.5, h: 2.6, arch: 'flat' }] : s === 'e' ? [{ x: l / 2, y: 0, w: 2.6, h: 3.2, arch: 'flat' }] : lancets(l, 3, 2.2, 0.5, 1.2, DARK, 'round')));
   kit.gable('thatch', 'plank', 0, -3.5, 12, 3.5, 4.2, 5, { over: 0.7, wcol: 0xb8a888 });
-  walls(kit, 'plank', 12, -2.4, 16.5, 2.4, 0, 3.4, 0.25, 0xb8a888, (s, l) => (s === 'e' ? lancets(l, 1, 1.8, 0.5, 1.2, DARK, 'round') : []));
+  walls(kit, 'plank', 12, -2.4, 16.5, 2.4, 0, 3.4, 0.25, 0xb8a888, (s, l) => (s === 'e' ? lancets(l, 1, 1.8, 0.5, 1.2, DARK, 'round') : s === 'w' ? [{ x: l / 2, y: 0, w: 2.6, h: 3.2, arch: 'flat' }] : []));
   kit.gable('thatch', 'plank', 12, -2.4, 16.5, 2.4, 3.4, 3.6, { over: 0.6, wcol: 0xb8a888 });
-  kit.solid(0, -3.6, 16.5, 3.6);
-  const b = props, W = fin(0x5a422c, 0.9); b.box(W, 0.14, 2.2, 0.14, -0.4, 10.2, 0); b.box(W, 0.14, 0.14, 1.1, -0.4, 10.7, 0);
+  // inside: an earth floor strewn with rushes, a timber altar in the little chancel, benches along the walls for the old and the sick
+  kit.poly('earth', [[0, 0.12, -3.5], [0, 0.12, 3.5], [16.5, 0.12, 3.5], [16.5, 0.12, -3.5]], 0x8a7a58);
+  kit.box('plank', 14.6, 0, -0.9, 15.6, 1, 0.9, 0x6a4a2c, 'b').box('plank', 14.5, 1, -1, 15.7, 1.06, 1, 0x7a5a3a, 'b');
+  for (const z of [-3.1, 2.7]) kit.box('plank', 1.5, 0, z, 10.5, 0.42, z + 0.4, 0x6a4a30, 'b');
+  kit.solid(-0.25, -3.75, 0, -0.75).solid(-0.25, 0.75, 0, 3.75).solid(0, -3.75, 12, -3.5).solid(0, 3.5, 12, 3.75).solid(11.75, -3.75, 12.25, -1.3).solid(11.75, 1.3, 12.25, 3.75);
+  kit.solid(12, -2.65, 16.75, -2.4).solid(12, 2.4, 16.75, 2.65).solid(16.5, -2.65, 16.75, 2.65).solid(14.5, -1, 15.7, 1);
+  const b = props, W = fin(0x5a422c, 0.9), E = fin(0xff7a20, 0.8, 0, 2.5);
+  b.box(W, 0.06, 0.5, 0.06, 15.1, 1.31, 0).box(W, 0.3, 0.05, 0.05, 15.1, 1.45, 0); for (const z of [-0.6, 0.6]) b.box(fin(0xe8e0c8, 1), 0.06, 0.22, 0.06, 15.1, 1.17, z).box(E, 0.04, 0.08, 0.04, 15.1, 1.32, z); b.box(W, 0.14, 2.2, 0.14, -0.4, 10.2, 0); b.box(W, 0.14, 0.14, 1.1, -0.4, 10.7, 0);
 }
 /** Fulbert's church in little: rubble walls, round-headed windows, a tiled roof, an apse and a square west tower. 46 × 13 m. */
 export function stoneChurch(kit) {
   const C = 0xe8e0d0;
-  walls(kit, 'rubble', 8, -6.5, 40, 6.5, 0, 11, 0.9, C, (s, l) => (s === 's' || s === 'n' ? lancets(l, 6, 5.5, 1.1, 3.2, DARK, 'round') : []));
+  walls(kit, 'rubble', 8, -6.5, 40, 6.5, 0, 11, 0.9, C, (s, l) => (s === 's' || s === 'n' ? lancets(l, 6, 5.5, 1.1, 3.2, ['glass', 0xb0a898, 'fit', [0.03, 0, 0.47, 1]], 'round') : s === 'w' ? [{ x: l / 2, y: 0, w: 3, h: 5.2, arch: 'round' }] : []));
   for (let i = 0; i <= 6; i++) for (const s of [1, -1]) kit.box('stone', 8 + (i * 32) / 6 - 0.45, 0, s * 7.4 - 0.25, 8 + (i * 32) / 6 + 0.45, 10.4, s * 7.4 + 0.25, AGED);   // pilaster strips
   kit.gable('tile', 'rubble', 8, -6.5, 40, 6.5, 11, 5.2, { over: 0.5, wcol: C });
   kit.cyl('rubble', 40, 0, 0, 8.5, 5.2, 5.2, 14, C, { a0: 0, arc: Math.PI }); kit.cyl('tile', 40, 0, 8.5, 12.5, 5.6, 0.05, 14, 0xffffff, { a0: 0, arc: Math.PI });
-  walls(kit, 'rubble', 0, -4.2, 8, 4.2, 0, 22, 0.9, C, (s, l) => [...(s === 'w' ? [{ x: l / 2, y: 0, w: 2.2, h: 4.2, arch: 'round', fill: DOOR, back: 0.8 }] : []), ...lancets(l, 2, 16.5, 1.2, 3.4, DARK, 'round'), ...(s === 'w' ? lancets(l, 1, 8, 1, 3, DARK, 'round') : [])]);
+  walls(kit, 'rubble', 0, -4.2, 8, 4.2, 0, 22, 0.9, C, (s, l) => [...(s === 'w' ? [{ x: l / 2, y: 0, w: 2.2, h: 4.2, arch: 'round' }] : s === 'e' ? [{ x: l / 2, y: 0, w: 3, h: 5.2, arch: 'round' }] : []), ...lancets(l, 2, 16.5, 1.2, 3.4, DARK, 'round'), ...(s === 'w' ? lancets(l, 1, 8, 1, 3, DARK, 'round') : [])]);
   kit.cyl('tile', 4, 0, 22, 28, 6.6, 0.05, 4, 0xffffff, { a0: Math.PI / 4 });
-  kit.solid(0, -4.3, 8, 4.3).solid(8, -7, 40, 7).solid(40, -5, 45, 5);
+  // inside: a flagged floor, a ceiling of boards under the roof, a stone altar before the apse, a font by the door
+  kit.poly('stone', [[0, 0.12, -4.2], [0, 0.12, 4.2], [8, 0.12, 4.2], [8, 0.12, -4.2]], 0xa8a090).poly('stone', [[8, 0.12, -6.5], [8, 0.12, 6.5], [40, 0.12, 6.5], [40, 0.12, -6.5]], 0xa8a090);
+  kit.poly('plank', [[8, 10.9, -6.5], [40, 10.9, -6.5], [40, 10.9, 6.5], [8, 10.9, 6.5]], 0x8a7050).poly('plank', [[0, 9, -4.2], [8, 9, -4.2], [8, 9, 4.2], [0, 9, 4.2]], 0x8a7050);
+  for (let x = 10; x < 40; x += 4) kit.box('plank', x - 0.15, 10.5, -6.5, x + 0.15, 10.9, 6.5, 0x5a4630, 't');
+  kit.box('stone', 36, 0, -3, 40, 0.3, 3, 0xc8c0b0, 'b').box('stone', 37.6, 0.3, -1.4, 38.8, 1.3, 1.4, 0xe0d8c8, 'b').box('stone', 37.5, 1.3, -1.5, 38.9, 1.42, 1.5, 0xd0c8b8, 'b');
+  kit.cyl('stone', 5.5, -2.4, 0, 0.9, 0.5, 0.42, 10, 0xd0c8b8, { open: false });
+  kit.solid(-0.9, -5.1, 8.9, -4.2).solid(-0.9, 4.2, 8.9, 5.1).solid(-0.9, -4.2, 0, -1.1).solid(-0.9, 1.1, 0, 4.2).solid(7.1, -6.5, 8.9, -1.5).solid(7.1, 1.5, 8.9, 6.5);
+  kit.solid(8, -7.4, 40, -6.5).solid(8, 6.5, 40, 7.4).solid(40, -6.5, 40.9, 6.5).solid(40, -5, 45, 5).solid(37.5, -1.5, 38.9, 1.5).solid(5, -2.9, 6, -1.9);
 }
 
 // =====================================================================================

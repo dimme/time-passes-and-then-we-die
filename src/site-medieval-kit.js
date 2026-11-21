@@ -189,6 +189,7 @@ const shapeOf = (P) => new THREE.Shape(P.map((p) => new THREE.Vector2(p[0], p[1]
 // =====================================================================================
 // Kit: textured geometry gathered by material and by the span of years it stands for
 // =====================================================================================
+const topAt = (b, lx) => b.ta + ((b.tb - b.ta) * (b.f * lx + b.hx)) / (2 * b.hx || 1);
 export class Kit {
   constructor() { this.B = new Map(); this.M = new THREE.Matrix4(); this.stack = []; this.shell = false; this.span = [-Infinity, Infinity]; this.tag = ''; this.solids = []; }
   /** Everything added inside fn stands from year a to year b. */
@@ -294,11 +295,34 @@ export class Kit {
     if (step) { const [m, c, tr = 0.4, ri = 0.17] = step; this.box(m, xa - 0.2, y - 0.02, depth - 0.02, xb + 0.2, y + ri, depth + tr, c, 'nb'); }
     return this;
   }
-  /** Register a rectangle (local x0..x1, z0..z1) the visitor cannot walk through, for as long as the current span lasts. */
-  solid(x0, z0, x1, z1) {
-    const e = this.M.elements, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
-    this.solids.push({ x: e[0] * cx + e[8] * cz + e[12], z: e[2] * cx + e[10] * cz + e[14], hx: Math.abs(x1 - x0) / 2, hz: Math.abs(z1 - z0) / 2, c: e[0], s: e[2], y0: this.span[0], y1: this.span[1] });
+  /** Register a rectangle (local x0..x1, z0..z1) the visitor cannot walk through, for as long as the current span lasts.
+   *  o.top: a walkable top (a number, or [y at x0, y at x1] for a ramp; heights in the current frame): it stops you from below unless the step is ≤ 0.6 m, and carries you once you are on it.
+   *  o.lo/o.hi: it only stands between those heights (a parapet on a deck): you pass under it, or over it. */
+  solid(x0, z0, x1, z1, o) {
+    const e = this.M.elements, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, b = { x: e[0] * cx + e[8] * cz + e[12], z: e[2] * cx + e[10] * cz + e[14], hx: Math.abs(x1 - x0) / 2, hz: Math.abs(z1 - z0) / 2, c: e[0], s: e[2], y0: this.span[0], y1: this.span[1] };
+    if (o) {
+      const oy = e[13];
+      if (o.top !== undefined) { const t = Array.isArray(o.top) ? o.top : [o.top, o.top], f = x1 < x0 ? -1 : 1; b.ta = t[0] + oy; b.tb = t[1] + oy; b.f = f; (this.floors || (this.floors = [])).push(b); }
+      if (o.lo !== undefined) { b.lo = o.lo + oy; b.hi = (o.hi ?? Infinity) + oy; }
+    }
+    this.solids.push(b);
     return this;
+  }
+  /** A walkable block: solid(…, { top }). */
+  platform(x0, z0, x1, z1, top) { return this.solid(x0, z0, x1, z1, { top }); }
+  /** floor(x, z, year): the highest walkable top standing over (x, z) that year, or −Infinity. */
+  floor() {
+    const F = this.floors || [];
+    return (x, z, year) => {
+      let h = -Infinity;
+      for (let i = 0; i < F.length; i++) {
+        const b = F[i]; if (year < b.y0 || year >= b.y1) continue;
+        const dx = x - b.x, dz = z - b.z, lx = dx * b.c + dz * b.s, lz = -dx * b.s + dz * b.c;
+        if (Math.abs(lx) > b.hx || Math.abs(lz) > b.hz) continue;
+        const t = topAt(b, lx); if (t > h) h = t;
+      }
+      return h;
+    };
   }
   /** Turn everything gathered into meshes under `group`. swap: { tag: (material) => material } gives a tag its own materials. */
   build(group, swap = {}) {
@@ -324,7 +348,10 @@ export class Kit {
       for (let i = 0; i < S.length; i++) {
         const b = S[i]; if (year < b.y0 || year >= b.y1) continue;
         const dx = pos.x - b.x, dz = pos.z - b.z; if (Math.abs(dx) + Math.abs(dz) > (b.hx + b.hz) * 1.5 + 2) continue;
-        const lx = dx * b.c + dz * b.s, lz = -dx * b.s + dz * b.c, px = b.hx + R - Math.abs(lx), pz = b.hz + R - Math.abs(lz);
+        const lx = dx * b.c + dz * b.s, lz = -dx * b.s + dz * b.c, feet = pos.y - 1.7;
+        if (b.ta !== undefined && feet > topAt(b, Math.max(-b.hx, Math.min(b.hx, lx))) - 0.6) continue;   // up on it already, or a step low enough to climb
+        if (b.lo !== undefined && (feet < b.lo - 0.3 || feet > b.hi)) continue;   // below it or above it
+        const r = b.ta !== undefined ? 0.1 : R, px = b.hx + r - Math.abs(lx), pz = b.hz + r - Math.abs(lz);
         if (px <= 0 || pz <= 0) continue;
         let ox = 0, oz = 0; if (px < pz) ox = Math.sign(lx) * px; else oz = Math.sign(lz) * pz;
         pos.x += ox * b.c - oz * b.s; pos.z += ox * b.s + oz * b.c;
