@@ -592,7 +592,7 @@ export const TYPES = {
           k.box(M.trim, hull, 0.6, 5.2, 0.5, sx - sw / 2 + 0.3, 0, 0.25, 'kb');
           if (r() < 0.85) {   // an open stall: lit shelves of goods behind a counter, a canopy edged in neon, its sign above
             k.quad(M.glow, mul(lin(col), [0.2, 0.2, 0.2]), [a, 0.2, 0.04], [b, 0.2, 0.04], [b, 3.4, 0.04], [a, 3.4, 0.04]);
-            for (const y of [1.45, 2.05, 2.65]) { k.box(M.trim, 0x0a0a10, b - a, 0.06, 0.3, c, y, 0.2, 'k'); for (let j = 0; j < 5; j++) if (r() < 0.7) k.box(M.glow, mul(lin(pick(r, NEON)), [0.55, 0.55, 0.55]), 0.2 + r() * 0.3, 0.18 + r() * 0.3, 0.2, a + 0.35 + (j * (b - a - 0.7)) / 4, y + 0.06, 0.2, 'kb'); }
+            for (const y of [1.45, 2.05, 2.65]) { k.box(M.trim, 0x0a0a10, b - a, 0.06, 0.3, c, y, 0.2, 'k'); k.quad(M.glow, mul(lin(pick(r, NEON)), [0.45, 0.45, 0.45]), [a + 0.2, y + 0.06, 0.12], [b - 0.2, y + 0.06, 0.12], [b - 0.2, y + 0.4, 0.12], [a + 0.2, y + 0.4, 0.12]); }      // goods on the shelves, one lit strip a shelf
             k.box(M.trim, 0x1c1d26, b - a - 0.2, 1, 0.4, c, 0, 0.42, 'kb'); k.box(M.metal, 0x5a5e68, b - a, 0.06, 0.5, c, 1, 0.42, 'k');
             k.sheet(M.trim, 0x14141c, [a - 0.1, 3.05, 1.7], [b + 0.1, 3.05, 1.7], [b + 0.1, 3.5, 0.3], [a - 0.1, 3.5, 0.3]); k.quad(M.glow, col, [a - 0.1, 2.93, 1.71], [b + 0.1, 2.93, 1.71], [b + 0.1, 3.05, 1.71], [a - 0.1, 3.05, 1.71]);
             sign(c, 3.75, (b - a) * (0.5 + r() * 0.4), 1.15, col, false);

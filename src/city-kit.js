@@ -119,6 +119,11 @@ function facade(st, seed) {
   if (st.band) for (let cy = 0; cy <= G; cy++) { const e = 0.5 * my; R(0, cy * C - e / 2, S, e, st.band, 0.95, 0.7); shade(0, cy * C - e / 2, S, 3, 0.2); fade(0, cy * C + e / 2, S, 0.2 * my, 0.45); for (let q = 0; q < S; q += 0.16 * mx) shade(q, cy * C + e * 0.1, 0.07 * mx, e * 0.3, -0.16); }
   if (st.planter) for (let cy = 0; cy < G; cy++) { const yb = (cy + 1) * C - C * st.wy; R(0, yb, S, 0.35 * my, st.planter, 0.9, 0.95); for (let q = 0; q < 220; q++) shade(r() * S, yb - 3 + r() * (0.35 * my + 6), 3 + r() * 6, 2 + r() * 5, (r() - 0.6) * 0.5); fade(0, yb + 0.35 * my, S, 0.25 * my, 0.35); }
   if (st.panels) for (let i = 0; i < 60; i++) { const x = Math.floor(r() * G * 2) * C / 2, y = r() * S; shade(x, y, 2, 40 + r() * 200, -0.5); shade(r() * S, Math.floor(r() * G * 4) * C / 4, 30 + r() * 160, 2, 0.08); }
+  if (st.curtain) {   // pressure caps stand proud on every mullion, a deeper transom marks each slab edge, with a thin shadow below it
+    const mw = Math.max(2, 0.09 * mx), tw = Math.max(2, 0.12 * my);
+    for (let cx = 0; cx <= G; cx++) { R(cx * C - mw / 2, 0, mw, S, st.wall, 0.95, 0.3, 0.85); shade(cx * C - mw / 2, 0, 1, S, 0.25); shade(cx * C + mw / 2, 0, 2, S, -0.35); }
+    for (let cy = 0; cy <= G; cy++) { const y = cy * C + 0.05 * my; R(0, y - tw / 2, S, tw, st.wall, 0.95, 0.3, 0.85); shade(0, y - tw / 2, S, 1, 0.3); fade(0, y + tw / 2, S, 0.25 * my, 0.35); }
+  }
   if (st.kind === 'metal' && !st.curtain) for (let cx = 0; cx < G; cx++) { shade(cx * C + C * (1 - st.ww) / 2 - 2, 0, 2, S, -0.3); shade(cx * C, 0, 2, S, 0.2); }
   for (let i = 0; i < (st.holes || 0); i++) {
     const x = r() * S, y = r() * S, a = 8 + r() * 26, b = 8 + r() * 36, moss = r() < 0.75;
