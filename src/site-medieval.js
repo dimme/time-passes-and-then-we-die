@@ -353,7 +353,7 @@ function build({ world, group }) {
   trees(['shrub'], 70, () => { const x = (r() * 2 - 1) * 600, z = (r() * 2 - 1) * 520; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.25) && Math.abs(z - CZ) > 6 ? [x, z] : null; }, INF, [0.8, 1.6]);
 
   // ---------- assemble ----------
-  kit.build(group, { clip: (m) => clipped(m, clipY) }); console.log("KITTRIS", kit.tris, kit.meshes.length); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });
+  kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });
   const people = actors(world, list, { seed: 7 }); group.add(...people.meshes);
   const mounts = new Walkers(world, group, [...oxen, ...rides.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, u0: Y(q.from), load: q.load }))]);
   const fumes = smoke(hearths, { per: 5, rise: 1.6, wind: [0.9, 0.3], life: 9, grey: 0.5 }); group.add(fumes.mesh);

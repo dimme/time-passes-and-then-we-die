@@ -311,7 +311,7 @@ function build({ world, group }) {
   trees('elmC', 40, () => [60 + r() * 240, r() < 0.5 ? -36 + r() * 110 : 164 + r() * 160], 1796, [0.5, 1.1]);
 
   // ---------- assemble ----------
-  kit.build(group, { clip: (m) => clipped(m, clipY) }); console.log("KITTRIS", kit.tris, kit.meshes.length); props.build(group);
+  kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group);
   const people = actors(world, list, { seed: 11 }); group.add(...people.meshes);
   const horses = new Walkers(world, group, [...towing, ...packs, ...cartRoutes.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, ahead: 2.8, u0: q.u0 }))]);
   const soot = smoke(chimneys, { per: 9, rise: 4.5, wind: [3.4, 1.1], life: 16, grey: 0.045 }); group.add(soot.mesh);
