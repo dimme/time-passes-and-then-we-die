@@ -74,7 +74,7 @@ export class Travel {
     if (this.active && this.active.group) this.active.group.visible = false;
     this.id = id;
     if (id === 'home') {
-      this.active = null; this.home.group.visible = true; world.setProfile(MANHATTAN); world.floorAt = null;
+      this.active = null; this.home.group.visible = true; world.setProfile(MANHATTAN); world.floorAt = this.home.floorAt || player.homeFloor || null;
       player.collide = this.home.collide;
       if (this.homePos) { player.pos.x = this.homePos.x; player.pos.z = this.homePos.z; player.yaw = this.homePos.yaw; }
     } else {

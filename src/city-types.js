@@ -1,7 +1,7 @@
 // Building types. Each TYPES[name](r, corner) returns { obj, fw, fd }: obj stands on y=0 centred on its footprint with its
 // street front facing +z; corner is -1 / +1 when the -x / +x side also faces a street.
 import * as THREE from 'three';
-import { Kit, M, facadeOf, lin, WHITE, NEON, pick } from './city-kit.js';
+import { Kit, Solid, M, facadeOf, lin, WHITE, NEON, pick } from './city-kit.js';
 
 const PI = Math.PI;
 const SIDES = [[0, 1, 0], [1, 0, PI / 2], [0, -1, PI], [-1, 0, -PI / 2]];
@@ -206,6 +206,7 @@ export const TYPES = {
     // the stoep: a stone step with a bench either side of the door
     k.box(M.trim, 0x9a9486, 2.5, 0.3, 1.2, dx, 0, d / 2 + 0.6, 'kb'); k.box(M.trim, 0x9a9486, 2.9, 0.14, 1.6, dx, 0, d / 2 + 0.8, 'kb');
     for (const s of [-1, 1]) k.box(M.trim, WOOD, 0.3, 0.45, 1, dx + s * 1.05, 0.3, d / 2 + 0.6, 'kb');
+    const sol = new Solid(); sol.pad(dx, d / 2 + 0.8, 1.45, 0.8, 0.14); sol.pad(dx, d / 2 + 0.6, 1.25, 0.6, 0.3);
     // crow-stepped gables front and back, capped with stone
     const n = 5 + (w > 7.4), tw = (w / 2 - 0.42) / n, sh = (rise + 0.5) / n;
     for (const s of [1, -1]) k.at(0, h, s * (d / 2 - T / 2), s > 0 ? 0 : PI, () => {
@@ -222,7 +223,7 @@ export const TYPES = {
     const tile = lin(pick(r, [0xb5532f, 0xa84a2a, 0xc0603a, 0x8a4a34])), ov = 0.28, a = w / 2 + ov, he = h - (ov * rise) / (w / 2), hr = h + rise, zf = d / 2 - T, RT = M.tile();
     k.quad(RT, tile, [-a, he, zf], [0, hr, zf], [0, hr, -zf], [-a, he, -zf]); k.quad(RT, tile, [a, he, -zf], [0, hr, -zf], [0, hr, zf], [a, he, zf]);
     k.box(F.side, tint, 0.75, rise * 0.5 + 1.3, 0.75, w * 0.18, h + rise * 0.5, -d * 0.2, 'b'); k.box(M.trim, stone, 0.9, 0.1, 0.9, w * 0.18, h + rise + 1.3, -d * 0.2);
-    return finish(k, w, d);
+    return finish(k, w, d, { pads: sol.pads });
   },
 
   /** Georgian and Federal New York: Flemish-bond brick, six-over-six sashes, a fanlit door up a stoop, dormers in a pitched roof between end chimneys. */
@@ -257,7 +258,8 @@ export const TYPES = {
       if (i % 2 === 0) k.box(M.trim, white, fw + 0.5, 0.34, 0.32, 0, h - 0.3, 0.16, 'k');       // eaves cornice
     });
     // stoop with iron railings
-    const run = 1.7, zf = d / 2;
+    const run = 1.7, zf = d / 2, sol = new Solid();
+    sol.at(dxr, zf, 0, () => { sol.pad(0, 0.45, 0.95, 0.45, base); sol.steps(0, 0.9, 1.9, base, run - 0.3, 5); });
     k.at(dxr, 0, zf, 0, () => { k.box(M.trim, stone, 1.9, base, 0.9, 0, 0, 0.45, 'kb'); k.at(0, 0, 0.9, 0, () => steps(k, 0, 1.9, base, run - 0.3, stone, 5)); for (const s of [-1, 1]) { const x = s * 0.9, P = [[x, base, 0.05], [x, base, 0.9], [x, 0.15, run + 0.55]]; for (const p of P) k.rod(M.trim, IRON, 0.04, p, [p[0], p[1] + 0.9, p[2]]); for (const o of [0.9, 0.45]) { k.rod(M.trim, IRON, 0.035, [x, base + o, 0.05], [x, base + o, 0.9]); k.rod(M.trim, IRON, 0.035, [x, base + o, 0.9], [x, 0.15 + o, run + 0.55]); } } });
     // pitched roof, ridge parallel to the street
     const RM = r() < 0.6 ? M.slate() : M.shingle(), rc = lin(RM === M.slate() ? pick(r, [0x50525c, 0x44464e, 0x5a4a50]) : pick(r, [0x7a6a58, 0x62564a])), a = w / 2 + 0.12, ze = zf + 0.3, he = h - (0.3 * rise) / zf, hr = h + rise;
@@ -277,13 +279,13 @@ export const TYPES = {
       k.quad(RM, rc, [x + dw / 2 + 0.1, y0 + dh, z0 - L], [x, y0 + dh + 0.5, z0 - L - 0.5 / slope], [x, y0 + dh + 0.5, z0 + 0.12], [x + dw / 2 + 0.1, y0 + dh, z0 + 0.12]);
       k.quad(M.trim, white, [x - dw / 2, y0 + dh, z0], [x + dw / 2, y0 + dh, z0], [x, y0 + dh + 0.45, z0]);
     }
-    return finish(k, w, d);
+    return finish(k, w, d, { pads: sol.pads });
   },
   /** The walk-up city, 1840–1960: a row of party-wall buildings — brownstones up their stoops, brick tenements over shops, or cast-iron lofts. */
   tenement(r, corner = 0) {
     const k = new Kit(r), kind = pick(r, ['brownstone', 'tenement', 'tenement', 'tenementarch', 'castiron']), F = facadeOf(kind), W = 22.5 + r() * 1.5, D = 19 + r() * 2;
     const bs = kind === 'brownstone', ci = kind === 'castiron', yard = bs ? 2.5 : 0, d = D - yard - 3, zc = D / 2 - yard - d / 2, nb = ci ? 2 : 3 + (r() < 0.5);
-    const cuts = [-W / 2]; for (let i = 1; i < nb; i++) cuts.push(-W / 2 + (W * (i + (r() - 0.5) * 0.3)) / nb); cuts.push(W / 2);
+    const sol = new Solid(), cuts = [-W / 2]; for (let i = 1; i < nb; i++) cuts.push(-W / 2 + (W * (i + (r() - 0.5) * 0.3)) / nb); cuts.push(W / 2);
     const tints = bs ? [WHITE, [0.85, 0.8, 0.78], [1.15, 1.02, 0.95], [0.7, 0.66, 0.66], [1.3, 1.25, 1.2]] : ci ? [WHITE, [0.8, 0.82, 0.86], [0.66, 0.72, 0.66], [1.06, 0.98, 0.84], [0.95, 0.8, 0.7]] : [WHITE, [0.8, 0.72, 0.7], [1.25, 1.1, 0.9], [0.62, 0.52, 0.5], [1.4, 1.3, 1.1], [0.95, 0.75, 0.7]];
     const g = bs ? 1.5 : ci ? 4.7 : 3.9, nf0 = bs ? 3 : ci ? 4 : 4 + Math.floor(r() * 2);
     for (let b = 0; b < nb; b++) {
@@ -303,6 +305,7 @@ export const TYPES = {
             for (const s of [-1, 1]) k.box(M.trim, wc, 0.3, 3.1, 0.3, dx + s * 0.85, g, 0.15, 'kb');
             k.box(M.trim, wc, 2.3, 0.4, 0.5, dx, g + 3.1, 0.25, 'k'); k.box(M.trim, wc, 1.4, 3.1, 0.06, dx, g, 0.03, 'kb');
             k.quad(M.trim, 0x24160f, [dx - 0.62, g, 0.07], [dx + 0.62, g, 0.07], [dx + 0.62, g + 2.35, 0.07], [dx - 0.62, g + 2.35, 0.07]); glaze(k, dx, g + 2.4, 1.24, 0.6, 0.07, LAMP, 1, 1, 0x24160f);
+            sol.at(cx + dx, zc + d / 2, 0, () => { sol.pad(0, 0.25, 0.85, 0.25, g); sol.steps(0, 0.5, 1.7, g, 1.9, 7); });
             k.at(dx, 0, 0, 0, () => {
               k.box(M.trim, wc, 1.7, g, 0.5, 0, 0, 0.25, 'kb'); k.at(0, 0, 0.5, 0, () => steps(k, 0, 1.7, g, 1.9, wc, 7));
               for (const s of [-1, 1]) { k.rod(M.trim, wc, 0.24, [s * 0.97, g - 0.05, 0], [s * 0.97, 0.1, 2.4], 4, 0.5); k.box(M.trim, wc, 0.3, 0.95, 0.3, s * 0.97, 0, 2.45); k.rail(IRON, s * 0.97, 0, s * 0.97, 2.4, g + 0.2, 0.75, 0, 0.35); }
@@ -333,7 +336,7 @@ export const TYPES = {
       for (let q = 0; q < 2; q++) { k.box(M.trim, mul(wc, [0.75, 0.75, 0.75]), 0.6, 1.9, 1.1, cx + w / 2 - 0.5, H, zc + d * (0.25 - q * 0.45), 'b'); k.box(M.trim, STONE, 0.72, 0.08, 1.22, cx + w / 2 - 0.5, H + 1.9, zc + d * (0.25 - q * 0.45)); }
       if (nf >= 4 && r() < (ci ? 0.8 : 0.4)) waterTank(k, cx + (r() - 0.5) * (w - 4.5), H, zc - d * 0.1 + (r() - 0.5) * 3, 0.85 + r() * 0.25);
     }
-    return finish(k, W, D);
+    return finish(k, W, D, bs ? { pads: sol.pads, body: [0, zc, W / 2, d / 2] } : {});
   },
   /** Mills and warehouses, 1835–1965: brick piers and big iron windows under a flat or saw-tooth roof, a loading dock, a tall stack. */
   factory(r, corner = 0) {

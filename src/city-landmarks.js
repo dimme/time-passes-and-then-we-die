@@ -127,7 +127,7 @@ export const BRIDGE_DECK = {
   x0: 112, end: 742, hw: 6, road: 3.9, walk: 0.85,
   yAt(x, z) {
     if (x < 112 || x > 742 || Math.abs(z) > 6) return null;
-    const y = x < 212 ? 3.5 + (20.4 * (x - 112)) / 100 : x > 638 ? 4.6 + (19.3 * (742 - x)) / 104 : 24;
+    const y = x < 212 ? 3.05 + (20.85 * (x - 112)) / 100 : x > 638 ? 4.05 + (19.85 * (742 - x)) / 104 : 24;   // level with the street at each end
     if (Math.abs(z) > 1.7 || x < 222 || x > 628) return y;
     return y + 1.63 * Math.min(1, (x - 222) / 8, (628 - x) / 8);   // the boardwalk, ramped at each end
   },
@@ -144,7 +144,7 @@ export function bridge(r) {
   const tower = ext(sh, 9);
   for (const x of [T0, T1]) { k.geo(G.side, gt, tower, x + 4.5, 0, 0, 0, -PI / 2); k.box(G.side, gt, 13, 7, 24, x, -9, 0, 'b'); }
   // anchorages and the arcaded approaches
-  const ramp = (x) => (x < A0 ? 3.5 + ((DY - 3.6) * Math.max(0, x - 112)) / (A0 - 10 - 112) : 4.6 + ((DY - 4.7) * Math.max(0, 742 - x)) / (742 - A1 - 10));
+  const ramp = (x) => (x < A0 ? 3.05 + ((DY - 3.15) * Math.max(0, x - 112)) / (A0 - 10 - 112) : 4.05 + ((DY - 4.15) * Math.max(0, 742 - x)) / (742 - A1 - 10));
   const arcade = (x0, x1, y0, arches) => {
     const s = new THREE.Shape(); s.moveTo(x0, y0 - 0.6); s.lineTo(x1, y0 - 0.6); s.lineTo(x1, ramp(x1) + 0.9); s.lineTo(x0, ramp(x0) + 0.9);
     for (const [xc, hw] of arches) { const top = Math.min(ramp(xc - hw), ramp(xc + hw)) - 1.7, rise = Math.min(hw, (top - y0) * 0.55); if (top - y0 < 3) continue; const h = new THREE.Path(); h.moveTo(xc - hw, y0 - 0.4); h.lineTo(xc + hw, y0 - 0.4); h.lineTo(xc + hw, top - rise); h.bezierCurveTo(xc + hw, top - rise * 0.45, xc + hw * 0.55, top, xc, top); h.bezierCurveTo(xc - hw * 0.55, top, xc - hw, top - rise * 0.45, xc - hw, top - rise); s.holes.push(h); }
