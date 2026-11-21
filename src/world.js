@@ -274,6 +274,7 @@ export class World {
   heightAt(x, z) { return this.profile.base(x, z) + this.hill * this.profile.relief(x, z); }
   /** What the player (and objects that must stay on the surface) stand on. */
   surfaceAt(x, z) {
+    if (this.underAt) { const y = this.underAt(x, z); if (y !== null) return y; }   // inside a place's tunnels and chambers: their floor, even below the ground
     let h = this.heightAt(x, z);
     if (this.floorAt) h = Math.max(h, this.floorAt(x, z));   // a place's walkable platforms and stairs, for the visitor's feet
     return this.ice > -50 ? Math.max(h, this.ice + iceBumps(x, z)) : h;

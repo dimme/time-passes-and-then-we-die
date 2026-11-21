@@ -96,11 +96,8 @@ export default {
         last.x = pos.x; last.z = pos.z; last.ok = !blocked(pos.x, pos.z, f);
       },
     };
-    // The ground under the visitor's feet is the world's, raised by what they stand on - except in the passages below the ground (Khufu's
-    // Subterranean Chamber is 30 m down in the rock), where the floor of the passage is what they stand on. world.surfaceAt cannot go below
-    // the terrain, so while this place is the one shown it is given that one exception; elsewhere it behaves as before.
-    const proto = Object.getPrototypeOf(world).surfaceAt;
-    world.surfaceAt = function (x, z) { if (this.floorAt && this.floorAt === api.floorAt) { const y = inside.find(x, z, O.feet, 0); if (y !== null) return this.ice > -50 ? Math.max(y, this.ice) : y; } return proto.call(this, x, z); };
+    // In the passages below the ground (Khufu's Subterranean Chamber is 30 m down in the rock) the floor of the passage is what the visitor stands on.
+    api.underAt = (x, z) => inside.find(x, z, O.feet, 0);
     return api;
   },
 };

@@ -9,7 +9,7 @@
 //     spawn: { x, z, yaw },                          // where the visitor arrives (yaw 0 = facing −z)
 //     env(year, env) {},                             // adjust the interpolated environment in place
 //     events: [{ y, t, h, w }],                      // captions: year, title, here, wider world
-//     build({ world, group }) → { update(u, t, env, camera, view), collide?(pos), floorAt?(x, z) },   // floorAt: height of walkable platforms (−Infinity where none)
+//     build({ world, group }) → { update(u, t, env, camera, view), collide?(pos), floorAt?(x, z), underAt?(x, z) },   // underAt: floor of a tunnel the visitor is in (may be below the ground), or null   // floorAt: height of walkable platforms (−Infinity where none)
 //   }
 //
 // A module without `build` is a placeholder: its years stay in Manhattan until it is written.
@@ -74,7 +74,7 @@ export class Travel {
     if (this.active && this.active.group) this.active.group.visible = false;
     this.id = id;
     if (id === 'home') {
-      this.active = null; this.home.group.visible = true; world.setProfile(MANHATTAN); world.floorAt = this.home.floorAt || player.homeFloor || null;
+      this.active = null; this.home.group.visible = true; world.setProfile(MANHATTAN); world.floorAt = this.home.floorAt || player.homeFloor || null; world.underAt = null;
       player.collide = this.home.collide;
       if (this.homePos) { player.pos.x = this.homePos.x; player.pos.z = this.homePos.z; player.yaw = this.homePos.yaw; }
     } else {
@@ -82,7 +82,7 @@ export class Travel {
       world.setProfile(site.terrain);
       if (!this.built[id]) { const group = new THREE.Group(); this.scene.add(group); this.built[id] = { group, ...site.build({ world, group }) }; }
       this.active = this.built[id]; this.active.group.visible = true;
-      player.collide = this.active.collide || null; world.floorAt = this.active.floorAt || null;
+      player.collide = this.active.collide || null; world.floorAt = this.active.floorAt || null; world.underAt = this.active.underAt || null;
       player.pos.x = site.spawn.x; player.pos.z = site.spawn.z; player.yaw = site.spawn.yaw; player.pitch = 0.05;
     }
     player.pos.y = world.heightAt(player.pos.x, player.pos.z) + 1.7;
