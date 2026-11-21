@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { merge, vcMat } from './util.js';
 import { staticPerson } from './fauna.js';
-import { Kit, M, facadeOf, lin, WHITE, pick } from './city-kit.js';
+import { Kit, Solid, inside, M, facadeOf, lin, WHITE, pick } from './city-kit.js';
 import { around, pierced, glaze, mul, DARK, CANDLE, LAMP } from './city-types.js';
 
 const PI = Math.PI, IRON = 0x1b1d1d, WOOD = 0x5a4028, STONE = 0x9a9488;
@@ -48,12 +48,42 @@ export function paleoCamp(r, lift) {
 }
 
 /** A bark house: sheets of elm bark over a frame of bent saplings, a smoke hole in the roof, a hide over the door. `long` > 0 stretches it into a longhouse. */
-function wigwam(k, r, s = 1, long = 0) {
+function wigwam(k, r, s = 1, long = 0, sol = null) {
   const B = M.bark(), c = lin(pick(r, [0x8a6e4c, 0x7a6244, 0x957a56])), R = 2.7 * s, H = 2.5 * s, sap = 0x4a3826, zd = long ? long / 2 + R : R;
   k.su = 5; k.sv = 2;
   if (long) {
-    k.su = long / 2.5; k.geo(B, c, new THREE.CylinderGeometry(R, R, long, 12, 1, true, 0, PI), 0, 0, 0, 0, PI / 2, PI / 2, H / R, 1, 1); k.su = 5;
-    for (const e of [1, -1]) k.geo(B, c, new THREE.SphereGeometry(R, 10, 6, 0, PI, 0, PI / 2), 0, 0, (e * long) / 2, 0, e > 0 ? 0 : PI, 0, 1, H / R, 1);
+    // a longhouse: a doorway at each end (a gap in the bark below a lintel), the bark seen from inside smoke-dark
+    const smoke = 0x4a3c2c, a = 0.85 / R, td = Math.acos(1.9 / H), shell = new THREE.CylinderGeometry(R, R, long, 12, 1, true, 0, PI);
+    k.su = long / 2.5; k.geo(B, c, shell, 0, 0, 0, 0, PI / 2, PI / 2, H / R, 1, 1); k.geo(B, smoke, inside(shell), 0, 0, 0, 0, PI / 2, PI / 2, H / R, 1, 1); k.su = 5;
+    const ends = [new THREE.SphereGeometry(R, 10, 3, 0, PI, 0, td), new THREE.SphereGeometry(R, 4, 3, 0, PI / 2 - a, td, PI / 2 - td), new THREE.SphereGeometry(R, 4, 3, PI / 2 + a, PI / 2 - a, td, PI / 2 - td)];
+    for (const e of [1, -1]) for (const g of ends) { k.geo(B, c, g, 0, 0, (e * long) / 2, 0, e > 0 ? 0 : PI, 0, 1, H / R, 1); k.geo(B, smoke, inside(g), 0, 0, (e * long) / 2, 0, e > 0 ? 0 : PI, 0, 1, H / R, 1); }
+    k.su = k.sv = 1;
+    k.quad(M.earth(), 0x5a4a36, [-R + 0.1, 0.03, zd - 0.3], [R - 0.1, 0.03, zd - 0.3], [R - 0.1, 0.03, -zd + 0.3], [-R + 0.1, 0.03, -zd + 0.3]);   // the packed earth floor
+    for (const sd of [-1, 1]) {   // sleeping platforms along both walls, divided into family compartments, with mats and furs
+      const x = sd * (R - 0.75);
+      k.box(M.trim, 0x6a5236, 1.1, 0.45, long - 0.6, x, 0, 0); k.box(M.trim, 0x3a2c1e, 0.08, 0.38, long - 0.6, x - sd * 0.56, 0, 0, 'b');
+      for (let q = 0; q < 4; q++) {
+        const z = -long / 2 + 0.3 + (q + 0.5) * (long - 0.6) / 4;
+        k.box(M.trim, pick(r, [0x8a6a4a, 0x6a4a34, 0xa08060, 0x5a4636]), 0.95, 0.05, 1.7, x, 0.45, z, 'b');
+        if (q) k.rod(M.trim, sap, 0.08, [x - sd * 0.55, 0, z - (long - 0.6) / 8], [x - sd * 0.55, 1.6, z - (long - 0.6) / 8], 5);
+        if (r() < 0.6) k.lathe(M.trim, 0x8a5a3c, [[0.1, 0], [0.2, 0.15], [0.16, 0.32], [0.19, 0.38]], x - sd * 0.85, 0, z + 0.4, 7);
+      }
+      if (sol) sol.pad(x, 0, 0.55, (long - 0.6) / 2, 0.45);
+    }
+    for (const z of [-long / 3, 0, long / 3]) {   // a hearth under each smoke hole: a ring of stones round the embers
+      for (let q = 0; q < 8; q++) k.geo(M.trim, pick(r, [0x7a746a, 0x8a8478, 0x5e5a52]), BLOB, Math.cos(q * 0.785) * 0.55, 0.05, z + Math.sin(q * 0.785) * 0.55, 0, q, 0, 0.17, 0.12, 0.15);
+      k.cyl(M.glow, 0xff5a14, 0.4, 0.45, 0.04, 0, 0.02, z, 8);
+      for (const an of [0.4, 2.1, 4.2]) k.rod(M.trim, 0x1c140c, 0.09, [Math.cos(an) * 0.42, 0.05, z + Math.sin(an) * 0.42], [Math.cos(an) * 0.05, 0.15, z + Math.sin(an) * 0.05], 5);
+      k.box(M.trim, 0xc8a040, 0.12, 0.45, 0.12, 0.3, H - 0.65, z + 0.9, 'b'); k.box(M.trim, 0xb89038, 0.12, 0.4, 0.12, -0.3, H - 0.6, z - 0.9, 'b');   // maize hung to dry in the smoke
+    }
+    k.su = 5; k.sv = 2;
+    if (sol) {   // its walls, with a way in at each end
+      sol.wall(-R, -long / 2, -R, long / 2); sol.wall(R, -long / 2, R, long / 2);
+      for (const e of [1, -1]) for (const [f0, f1] of [[0, PI / 2 - a], [PI / 2 + a, PI]]) for (let q = 0; q < 3; q++) {
+        const p0 = f0 + ((f1 - f0) * q) / 3, p1 = f0 + ((f1 - f0) * (q + 1)) / 3;
+        sol.wall(-Math.cos(p0) * R, e * (long / 2 + Math.sin(p0) * R), -Math.cos(p1) * R, e * (long / 2 + Math.sin(p1) * R));
+      }
+    }
     for (let z = -long / 2; z <= long / 2 + 0.01; z += long / 6) k.geo(M.trim, sap, new THREE.TorusGeometry(R + 0.04, 0.05, 4, 10, PI), 0, 0, z, 0, 0, 0, 1, H / R, 1);
     for (const z of [-long / 3, 0, long / 3]) k.cyl(M.trim, 0x0c0806, 0.4, 0.45, 0.06, 0, H - 0.02, z, 8);
     for (const a of [-1.15, -0.6, 0.6, 1.15]) k.rod(M.trim, sap, 0.07, [(R + 0.05) * Math.sin(a), (H + 0.05) * Math.cos(a), -long / 2], [(R + 0.05) * Math.sin(a), (H + 0.05) * Math.cos(a), long / 2], 5);      // poles lashed along the outside hold the bark down
@@ -63,16 +93,20 @@ function wigwam(k, r, s = 1, long = 0) {
     for (const y of [0.9 * s, 1.75 * s]) k.geo(M.trim, sap, new THREE.TorusGeometry(R * Math.sqrt(1 - (y / H) ** 2) + 0.03, 0.04, 4, 16), 0, y, 0, PI / 2);
   }
   k.su = k.sv = 1;
-  // the doorway faces +z
-  k.geo(M.trim, 0x120c08, new THREE.CircleGeometry(0.62, 8, 0, PI), 0, 0.85, zd * 0.955, -0.33); k.quad(M.trim, 0x120c08, [-0.62, 0, zd + 0.01], [0.62, 0, zd + 0.01], [0.62, 0.86, zd * 0.955], [-0.62, 0.86, zd * 0.955]);
-  k.sheet(M.trim, 0x9a8464, [0.62, 0, zd + 0.03], [1.25, 0.05, zd - 0.1], [1.05, 1.3, zd - 0.35], [0.62, 1.4, zd - 0.12]);
-  for (const x of [-0.72, 0.72]) k.rod(M.trim, sap, 0.07, [x, 0, zd + 0.02], [x * 0.9, 1.5, zd * 0.93], 5);
+  // the doorway faces +z (a longhouse's two are open; a wigwam's is drawn, and the hut is solid)
+  if (!long) { k.geo(M.trim, 0x120c08, new THREE.CircleGeometry(0.62, 8, 0, PI), 0, 0.85, zd * 0.955, -0.33); k.quad(M.trim, 0x120c08, [-0.62, 0, zd + 0.01], [0.62, 0, zd + 0.01], [0.62, 0.86, zd * 0.955], [-0.62, 0.86, zd * 0.955]); if (sol) sol.wall(0, 0, 0, 0, R); }
+  const dw = long ? 0.95 : 0.62;
+  k.sheet(M.trim, 0x9a8464, [dw, 0, zd + 0.03], [dw + 0.63, 0.05, zd - 0.1], [dw + 0.43, 1.3, zd - 0.35], [dw, 1.4, zd - 0.12]);
+  for (const e of long ? [1, -1] : [1]) for (const x of [-dw - 0.1, dw + 0.1]) k.rod(M.trim, sap, 0.07, [x, 0, e * (zd + 0.02)], [x * 0.9, long ? 2 : 1.5, e * zd * (long ? 0.97 : 0.93)], 5);
 }
 /** A Lenape village, c. 950–1640: wigwams and a longhouse round a hearth, drying racks, a field of maize, dugout canoes. */
 export function lenapeVillage(r, lift) {
-  const k = new Kit(r, lift), face = (x, z) => Math.atan2(-x, -z);
-  for (const [x, z, s] of [[-9, -6, 1], [-10.5, 5, 1.1], [8, -8, 0.9], [10, 4.5, 1], [-1, 10.5, 1]]) k.on(x, z, face(x, z), () => wigwam(k, r, s));
-  k.on(1, -15, PI / 2, () => wigwam(k, r, 1.1, 10));
+  const k = new Kit(r, lift), sol = new Solid(), face = (x, z) => Math.atan2(-x, -z);
+  for (const [x, z, s] of [[-9, -6, 1], [-10.5, 5, 1.1], [8, -8, 0.9], [10, 4.5, 1], [-1, 10.5, 1]]) k.on(x, z, face(x, z), () => sol.at(x, z, face(x, z), () => wigwam(k, r, s, 0, sol)));
+  // the longhouse lies along the slope's contour, so both its doorways open at ground level instead of one being buried in the hill
+  const L = lift || (() => 0), lay = (a) => Math.abs(L(1 + Math.sin(a) * 8, -15 + Math.cos(a) * 8) - L(1 - Math.sin(a) * 8, -15 - Math.cos(a) * 8));
+  let ly = PI / 2; for (let a = 0; a < PI; a += PI / 24) if (lay(a) < lay(ly) - 0.05) ly = a;
+  k.on(1, -15, ly, () => sol.at(1, -15, ly, () => wigwam(k, r, 1.1, 10, sol)));
   for (const [x, z, ry] of [[-15, -1, 0.4], [14, -2, -0.3]]) k.on(x, z, ry, () => {   // fish and hides drying
     for (const a of [-1.5, 1.5]) { k.rod(M.trim, 0x4a3826, 0.07, [a, 0, -0.3], [a, 1.9, 0], 5); k.rod(M.trim, 0x4a3826, 0.07, [a, 0, 0.3], [a, 1.9, 0], 5); } k.rod(M.trim, 0x4a3826, 0.06, [-1.8, 1.85, 0], [1.8, 1.85, 0], 5);
     for (let i = 0; i < 7; i++) k.sheet(M.trim, i % 3 ? 0xb8a890 : 0x8a6a4a, [-1.3 + i * 0.4, 1.2, 0], [-1.1 + i * 0.4, 1.2, 0], [-1.12 + i * 0.4, 1.83, 0], [-1.28 + i * 0.4, 1.83, 0]);
@@ -84,7 +118,8 @@ export function lenapeVillage(r, lift) {
   for (const [x, z, ry] of [[-17, -8, 0.5], [-18.5, -5.5, 0.35]]) k.on(x, z, ry, () => { k.geo(M.trim, 0x5a4026, BOWL, 0, 0.42, 0, 0, 0, 0, 2.7, 0.42, 0.42); k.geo(M.trim, 0x3a2816, BOWL, 0, 0.42, 0, 0, 0, 0, -2.55, 0.34, 0.34); });
   k.on(3.5, 3, 0, () => { k.lathe(M.trim, 0x8a5a3c, [[0.12, 0], [0.26, 0.2], [0.2, 0.42], [0.24, 0.5]], 0, 0, 0, 8); k.lathe(M.trim, 0x6a4a34, [[0.1, 0], [0.2, 0.15], [0.16, 0.3]], 0.6, 0, 0.2, 8); k.cyl(M.trim, WOOD, 0.2, 0.24, 0.6, -0.7, 0, 0.3, 8); k.rod(M.trim, 0x7a6248, 0.07, [-0.7, 0.5, 0.3], [-0.55, 1.5, 0.35], 5); });
   const spots = Array.from({ length: 7 }, () => { const a = r() * 6.28, d = 2.5 + r() * 5; return [Math.cos(a) * d, Math.sin(a) * d]; });
-  return withFire(group(k, figures(r, spots, [0x8a6a4a, 0x9a7a52, 0x6a4a34], lift)));
+  const g = withFire(group(k, figures(r, spots, [0x8a6a4a, 0x9a7a52, 0x6a4a34], lift))); g.userData.solid = sol;
+  return g;
 }
 
 /** A plain gabled house (ridge along x) with real openings, for the buildings inside the fort. */
@@ -92,35 +127,72 @@ function cottage(k, r, F, w, d, h, rise, roof, tint, o = {}) {
   const lit = () => (r() < 0.4 ? CANDLE : DARK);
   around(k, w, d, 0, 0, 0, (fw, i) => {
     const holes = []; const n = Math.max(1, Math.round(fw / 3.2));
-    for (let f = 0; f * 2.9 + 2.6 < h; f++) for (let q = 0; q < n; q++) { const x = (q - (n - 1) / 2) * (fw / n); if (i === 0 && f === 0 && q === Math.floor(n / 2)) holes.push({ x, y: 0.15, w: 1.1, h: 2.1, door: 1 }); else if (i !== 2 || q % 2 === 0) holes.push({ x, y: f * 2.9 + 1, w: o.ww || 0.85, h: o.wh || 1.3 }); }
+    for (let f = 0; f * 2.9 + 2.6 < h; f++) for (let q = 0; q < n; q++) { const x = (q - (n - 1) / 2) * (fw / n); if (i === 0 && f === 0 && q === Math.floor(n / 2)) holes.push({ x, y: 0.15, w: o.dw || 1.1, h: o.dh || 2.1, door: 1 }); else if (i !== 2 || q % 2 === 0) holes.push({ x, y: f * 2.9 + 1, w: o.ww || 0.85, h: o.wh || 1.3 }); }
     pierced(k, F, -fw / 2, fw / 2, 0, h, holes, tint);
-    for (const q of holes) { if (q.door) k.quad(M.trim, o.paint || 0x3a2a1c, [q.x - q.w / 2, q.y, -0.12], [q.x + q.w / 2, q.y, -0.12], [q.x + q.w / 2, q.y + q.h, -0.12], [q.x - q.w / 2, q.y + q.h, -0.12]); else { glaze(k, q.x, q.y, q.w, q.h, -0.12, lit(), 2, 3, 0xe2dac4, 0.05, 0.03); k.box(M.trim, 0xbdb5a2, q.w + 0.2, 0.08, 0.12, q.x, q.y - 0.08, 0.03, 'k'); } }
+    for (const q of holes) { if (q.door && o.open) continue; if (q.door) k.quad(M.trim, o.paint || 0x3a2a1c, [q.x - q.w / 2, q.y, -0.12], [q.x + q.w / 2, q.y, -0.12], [q.x + q.w / 2, q.y + q.h, -0.12], [q.x - q.w / 2, q.y + q.h, -0.12]); else { glaze(k, q.x, q.y, q.w, q.h, -0.12, lit(), 2, 3, 0xe2dac4, 0.05, 0.03); k.box(M.trim, 0xbdb5a2, q.w + 0.2, 0.08, 0.12, q.x, q.y - 0.08, 0.03, 'k'); } }
   });
   const a = w / 2 + 0.25, z = d / 2 + 0.3, he = h - (0.3 * rise) / (d / 2), rc = lin(o.roof || 0xb5532f);
   k.quad(roof, rc, [-a, he, z], [a, he, z], [a, h + rise, 0], [-a, h + rise, 0]); k.quad(roof, rc, [a, he, -z], [-a, he, -z], [-a, h + rise, 0], [a, h + rise, 0]);
   for (const s of [-1, 1]) k.quad(F.side, tint, ...(s > 0 ? [[w / 2, h, d / 2], [w / 2, h, -d / 2], [w / 2, h + rise, 0]] : [[-w / 2, h, -d / 2], [-w / 2, h, d / 2], [-w / 2, h + rise, 0]]));
   k.box(F.side, tint, 0.7, 1.6, 0.7, w * 0.3, h + rise - 0.6, 0, 'b'); k.box(M.trim, 0x77705f, w + 0.1, 1.5, d + 0.1, 0, -1.5, 0, 'tb');
+  if (o.open) room(k, w, d, h, o.dw, o.dh, o.open);
+}
+/** The inside of a w × d room whose door (dw × dh) is in the middle of its +z wall: floor, plastered walls, a beamed ceiling at h. */
+function room(k, w, d, h, dw, dh, { wall = 0xd8d0bc, floor = 0x6a5038, beam = 0x4a3626 } = {}) {
+  const a = w / 2 - 0.2, b = d / 2 - 0.2, x = dw / 2;
+  k.quad(M.trim, wall, [-a, 0, -b], [a, 0, -b], [a, h, -b], [-a, h, -b]); k.quad(M.trim, wall, [-a, 0, b], [-a, 0, -b], [-a, h, -b], [-a, h, b]); k.quad(M.trim, wall, [a, 0, -b], [a, 0, b], [a, h, b], [a, h, -b]);
+  k.quad(M.trim, wall, [-x, 0, b], [-a, 0, b], [-a, h, b], [-x, h, b]); k.quad(M.trim, wall, [a, 0, b], [x, 0, b], [x, h, b], [a, h, b]); k.quad(M.trim, wall, [x, dh + 0.15, b], [-x, dh + 0.15, b], [-x, h, b], [x, h, b]);
+  k.quad(M.trim, wall, [-x, 0.15, b + 0.2], [-x, 0.15, b], [-x, dh + 0.15, b], [-x, dh + 0.15, b + 0.2]); k.quad(M.trim, wall, [x, 0.15, b], [x, 0.15, b + 0.2], [x, dh + 0.15, b + 0.2], [x, dh + 0.15, b]);   // the door's reveals
+  k.quad(M.trim, floor, [-a, 0.15, b + 0.2], [a, 0.15, b + 0.2], [a, 0.15, -b], [-a, 0.15, -b]); k.quad(M.trim, beam, [-a, h, -b], [a, h, -b], [a, h, b], [-a, h, b]);
+  for (let z = -b + 0.6; z < b; z += 1.2) k.box(M.trim, beam, 2 * a, 0.22, 0.2, 0, h - 0.22, z, 't');
 }
 /** Fort Amsterdam, 1626–1790: a square earthwork with four pointed bastions faced in stone, holding barracks, the governor's house and a church. */
 export function fort(r, lift) {
   const k = new Kit(r, lift), S = 16, G = facadeOf('granite'), B = facadeOf('hollandbrick'), st = [0.86, 0.8, 0.7], sod = 0x64803f, earth = 0x7c6a4c, L = lift || (() => 0);
   const C = [[S - 7, S], [S - 7, S + 2.6], [S + 5.4, S + 5.4], [S + 2.6, S - 7], [S, S - 7]], out = [];
   for (let q = 0, P = C; q < 4; q++) { out.push(...P); P = P.map(([x, z]) => [z, -x]); }
+  const GW = 2.75, gi = out.findIndex(([x, z]) => x === S - 7 && z === -S) + 1;   // the gate: cut the north curtain where the passage goes through
+  out.splice(gi, 0, [GW, -S], [-GW, -S]);
   // rampart section, measured inwards from the foot of the scarp: [inset, height]
   const sec = [[0, 0], [0.9, 3.6], [0.9, 4.4], [1.7, 4.4], [1.7, 3.4], [4.2, 3.4], [6.3, 0]], cols = [null, earth, sod, earth, earth, sod], n = out.length;
   const nrm = out.map((p, i) => { const q = out[(i + 1) % n], l = Math.hypot(q[0] - p[0], q[1] - p[1]); return [-(q[1] - p[1]) / l, (q[0] - p[0]) / l]; });
   const ring = sec.map(([d, y]) => out.map((p, i) => { const a = nrm[(i + n - 1) % n], b = nrm[i], m = Math.max(0.45, 1 + a[0] * b[0] + a[1] * b[1]), x = p[0] - ((a[0] + b[0]) / m) * d, z = p[1] - ((a[1] + b[1]) / m) * d; return [x, y, z, undefined, undefined, L(x, z)]; }));
-  for (let i = 0; i < n; i++) for (let s = 0; s + 1 < sec.length; s++) { const j = (i + 1) % n; k.quad(s ? M.earth() : G.side, s ? cols[s] : st, ring[s][j], ring[s][i], ring[s + 1][i], ring[s + 1][j]); }
+  for (let i = 0; i < n; i++) for (let s = 0; s + 1 < sec.length; s++) { const j = (i + 1) % n; if (i !== gi) k.quad(s ? M.earth() : G.side, s ? cols[s] : st, ring[s][i], ring[s][j], ring[s + 1][j], ring[s + 1][i]); }
+  // what you bump into: the rampart (a wall along the middle of its section), the gate piers, the houses
+  const sol = new Solid(), mid = 3.15;
+  for (let i = 0; i < n; i++) {
+    if (i === gi) continue;
+    const p = out[i], q = out[(i + 1) % n], [nx, nz] = nrm[i], A = [p[0] - nx * mid, p[1] - nz * mid], Bq = [q[0] - nx * mid, q[1] - nz * mid];
+    if (i === gi - 1) Bq[0] = GW + mid; if (i === gi + 1) A[0] = -GW - mid;     // stop short of the passage
+    sol.wall(A[0], A[1], Bq[0], Bq[1], mid);
+  }
+  for (const s of [-1, 1]) sol.wall(s * 2.15, -S - 1.25, s * 2.15, -S + 6.25, 0.6);
   // gatehouse through the north curtain
-  k.on(0, -S + 2.5, PI, () => { k.box(G.side, st, 5.5, 5.2, 7.5, 0, 0, 0, 'b'); k.box(M.trim, 0xbdb5a2, 5.9, 0.3, 7.9, 0, 5.2, 0); for (const z of [3.76, -3.76]) { k.quad(M.trim, 0x2a2018, ...(z > 0 ? [[-1.3, 0, z], [1.3, 0, z], [1.3, 2.6, z], [-1.3, 2.6, z]] : [[1.3, 0, z], [-1.3, 0, z], [-1.3, 2.6, z], [1.3, 2.6, z]])); k.geo(M.trim, 0x2a2018, new THREE.CircleGeometry(1.3, 10, 0, PI), 0, 2.6, z, 0, z > 0 ? 0 : PI, 0); } });
+  k.on(0, -S + 2.5, PI, () => {   // an open passage 3 m wide between two stone piers, its gates folded back
+    for (const s of [-1, 1]) { k.box(G.side, st, 1.25, 5.2, 7.5, s * 2.125, 0, 0, 'b'); k.box(M.plank(), 0x5a4630, 0.1, 3.1, 1.45, s * 1.44, 0, 3.0, 'b'); }
+    k.box(G.side, st, 3, 1.9, 7.5, 0, 3.3, 0); k.box(M.trim, 0xbdb5a2, 5.9, 0.3, 7.9, 0, 5.2, 0);
+    for (const z of [3.8, -3.8]) k.box(M.trim, 0xbdb5a2, 3.5, 0.35, 0.1, 0, 3.1, z);
+  });
   // inside: barracks along the west wall, the church of St Nicholas, the governor's house
   k.on(-5.5, 1, PI / 2, () => cottage(k, r, B, 11, 4.4, 5.2, 2.3, M.tile(), WHITE));
-  k.on(5.5, 3.5, -PI / 2, () => { cottage(k, r, B, 9, 5, 5, 3.6, M.tile(), [1.15, 1.1, 1], { wh: 2.2, ww: 0.8, roof: 0x8a4a34 }); k.box(B.side, [1.15, 1.1, 1], 2.2, 9, 2.2, -4.2, 0, 0, 'b'); k.geo(M.shingle(), 0x5a4a40, new THREE.ConeGeometry(1.8, 3.6, 4), -4.2, 10.8, 0, 0, PI / 4, 0); k.cyl(M.trim, IRON, 0.03, 0.03, 1.4, -4.2, 12.4, 0, 4); });
+  sol.at(-5.5, 1, PI / 2, () => sol.room(11, 4.4)); sol.at(3.5, -6.5, 0, () => sol.room(6.5, 4.4));
+  // the church of St Nicholas stands open: benches facing the pulpit, a brass chandelier, candles
+  sol.at(5.5, 3.5, -PI / 2, () => { sol.room(9, 5, 1.8); sol.pad(0, 0.1, 4.3, 2.4, 0.15); sol.wall(0, -1.75, 0, -1.75, 0.6); sol.wall(-4.2, 0, -4.2, 0, 1.1); for (const sd of [-1, 1]) for (const z of [-0.9, 0.1, 1.1]) sol.wall(sd * 1.3, z, sd * 3, z, 0.25); });
+  k.on(5.5, 3.5, -PI / 2, () => {
+    cottage(k, r, B, 9, 5, 5, 3.6, M.tile(), [1.15, 1.1, 1], { wh: 2.2, ww: 0.8, roof: 0x8a4a34, dw: 1.8, dh: 2.6, open: {} });
+    const oak = 0x4a3020;
+    k.box(M.trim, oak, 1.1, 1.3, 0.9, 0, 0.05, -1.75); k.box(M.trim, oak, 0.9, 2.4, 0.1, 0, 0.05, -2.25, 'k'); k.box(M.trim, oak, 1.5, 0.12, 1.1, 0, 3.1, -1.75);   // pulpit and sounding board
+    k.box(M.trim, 0xe8e0c8, 0.5, 0.06, 0.4, 0, 1.35, -1.6); for (let q = 0; q < 4; q++) k.box(M.trim, oak, 0.25, 0.8, 0.25, (q - 1.5) * 0.3, 0.05, -1.25);
+    for (const sd of [-1, 1]) for (const z of [-0.9, 0.1, 1.1]) { k.box(M.trim, oak, 1.7, 0.08, 0.38, sd * 2.15, 0.45, z); k.box(M.trim, oak, 1.7, 0.55, 0.06, sd * 2.15, 0.5, z + 0.2); for (const e of [-0.8, 0.8]) k.box(M.trim, oak, 0.06, 0.45, 0.36, sd * 2.15 + e, 0.05, z, 'b'); }
+    k.rod(M.trim, IRON, 0.02, [0, 5, 0], [0, 3.6, 0], 4); k.cyl(M.metal, 0xc8a040, 0.08, 0.12, 0.35, 0, 3.3, 0, 8);
+    for (let q = 0; q < 6; q++) { const an = (q * PI) / 3, x = Math.cos(an) * 0.55, z = Math.sin(an) * 0.55; k.rod(M.metal, 0xc8a040, 0.03, [0, 3.4, 0], [x, 3.45, z], 4); k.box(M.trim, 0xf0e8d0, 0.04, 0.16, 0.04, x, 3.47, z, 'b'); k.box(M.glow, 0xffc060, 0.035, 0.05, 0.035, x, 3.63, z, 'b'); }
+    for (const x of [-3.6, 3.6]) { k.box(M.trim, 0xf0e8d0, 0.04, 0.16, 0.04, x, 1.9, -2.2, 'b'); k.box(M.glow, 0xffc060, 0.035, 0.05, 0.035, x, 2.06, -2.2, 'b'); } k.box(B.side, [1.15, 1.1, 1], 2.2, 9, 2.2, -4.2, 0, 0, 'b'); k.geo(M.shingle(), 0x5a4a40, new THREE.ConeGeometry(1.8, 3.6, 4), -4.2, 10.8, 0, 0, PI / 4, 0); k.cyl(M.trim, IRON, 0.03, 0.03, 1.4, -4.2, 12.4, 0, 4); });
   k.on(3.5, -6.5, 0, () => cottage(k, r, B, 6.5, 4.4, 3.2, 2.1, M.tile(), [0.85, 0.7, 0.62]));
   // the flag of the Dutch Republic on the south-east bastion, guns on the others
   k.on(S + 1.6, S + 1.6, 0, () => { k.cyl(M.trim, 0x5a4a3a, 0.06, 0.1, 13, 0, 3.4, 0, 6); [0xf08020, 0xf4f4f0, 0x2040a0].forEach((c, i) => k.sheet(M.trim, c, [0.08, 15.4 - i * 0.6, 0], [3.2, 15.3 - i * 0.6, 0.25], [3.2, 15.9 - i * 0.6, 0.25], [0.08, 16 - i * 0.6, 0])); });
   for (const [x, z, ry] of [[-S - 1.4, S + 1.4, -PI / 4], [-S - 1.4, -S - 1.4, (-3 * PI) / 4], [S + 1.4, -S - 1.4, (3 * PI) / 4]]) k.on(x, z, ry, () => { k.rod(M.trim, 0x1c1c1c, 0.3, [0, 4, -0.9], [0, 4.25, 1.3], 8); k.box(M.trim, WOOD, 0.7, 0.4, 1.5, 0, 3.4, 0); for (const s of [-1, 1]) k.geo(M.trim, WOOD, new THREE.CylinderGeometry(0.4, 0.4, 0.1, 10), s * 0.42, 3.8, 0.2, 0, 0, PI / 2); });
-  return k.build();
+  const g = k.build(); g.userData.solid = sol;
+  return g;
 }
 
 /** A Dutch smock mill, 1628–1740: an eight-sided weatherboarded tower on a stone base, a turning cap, four lattice sails half-clothed in canvas. */

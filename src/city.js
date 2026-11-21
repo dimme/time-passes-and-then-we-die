@@ -9,7 +9,7 @@ import { yearToU } from './timeline.js';
 import { LAND } from './world.js';
 import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js';
 import { Scatter } from './flora.js';
-import { Kit, M, NEON, setNight, conform } from './city-kit.js';
+import { Kit, M, NEON, setNight, conform, pushOut, padTop } from './city-kit.js';
 import { TYPES } from './city-types.js';
 import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js';
 import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js';
@@ -47,7 +47,7 @@ export function buildCity(world, scene) {
   const props = [];   // everything else with a lifespan
   /** make() → { obj, fw, fd }; place(b) → [x, z] once its footprint is known */
   const addOcc = (make, place, ry, y0, y1) => occ.push({ make, place, ry, u0: Y(y0), u1: Y(y1), in: false, obj: null, x: 0, z: 0, fw: 0, fd: 0, seen: 0 });
-  const addProp = (obj, x, z, y0, y1, ground = true) => { obj.position.set(x, ground ? LAND : 0, z); props.push({ obj, x, z, u0: Y(y0), u1: Y(y1), ground, in: false, tick: obj.userData.tick }); return obj; };
+  const addProp = (obj, x, z, y0, y1, ground = true) => { obj.position.set(x, ground ? LAND : 0, z); props.push({ obj, x, z, u0: Y(y0), u1: Y(y1), ground, in: false, tick: obj.userData.tick, solid: obj.userData.solid }); return obj; };
   /** the land at a point relative to (X, Z), for things that stood on the island's original hills */
   const liftAt = (X, Z) => (x, z) => world.heightAt(X + x, Z + z) - world.heightAt(X, Z);
 
@@ -137,6 +137,7 @@ export function buildCity(world, scene) {
   }
   const walks = new THREE.Group(); walks.add(flatMesh(walk, new THREE.MeshStandardMaterial({ color: 0x9a9892, roughness: 0.88, map: paving.map, normalMap: paving.normalMap })), curbs.build());
   addProp(walks, 0, 0, 1811, 2950);
+  const uWalk = [Y(1811), Y(2950)], uFoot = [Y(2172), Y(2950)];
 
   // street furniture, instanced: gas lamps, then the bishop's crook, then the cobra head; signals, hydrants, subway entrances
   const furniture = [], scatter = (parts, items) => { const s = new Scatter(world, parts, items); scene.add(...s.meshes); furniture.push(s); };
@@ -188,16 +189,18 @@ export function buildCity(world, scene) {
 
   /** Build a building the first time it is needed, and set it on its lot. */
   const realise = (o) => {
-    const b = o.make(); o.obj = b.obj; o.fw = b.fw; o.fd = b.fd; o.noGrow = b.noGrow; [o.x, o.z] = o.place(o);
+    const b = o.make(); o.obj = b.obj; o.fw = b.fw; o.fd = b.fd; o.noGrow = b.noGrow; o.pads = b.pads && b.pads.length ? b.pads : null; o.body = b.body; [o.x, o.z] = o.place(o);
     o.obj.rotation.y = o.ry; o.obj.position.set(o.x, world.heightAt(o.x, o.z) - 0.05, o.z); built++;
   };
   const free = () => {
     const idle = occ.filter((o) => o.obj && !o.in).sort((a, b) => a.seen - b.seen);
     for (const o of idle.slice(0, built - KEEP)) { o.obj.traverse((m) => m.geometry && m.geometry.dispose()); o.obj = null; built--; }
   };
-  let lastV = -1, lastU = -9, built = 0, stamp = 0, last = 0, wait = [];
+  let lastV = -1, lastU = -9, built = 0, stamp = 0, last = 0, wait = [], uNow = 0;
+  const ground = (x, z) => world.heightAt(x, z);
   return {
     update(u, t) {
+      uNow = u;
       world.deck = u >= uBridge[0] && u < uBridge[1] ? deck : null;   // while it stands, the bridge can be walked and driven over
       const moved = world.shapeVersion !== lastV, now = performance.now(), frame = now - last; lastV = world.shapeVersion; last = now;
       if (u !== lastU || moved) {
@@ -231,13 +234,38 @@ export function buildCity(world, scene) {
       for (const p of props) if (p.in && p.tick) p.tick(t);
       setNight(world.night);      // windows and street lamps come on as the light fails
     },
-    /** Push a point out of any building standing right now. */
+    /** Push a point out of any building standing right now, and out of the walls of the fort, the longhouse, the church. */
     collide(pos, rad = 0.7) {
       for (const o of occ) {
         if (!o.in) continue;
+        if (o.body) {   // a house set back behind its stoop: only the house itself is solid (in the lot's own frame)
+          const co = Math.cos(o.ry), si = Math.sin(o.ry), ex = pos.x - o.x, ez = pos.z - o.z, [bx, bz, hx, hz] = o.body;
+          const lx = ex * co - ez * si - bx, lz = ex * si + ez * co - bz, px = hx + rad - Math.abs(lx), pz = hz + rad - Math.abs(lz);
+          if (px > 0 && pz > 0) { const mx = px < pz ? (lx < 0 ? -px : px) : 0, mz = px < pz ? 0 : (lz < 0 ? -pz : pz); pos.x += mx * co + mz * si; pos.z += -mx * si + mz * co; }
+          continue;
+        }
         const dx = pos.x - o.x, dz = pos.z - o.z, px = o.fw / 2 + rad - Math.abs(dx), pz = o.fd / 2 + rad - Math.abs(dz);
         if (px > 0 && pz > 0) { if (px < pz) pos.x += (dx < 0 ? -1 : 1) * px; else pos.z += (dz < 0 ? -1 : 1) * pz; }
       }
+      for (const p of props) if (p.in && p.solid && Math.abs(pos.x - p.x) < 60 && Math.abs(pos.z - p.z) < 60) pushOut(p.solid.walls, p.x, p.z, pos, rad * 0.5);
+    },
+    /** Height of whatever walkable surface is under (x, z): stoops, sidewalks, the megacity's footbridges, platforms inside (−Infinity where none). */
+    floorAt(x, z) {
+      let h = -Infinity;
+      for (const o of occ) if (o.in && o.pads && Math.abs(x - o.x) < 20 && Math.abs(z - o.z) < 20) {
+        const co = Math.cos(o.ry), si = Math.sin(o.ry), ex = x - o.x, ez = z - o.z, y0 = o.obj.position.y, sy = o.obj.scale.y;
+        h = Math.max(h, padTop(o.pads, 0, 0, ex * co - ez * si, ex * si + ez * co, () => y0 / sy) * sy);
+      }
+      for (const p of props) if (p.in && p.solid && p.solid.pads.length && Math.abs(x - p.x) < 60 && Math.abs(z - p.z) < 60) h = Math.max(h, padTop(p.solid.pads, p.x, p.z, x, z, ground));
+      if (uNow >= uWalk[0] && uNow < uWalk[1]) {
+        const y = walks.position.y, c = Math.round((x + 150) / 100), row = Math.floor(z / 60);
+        if (c >= 0 && c < 4 && row >= -8 && row < 8 && Math.abs(x + 150 - c * 100) <= 43.35 && Math.abs(z - row * 60 - 30) <= 26.35) h = Math.max(h, y + 0.17);   // sidewalks
+        if (uNow >= uFoot[0] && uNow < uFoot[1]) {   // footbridges over the flooded streets
+          const ax = Math.max(-2, Math.min(2, Math.round(x / 100))) * 100, kz = Math.max(-8, Math.min(8, Math.round(z / 60))) * 60, dx = x - ax, dz = z - kz;
+          if ((Math.abs(Math.abs(dx) - 8.25) <= 1.75 && Math.abs(dz) <= 3.6) || (Math.abs(dx) <= 6.6 && Math.abs(Math.abs(dz) - 4.75) <= 1.25)) h = Math.max(h, y + 0.19);
+        }
+      }
+      return h;
     },
     count: () => group.children.length,
   };

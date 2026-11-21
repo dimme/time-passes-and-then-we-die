@@ -383,3 +383,53 @@ export class Kit {
     return g;
   }
 }
+
+/** A copy of a geometry turned inside out, for the inner face of a shell you can walk into. */
+export function inside(g) {
+  const f = g.index ? g.toNonIndexed() : g.clone(), p = f.attributes.position, n = f.attributes.normal, u = f.attributes.uv;
+  for (let i = 0; i < p.count; i += 3) for (const a of [p, n, u]) if (a) { const s = a.itemSize; for (let c = 0; c < s; c++) { const t = a.array[(i + 1) * s + c]; a.array[(i + 1) * s + c] = a.array[(i + 2) * s + c]; a.array[(i + 2) * s + c] = t; } }
+  for (let i = 0; i < n.array.length; i++) n.array[i] = -n.array[i];
+  return f;
+}
+
+/**
+ * What the visitor bumps into and stands on, for structures that can be walked into or onto. Laid out in the same local
+ * frames as a Kit (at() turns the same way), so the numbers can be copied from the drawing code.
+ *   wall(x0, z0, x1, z1, r): a wall r thick either side of a line (a capsule); a point (x0 = x1, z0 = z1) is a round post or hut
+ *   pad(x, z, hx, hz, top): a walkable top, hx × hz either side of (x, z), at height top above the ground there
+ */
+export class Solid {
+  constructor() { this.walls = []; this.pads = []; this.co = 1; this.si = 0; this.ox = 0; this.oz = 0; }
+  at(x, z, ry, fn) {
+    const s = [this.co, this.si, this.ox, this.oz], c = Math.cos(ry), sn = Math.sin(ry);
+    this.ox += x * s[0] + z * s[1]; this.oz += -x * s[1] + z * s[0]; this.co = s[0] * c - s[1] * sn; this.si = s[1] * c + s[0] * sn;
+    fn(); [this.co, this.si, this.ox, this.oz] = s;
+  }
+  p(x, z) { return [x * this.co + z * this.si + this.ox, -x * this.si + z * this.co + this.oz]; }
+  wall(x0, z0, x1, z1, r = 0.15) { this.walls.push([...this.p(x0, z0), ...this.p(x1, z1), r]); }
+  pad(x, z, hx, hz, top) { const [cx, cz] = this.p(x, z); this.pads.push([cx, cz, hx, hz, top, this.co, this.si]); }
+  /** a closed rectangular building w × d centred here, its door (if any) a gap `door` wide in the middle of the +z wall */
+  room(w, d, door = 0, r = 0.15) {
+    const a = w / 2, b = d / 2; this.wall(-a, -b, a, -b, r); this.wall(-a, -b, -a, b, r); this.wall(a, -b, a, b, r);
+    if (door) { this.wall(-a, b, -door / 2 - r, b, r); this.wall(door / 2 + r, b, a, b, r); } else this.wall(-a, b, a, b, r);
+  }
+  /** treads of a flight of steps as built by steps() in city-types: n treads rising to `rise` against the wall at z0, run deep */
+  steps(x, z0, w, rise, run, n) { for (let i = 0; i < n; i++) this.pad(x, z0 + (run * (i + 0.5)) / n, w / 2, run / n / 2, (rise * (n - i)) / (n + 1)); }
+}
+/** Push pos out of a list of capsule walls given in a frame whose origin is (X, Z). */
+export function pushOut(walls, X, Z, pos, rad) {
+  for (const [x0, z0, x1, z1, r] of walls) {
+    const ax = X + x0, az = Z + z0, ex = x1 - x0, ez = z1 - z0, L = ex * ex + ez * ez;
+    const t = L ? Math.max(0, Math.min(1, ((pos.x - ax) * ex + (pos.z - az) * ez) / L)) : 0, dx = pos.x - (ax + ex * t), dz = pos.z - (az + ez * t), d = Math.hypot(dx, dz), m = r + rad;
+    if (d < m && d > 1e-6) { pos.x += (dx / d) * (m - d); pos.z += (dz / d) * (m - d); }
+  }
+}
+/** Highest pad top under (x, z) in a frame with origin (X, Z); base(px, pz) gives the ground a pad's top is measured from. */
+export function padTop(pads, X, Z, x, z, base) {
+  let h = -Infinity;
+  for (const [cx, cz, hx, hz, top, co, si] of pads) {
+    const dx = x - X - cx, dz = z - Z - cz, lx = dx * co - dz * si, lz = dx * si + dz * co;
+    if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) h = Math.max(h, base(X + cx, Z + cz) + top);
+  }
+  return h;
+}

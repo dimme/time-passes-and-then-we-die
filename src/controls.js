@@ -6,6 +6,7 @@ const EYE = 1.7;
 export class Player {
   constructor(camera, canvas, world, city) {
     this.camera = camera; this.world = world; this.collide = (pos) => city.collide(pos);   // replaced when the place changes
+    this.homeFloor = city.floorAt ? (x, z) => city.floorAt(x, z) : null; world.floorAt = this.homeFloor;   // Manhattan's stoops, sidewalks, footbridges and floors
     this.pos = { x: 0, y: 5, z: 2 };
     this.yaw = Math.PI - 0.1; this.pitch = 0.12;
     this.keys = new Set();
