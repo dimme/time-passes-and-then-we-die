@@ -9,7 +9,7 @@ import { species } from './animals.js';
 import { actors } from './people-actors.js';
 import { cartParts } from './vehicles.js';
 import { Bag, vehicleMat } from './vehicles-kit.js';
-import { Kit, Props, Followers, fin, mat4, clipped, pathOf, where, smoke, grove } from './site-medieval-kit.js';
+import { Kit, Props, Followers, fin, mat4, clipped, pathOf, where, smoke, grove, outline } from './site-medieval-kit.js';
 import { Walkers, horse } from './site-medieval-beasts.js';
 import { walls } from './site-medieval-cathedral.js';
 import { trainParts, track } from './site-manchester-train.js';
@@ -27,49 +27,79 @@ const hexA = (h, o, k = 1) => { o[0] += ((h >> 16 & 255) / 255 - o[0]) * k; o[1]
 const eye = { x: 0, z: 0 };
 const LIT = ['lit', 0xffffff, 'tile'], PANE = ['pane', 0x56606a, 'tile'];
 
+const ST = 0xc4bcae, ST2 = 0xb4ac9e, SASH = 0xe2ded2;   // dressed stone, weathered stone, painted sashes
 /** A row of brick houses sharing one roof: local x 0..len, front towards +z. kind: 'georgian' | 'weaver' | 'back' (back-to-backs). */
 function terrace(kit, r, len, { kind = 'back', col = 0xffffff, lit = 0.3, late = false } = {}) {
-  const unit = kind === 'georgian' ? 6.2 : kind === 'weaver' ? 5 : 4, floors = kind === 'back' ? 2 : 3, fh = kind === 'georgian' ? 3.3 : 2.8, d = kind === 'back' ? 8.4 : 9, n = Math.max(1, Math.round(len / unit)), u = len / n, H = floors * fh;
-  const win = (x, y, w, h) => ({ x, y, w, h, arch: 'flat', fill: r() < lit ? LIT : PANE }), door = kind === 'georgian' ? [0x1c2a20, 0x2a1c14, 0x1a1a22] : [0x3a2a1c, 0x2c3a2c, 0x4a3020];
-  walls(kit, 'brick', 0, -d / 2, len, d / 2, 0, H, 0.25, col, (s) => {
-    const o = []; if (s === 'e' || s === 'w') return kind === 'georgian' ? [win(d / 2, fh + 1, 1, 1.7)] : [];
-    for (let i = 0; i < n; i++) {
+  const geo = kind === 'georgian', unit = geo ? 6.2 : kind === 'weaver' ? 5 : 4, floors = kind === 'back' ? 2 : 3, fh = geo ? 3.3 : 2.8, d = kind === 'back' ? 8.4 : 9, n = Math.max(1, Math.round(len / unit)), u = len / n, H = floors * fh, D = 0.25;
+  const win = (x, y, w, h) => ({ x, y, w, h, arch: 'flat', fill: r() < lit ? LIT : PANE }), door = geo ? [0x1c2a20, 0x2a1c14, 0x1a1a22] : [0x3a2a1c, 0x2c3a2c, 0x4a3020];
+  const SILL = ['stone', ST, 0.1, 0.1, 0.07], HEAD = ['stone', ST2, geo ? 0.26 : 0.18, 0.03, 0.08], BARS = ['plank', geo ? SASH : 0xb4ac9c, 2, 2, 0.06, false];
+  walls(kit, 'brick', 0, -d / 2, len, d / 2, 0, H, D, col, (s) => {
+    const o = [];
+    if (s === 'e' || s === 'w') { if (geo) o.push(win(d / 2, fh + 1, 1, 1.7)); }
+    else for (let i = 0; i < n; i++) {
       const x0 = 0.25 + i * u;
-      if (s === 's') o.push({ x: x0 + u * 0.27, y: 0, w: 1, h: kind === 'georgian' ? 2.7 : 2.05, arch: kind === 'georgian' ? 'round' : 'flat', fill: ['plank', door[Math.floor(r() * 3)], 'tile'], back: 0.7 }); else if (kind !== 'back') o.push(win(x0 + u * 0.3, 0.9, 1, 1.5));
-      o.push(win(x0 + u * 0.72, 0.9, kind === 'georgian' ? 1.15 : 1, kind === 'georgian' ? 1.9 : 1.4));
+      if (s === 's') o.push({ x: x0 + u * 0.27, y: 0, w: 1, h: geo ? 2.7 : 2.05, arch: geo ? 'round' : 'flat', fill: ['plank', door[Math.floor(r() * 3)], 'tile'], back: 0.7, door: 1 }); else if (kind !== 'back') o.push(win(x0 + u * 0.3, 0.9, 1, 1.5));
+      o.push(win(x0 + u * 0.72, 0.9, geo ? 1.15 : 1, geo ? 1.9 : 1.4));
       for (let k = 1; k < floors; k++) {
-        if (kind === 'weaver' && k === floors - 1) o.push(win(x0 + u / 2, k * fh + 0.9, u - 1.3, 1.15));   // the long loom-shop window under the eaves
-        else { o.push(win(x0 + u * 0.72, k * fh + 0.85, kind === 'georgian' ? 1.15 : 1, kind === 'georgian' ? 1.9 : 1.35)); if (kind !== 'back') o.push(win(x0 + u * 0.27, k * fh + 0.85, kind === 'georgian' ? 1.15 : 1, kind === 'georgian' ? 1.9 : 1.35)); }
+        if (kind === 'weaver' && k === floors - 1) o.push({ ...win(x0 + u / 2, k * fh + 0.9, u - 1.3, 1.15), loom: 1 });   // the long loom-shop window under the eaves
+        else { o.push(win(x0 + u * 0.72, k * fh + 0.85, geo ? 1.15 : 1, geo ? 1.9 : 1.35)); if (kind !== 'back') o.push(win(x0 + u * 0.27, k * fh + 0.85, geo ? 1.15 : 1, geo ? 1.9 : 1.35)); }
       }
+      if (s === 's' && i % 2 === 1) kit.box('lead', i * u - 0.05, 0, D, i * u + 0.05, H - 0.2, D + 0.1, 0x3a3e42, 'nbt');   // a rainwater pipe between every second pair
+    }
+    for (const h of o) {
+      if (h.door) {
+        kit.trim(h, D, geo ? { head: ['stone', SASH, 0.16, 0.06], jambs: ['stone', SASH, 0.16, 0.06], step: ['stone', ST2, 0.55, 0.2] } : { head: ['stone', ST2, 0.2, 0.03, 0.1], step: ['stone', ST2, 0.4, 0.14] });
+        if (geo) kit.poly('pane', outline(h).slice(2).map(([px, py]) => [h.x + (px - h.x) * 0.86, h.y + h.h - 0.5 + (py - (h.y + h.h - 0.5)) * 0.86, D * 0.7 + 0.03]), 0x56606a);   // the fanlight
+      } else kit.trim(h, D, s === 'n' ? { sill: SILL } : { sill: SILL, head: HEAD, bars: h.loom ? ['plank', 0xb4ac9c, 6, 1, 0.07, false] : BARS });
     }
     return o;
   });
-  kit.gable('slate', 'brick', 0, -d / 2, len, d / 2, H, d * 0.3, { over: 0.25, wcol: col, col: late ? 0xb8b8b8 : 0xffffff });
-  for (let i = 0; i <= n; i++) { const x = Math.min(len - 0.6, Math.max(0.6, i * u)); kit.box('brick', x - 0.5, H + d * 0.12, -0.45, x + 0.5, H + d * 0.3 + 1.2, 0.45, col, 'b'); for (const dx of [-0.25, 0.25]) kit.cyl('tile', x + dx, 0, H + d * 0.3 + 1.2, H + d * 0.3 + 1.65, 0.13, 0.1, 6, 0xd0b0a0); }
+  kit.box('stone', -D - 0.06, H - 0.2, -d / 2 - D - 0.07, len + D + 0.06, H + 0.06, d / 2 + D + 0.07, ST2, 'tb');   // the eaves course
+  kit.gable('slate', 'brick', 0, -d / 2, len, d / 2, H + 0.06, d * 0.3, { over: 0.5, wcol: col, col: late ? 0xb8b8b8 : 0xffffff });
+  const top = H + d * 0.3 + 1.2;
+  for (let i = 0; i <= n; i++) { const x = Math.min(len - 0.6, Math.max(0.6, i * u)); kit.box('brick', x - 0.5, H + d * 0.12, -0.45, x + 0.5, top, 0.45, col, 'b').box('stone', x - 0.58, top - 0.14, -0.53, x + 0.58, top + 0.02, 0.53, ST2, ''); for (const dx of [-0.25, 0.25]) kit.cyl('tile', x + dx, 0, top, top + 0.45, 0.13, 0.1, 6, 0xd0b0a0); }
   kit.solid(0, -d / 2, len, d / 2);
   return { n, u, d };
 }
-/** A cotton mill: seven storeys of brick and regular windows, a stair tower, an engine house and its chimney. Local x 0..len, z ±9. */
+/** A cotton mill: seven storeys of brick and regular windows under a stone cornice, a hoist bay, a stair tower, an engine house and its chimney. Local x 0..len, z ±9. */
 function mill(kit, r, len, { floors = 7, col = 0xffffff, lit = 0.75, tall = 44, chimneys }) {
-  const fh = 3.3, W = 9, H = floors * fh, bays = Math.floor(len / 3.1);
-  walls(kit, 'brick', 0, -W, len, W, 0, H, 0.5, col, (s, l) => {
+  const fh = 3.3, W = 9, H = floors * fh, bays = Math.floor(len / 3.1), D = 0.5, SILL = ['stone', ST, 0.12, 0.13, 0.08], HEAD = ['stone', ST2, 0.24, 0.03, 0.09];
+  let doorX = len / 2;
+  walls(kit, 'brick', 0, -W, len, W, 0, H, D, col, (s, l) => {
     const n = s === 's' || s === 'n' ? bays : 5, o = [];
-    for (let k = 0; k < floors; k++) for (let i = 0; i < n; i++) { if (k === 0 && s === 's' && i === Math.floor(n / 2)) { o.push({ x: (l * (i + 0.5)) / n, y: 0, w: 1.9, h: 2.9, arch: 'round', fill: ['plank', 0x2a2620, 'tile'], back: 0.7 }); continue; } o.push({ x: (l * (i + 0.5)) / n, y: k * fh + 0.95, w: 1.25, h: 1.9, arch: 'flat', fill: r() < lit ? LIT : PANE }); }
+    for (let k = 0; k < floors; k++) for (let i = 0; i < n; i++) {
+      const x = (l * (i + 0.5)) / n; let h;
+      if (k === 0 && s === 's' && i === Math.floor(n / 2)) { h = { x, y: 0, w: 1.9, h: 2.9, arch: 'round', fill: ['plank', 0x2a2620, 'tile'], back: 0.7 }; doorX = x; kit.trim(h, D, { head: ['stone', ST, 0.3, 0.06], jambs: ['stone', ST, 0.24, 0.06], step: ['stone', ST2, 0.5, 0.16] }); o.push(h); continue; }
+      const fill = r() < lit ? LIT : PANE;
+      if (s === 's' && i === 1 && k > 0) {   // the hoist bay: a loading door on every floor under a cat-head beam
+        h = { x, y: k * fh + 0.14, w: 1.6, h: 2.5, arch: 'flat', fill: ['plank', 0x3a3228, 'tile'], back: 0.6 }; kit.trim(h, D, { sill: ['stone', ST2, 0.4, 0.14, 0.12], head: HEAD });
+        if (k === floors - 1) { kit.box('plank', x - 0.11, H - 0.5, D, x + 0.11, H - 0.28, D + 1.5, 0x3a3028, 'n'); kit.poly('slate', [[x - 1.2, H - 0.55, D + 1.75], [x + 1.2, H - 0.55, D + 1.75], [x + 1.2, H, D + 0.2], [x - 1.2, H, D + 0.2]], 0x909090); kit.box('lead', x - 0.015, 3.2, D + 1.3, x + 0.015, H - 0.5, D + 1.33, 0x2a2a2a, 'tb'); }
+      } else { h = { x, y: k * fh + 0.95, w: 1.25, h: 1.9, arch: 'flat', fill }; kit.trim(h, D, { sill: SILL, head: HEAD }); }
+      o.push(h);
+    }
     return o;
   });
-  kit.gable('slate', 'brick', 0, -W, len, W, H, 3.6, { over: 0.2, wcol: col, col: 0xb0b0b0 });
-  kit.box('brick', -5, 0, -3, 0, H + 3.5, 3, col); kit.box('lead', -4.6, H + 3.5, -2.6, -0.4, H + 5.2, 2.6, 0x70767c, 'b');   // stair tower with the water tank on top
+  // stone plinth (broken at the door) and the eaves cornice
+  kit.box('stone', -D - 0.07, 0, -W - D - 0.07, len + D + 0.07, 0.8, W + D, ST2, 'tbs').box('stone', -D - 0.07, 0, W, doorX - 1.25, 0.8, W + D + 0.07, ST2, 'bn').box('stone', doorX + 1.25, 0, W, len + D + 0.07, 0.8, W + D + 0.07, ST2, 'bn');
+  kit.box('stone', -D - 0.2, H - 0.42, -W - D - 0.2, len + D + 0.2, H - 0.1, W + D + 0.2, ST, 't').box('brick', -D - 0.02, H - 0.1, -W - D - 0.02, len + D + 0.02, H + 0.2, W + D + 0.02, col, 'tb');
+  kit.gable('slate', 'brick', 0, -W, len, W, H + 0.2, 3.6, { over: 0.9, wcol: col, col: 0xb0b0b0, barge: ['stone', ST2, 0.3] });
+  // stair tower with the water tank on top
+  walls(kit, 'brick', -5, -3, 0, 3, 0, H + 3.5, 0.3, col, (s, l) => { const o = []; if (s === 'w') for (let k = 0; k < floors; k++) { const h = { x: l / 2, y: k * fh + 2.2, w: 1, h: 1.6, arch: 'flat', fill: PANE }; kit.trim(h, 0.3, { sill: SILL, head: HEAD }); o.push(h); } return o; });
+  kit.box('stone', -5.5, H + 3.5, -3.5, 0.2, H + 3.8, 3.5, ST, '').box('lead', -4.6, H + 3.8, -2.6, -0.4, H + 5.4, 2.6, 0x70767c, 'b');
   // engine house and chimney
-  walls(kit, 'brick', len, -W, len + 9, -W + 11, 0, 10, 0.4, col, (s, l) => (s === 's' ? [{ x: l / 2, y: 1.2, w: 2.4, h: 6.5, arch: 'round', fill: LIT }] : s === 'e' ? [{ x: l / 2, y: 1.2, w: 2.4, h: 6.5, arch: 'round', fill: LIT }] : []));
-  kit.gable('slate', 'brick', len, -W, len + 9, -W + 11, 10, 2.6, { over: 0.2, wcol: col, col: 0xb0b0b0 });
+  walls(kit, 'brick', len, -W, len + 9, -W + 11, 0, 10, 0.4, col, (s, l) => { if (s !== 's' && s !== 'e') return []; const h = { x: l / 2, y: 1.2, w: 2.4, h: 6.5, arch: 'round', fill: LIT }; kit.trim(h, 0.4, { head: ['stone', ST, 0.32, 0.05], sill: ['stone', ST, 0.14, 0.16, 0.1], bars: ['plank', SASH, 3, 5, 0.07] }); return [h]; });
+  kit.box('stone', len - 0.1, 9.6, -W - 0.55, len + 9.55, 9.95, -W + 11.55, ST, 't');
+  kit.gable('slate', 'brick', len, -W, len + 9, -W + 11, 10, 2.6, { over: 0.65, wcol: col, col: 0xb0b0b0 });
   const cx = len + 4.5, cz = -W + 15;
-  kit.box('brick', cx - 2.6, 0, cz - 2.6, cx + 2.6, 5, cz + 2.6, col); kit.cyl('brick', cx, cz, 5, tall, 2.2, 1.25, 10, col); kit.cyl('brick', cx, cz, tall - 1, tall, 1.5, 1.5, 10, 0xc8c0b8);
+  kit.box('brick', cx - 2.6, 0, cz - 2.6, cx + 2.6, 5, cz + 2.6, col, 'bt').box('stone', cx - 2.74, 0, cz - 2.74, cx + 2.74, 0.8, cz + 2.74, ST2, 'b').box('stone', cx - 2.85, 4.7, cz - 2.85, cx + 2.85, 5.15, cz + 2.85, ST, '');
+  kit.cyl('brick', cx, cz, 5.15, tall, 2.2, 1.25, 8, col).cyl('stone', cx, cz, 5.15, 5.6, 2.34, 2.28, 8, ST2);
+  kit.cyl('brick', cx, cz, tall - 3.2, tall - 2.4, 1.32, 1.72, 8, col).cyl('stone', cx, cz, tall - 2.4, tall - 2, 1.72, 1.72, 8, ST).cyl('brick', cx, cz, tall - 2, tall, 1.55, 1.45, 8, 0x74645c);   // the oversailing cap, sooted at the lip
   kit.solid(-5, -W, len + 9, W).solid(cx - 2.6, cz - 2.6, cx + 2.6, cz + 2.6);
   const e = kit.M.elements; chimneys.push({ x: e[0] * cx + e[8] * cz + e[12], y: G + tall + 1, z: e[2] * cx + e[10] * cz + e[14], size: 3.4, from: kit.span[0] });
 }
-
 function build({ world, group }) {
   const r = rng(1830), kit = new Kit(), props = new Props(), Y = yearToU, list = [], INF = Infinity, chimneys = [];
+  kit.shell = true;   // nothing here can be looked into: walls are built without their inner faces
   const clipY = { value: 1e6 };
   const WOOD = fin(0x6a4a2c, 0.9), PALE = fin(0xa88a5c, 0.9), IRON = fin(0x2e2e32, 0.5, 0.6), COAL = fin(0x0e0e10, 0.95), CLOTH = fin(0xe8e4d8, 0.95), BALE = fin(0xd8d0bc, 1), SACK = fin(0x9a8a68, 1), TAR = fin(0x2a2420, 0.8), RED = fin(0x8a3220, 0.7), EMBER = fin(0xff5a10, 0.8, 0, 2.5), GREENF = fin(0x2f4a36, 0.7);
   const ang = () => r() * 6.283;
@@ -147,8 +177,18 @@ function build({ world, group }) {
 
   // ---------- warehouses on the basin ----------
   const warehouse = (x0, z0, x1, z1, floors, from, col, front) => kit.during(from, INF, () => {
-    walls(kit, 'brick', x0, z0, x1, z1, G, floors * 3.4, 0.5, col, (s, l) => { const o = [], n = Math.floor(l / 3.4); for (let k = 0; k < floors; k++) for (let i = 0; i < n; i++) { const x = (l * (i + 0.5)) / n, load = s === front && i % 4 === 1; o.push(load ? { x, y: k * 3.4 + 0.1, w: 1.7, h: 2.5, arch: 'round', fill: ['plank', 0x3a3028, 'tile'], back: 0.7 } : { x, y: k * 3.4 + 1.1, w: 0.95, h: 1.4, arch: 'round', fill: r() < 0.2 ? LIT : PANE }); } return o; });
-    kit.gable('slate', 'brick', x0, z0, x1, z1, G + floors * 3.4, 4, { over: 0.2, wcol: col, col: 0xb0b0b0, axis: x1 - x0 > z1 - z0 ? 'x' : 'z' }); kit.at(0, 0, 0, 0, () => kit.solid(x0, z0, x1, z1));
+    const H = floors * 3.4;
+    walls(kit, 'brick', x0, z0, x1, z1, G, H, 0.5, col, (s, l) => {
+      const o = [], n = Math.floor(l / 3.4);
+      for (let k = 0; k < floors; k++) for (let i = 0; i < n; i++) {
+        const x = (l * (i + 0.5)) / n, load = s === front && i % 4 === 1, h = load ? { x, y: k * 3.4 + 0.1, w: 1.7, h: 2.5, arch: 'round', fill: ['plank', 0x3a3028, 'tile'], back: 0.7 } : { x, y: k * 3.4 + 1.1, w: 0.95, h: 1.4, arch: 'round', fill: r() < 0.2 ? LIT : PANE };
+        kit.trim(h, 0.5, load ? { head: ['stone', ST, 0.26, 0.05], jambs: ['stone', ST, 0.2, 0.05], sill: ['stone', ST2, k ? 0.4 : 0.1, 0.12, 0.2] } : { head: ['brick', 0xa08878, 0.24, 0.03], sill: ['stone', ST, 0.1, 0.12, 0.08] }); o.push(h);
+        if (load && k === floors - 1) { kit.box('plank', x - 0.11, H - 0.62, 0.5, x + 0.11, H - 0.4, 2, 0x3a3028, 'n'); kit.poly('slate', [[x - 1.3, H - 0.45, 2.2], [x + 1.3, H - 0.45, 2.2], [x + 1.3, H + 0.1, 0.6], [x - 1.3, H + 0.1, 0.6]], 0x909090); }   // cat-head beam under its hood
+      }
+      return o;
+    });
+    kit.box('stone', x0 - 0.68, G + H - 0.38, z0 - 0.68, x1 + 0.68, G + H - 0.08, z1 + 0.68, ST, 't').box('brick', x0 - 0.52, G + H - 0.08, z0 - 0.52, x1 + 0.52, G + H + 0.2, z1 + 0.52, col, 'tb').box('stone', x0 - 0.57, G, z0 - 0.57, x1 + 0.57, G + 0.09, z1 + 0.57, ST2, 'b');
+    kit.gable('slate', 'brick', x0, z0, x1, z1, G + H + 0.2, 4, { over: 0.9, wcol: col, col: 0xb0b0b0, axis: x1 - x0 > z1 - z0 ? 'x' : 'z', barge: ['stone', ST2, 0.3] }); kit.at(0, 0, 0, 0, () => kit.solid(x0, z0, x1, z1));
   });
   warehouse(-56, 62, -6, 80, 5, 1770, 0xd8c4b8, 's'); warehouse(6, 62, 54, 80, 5, 1789, 0xc8b8ac, 's'); warehouse(-58, 160, -16, 178, 4, 1793, 0xc8b8ac, 'n');
   { const b = props.bag(); for (const x of [-46, -32.5, -19]) { b.box(WOOD, 0.2, 0.2, 2.2, x + 1.6, G + 16.6, 81); b.rod(PALE, [x + 1.6, G + 16.5, 81.9], [x + 1.6, G + 5, 81.9], 0.02, 4); b.box(BALE, 0.9, 0.7, 0.7, x + 1.6, G + 4.6, 81.9); }
@@ -166,24 +206,41 @@ function build({ world, group }) {
   for (let i = 0; i < 64; i++) {
     const a = r() * 6.283, d = 340 + r() * 520, x = Math.cos(a) * d * 1.1 + 60, z = Math.sin(a) * d - 20; if (Math.abs(x - RIVER) < 30 || Math.abs(z - CANAL) < 34) continue;
     const from = 1800 + Math.floor((i / 64) ** 0.8 * 38), h = 30 + r() * 30, col = [0xa89488, 0x988678, 0x8a7a70][i % 3];
-    kit.during(from, INF, () => { kit.cyl('brick', x, z, G, G + h, 2.4, 1.3, 8, col); if (i % 2 === 0) { const w = 30 + r() * 30, fl = 5 + Math.floor(r() * 3); kit.box('brick', x + 6, G, z - 8, x + 6 + w, G + fl * 3.3, z + 8, col, 'b'); kit.gable('slate', 'brick', x + 6, z - 8, x + 6 + w, z + 8, G + fl * 3.3, 3, { wcol: col, col: 0x909090 }); } });
+    kit.during(from, INF, () => { kit.cyl('brick', x, z, G, G + h, 2.4, 1.3, 8, col).cyl('brick', x, z, G + h - 2.6, G + h - 1.6, 1.38, 1.8, 8, col).cyl('brick', x, z, G + h - 1.6, G + h, 1.8, 1.6, 8, 0x74645c).box('brick', x - 2.9, G, z - 2.9, x + 2.9, G + 4, z + 2.9, col, 'b'); if (i % 2 === 0) { const w = 30 + r() * 30, fl = 5 + Math.floor(r() * 3); kit.box('brick', x + 6, G, z - 8, x + 6 + w, G + fl * 3.3, z + 8, col, 'b'); kit.gable('slate', 'brick', x + 6, z - 8, x + 6 + w, z + 8, G + fl * 3.3, 3, { wcol: col, col: 0x909090 }); } });
     chimneys.push({ x, y: G + h + 1, z, size: 3.6, from });
   }
 
   // ---------- the railway, 1830: viaduct, bridge over the Irwell, Liverpool Road station and its warehouse ----------
   kit.during(1826, INF, () => {
     kit.tag = 'clip';
-    for (const z of [12, 26]) kit.along(z === 12 ? -44 : -290, z === 12 ? 12 : 26, z === 12 ? -290 : -44, z, G, (l) => kit.panel('brick', l, DECK + 0.45, Array.from({ length: Math.floor(l / 11) }, (_, i) => ({ x: 6 + i * 11, y: 0, w: 8.4, h: 5.4, arch: 'round' })), 0.6, 0xb8a498));
+    // brick arches on stone imposts, each ringed with stone voussoirs, under a string course and a coped parapet
+    const dressed = (l, A, c, top, y0 = 0) => {
+      for (const h of A) kit.trim(h, 0.6, { head: ['stone', c, h.w > 12 ? 0.8 : 0.5, 0.07] });
+      kit.box('stone', 0, top - 0.8, 0.6, l, top - 0.5, 0.82, c, 'n').box('stone', -0.05, top, -0.08, l + 0.05, top + 0.16, 0.72, c, '');
+      for (const h of A) if (h.w < 12) { const x = h.x - h.w / 2 - (h.x > 12 ? 1.3 : 0.9), ys = h.y + h.h - h.w / 2; kit.box('stone', x - 1.3, ys - 0.3, 0.6, x + 1.3, ys + 0.05, 0.76, c, 'n'); if (!y0) kit.box('stone', x - 1.3, 0, 0.6, x + 1.3, 0.8, 0.7, c, 'n'); kit.box(y0 ? 'stone' : 'brick', x - 0.55, ys + 0.05, 0.6, x + 0.55, top - 0.8, 0.72, y0 ? c : 0xa8948a, 'nt'); }
+    };
+    for (const z of [12, 26]) kit.along(z === 12 ? -44 : -290, z === 12 ? 12 : 26, z === 12 ? -290 : -44, z, G, (l) => { const A = Array.from({ length: Math.floor(l / 11) }, (_, i) => ({ x: 6 + i * 11, y: 0, w: 8.4, h: 5.4, arch: 'round' })); kit.panel('brick', l, DECK + 0.45, A, 0.6, 0xb8a498); dressed(l, A, 0xc4bcae, DECK + 0.45); });
     kit.poly('cobble', [[-640, G + DECK, 12], [-44, G + DECK, 12], [-44, G + DECK, 26], [-640, G + DECK, 26]], 0xc8c4bc);
-    for (const z of [10.6, 26.8]) kit.along(-620, z, -290, z, -3, (l) => kit.panel('stone', l, 9 + DECK + 0.45, [{ x: l - 20, y: 0, w: 19, h: 13, arch: 'round' }, { x: l - 44, y: 0, w: 19, h: 13, arch: 'round' }, ...Array.from({ length: 22 }, (_, i) => ({ x: 8 + i * 11.5, y: 9, w: 8.6, h: 5.4, arch: 'round' }))], 0.6, 0xa8a298));
+    for (const z of [10.6, 26.8]) kit.along(-620, z, -290, z, -3, (l) => { const A = [{ x: l - 20, y: 0, w: 19, h: 13, arch: 'round' }, { x: l - 44, y: 0, w: 19, h: 13, arch: 'round' }, ...Array.from({ length: 22 }, (_, i) => ({ x: 8 + i * 11.5, y: 9, w: 8.6, h: 5.4, arch: 'round' }))]; kit.panel('stone', l, 9 + DECK + 0.45, A, 0.6, 0xa8a298); dressed(l, A, 0xbcb6aa, 9 + DECK + 0.45, 9); });
     for (let x = -284.5; x < -46; x += 11) kit.at(0, 0, 0, 0, () => kit.solid(x - 1.3, 12, x + 1.3, 26));
   });
   kit.during(1830, INF, () => {
     // the station: a stuccoed front on Liverpool Road, the platform behind it at the level of the rails
-    walls(kit, 'daub', -112, 26, -44, 37, G, 11.5, 0.4, 0xe8e0cc, (s, l) => (s === 's' ? [...Array.from({ length: 9 }, (_, i) => ({ x: 4 + i * 7.5, y: 6.6, w: 1.3, h: 2.6, arch: 'flat', fill: i % 2 ? LIT : PANE })), ...Array.from({ length: 9 }, (_, i) => (i === 4 ? { x: 4 + i * 7.5, y: 0, w: 2.2, h: 3.6, arch: 'round', fill: ['plank', 0x2a1c14, 'tile'], back: 0.7 } : { x: 4 + i * 7.5, y: 1.2, w: 1.3, h: 2.4, arch: 'flat', fill: PANE }))] : []));
-    kit.box('stone', -112.4, G + 11.5, 25.6, -43.6, G + 12.2, 37.4, 0xd8d0c0, 'b'); kit.at(0, 0, 0, 0, () => kit.solid(-112, 26, -44, 37));
-    walls(kit, 'brick', -40, 2, 36, 30, G, 13, 0.5, 0xb8a498, (s, l) => { const o = [], n = Math.floor(l / 3.6); for (let k = 0; k < 4; k++) for (let i = 0; i < n; i++) o.push({ x: (l * (i + 0.5)) / n, y: k * 3.2 + 1, w: 1, h: 1.5, arch: 'round', fill: r() < 0.25 ? LIT : PANE }); return o; });
-    kit.gable('slate', 'brick', -40, 2, 36, 30, G + 13, 4, { wcol: 0xb8a498, col: 0xa8a8a8 }); kit.at(0, 0, 0, 0, () => kit.solid(-40, 2, 36, 30));
+    walls(kit, 'daub', -112, 26, -44, 37, G, 11.5, 0.4, 0xd8c8a4, (s, l) => {
+      if (s !== 's') return [];
+      const o = [...Array.from({ length: 9 }, (_, i) => ({ x: 4 + i * 7.5, y: 6.6, w: 1.3, h: 2.6, arch: 'flat', fill: i % 2 ? LIT : PANE })), ...Array.from({ length: 9 }, (_, i) => (i === 4 ? { x: 4 + i * 7.5, y: 0, w: 2.2, h: 3.6, arch: 'round', fill: ['plank', 0x2a1c14, 'tile'], back: 0.7 } : { x: 4 + i * 7.5, y: 1.2, w: 1.3, h: 2.4, arch: 'flat', fill: PANE }))], SD = 0xf2eee2;
+      for (const h of o) kit.trim(h, 0.4, h.arch === 'round' ? { head: ['stone', SD, 0.3, 0.08], step: ['stone', ST2, 0.9, 0.18] } : { sill: ['stone', SD, 0.16, 0.14, 0.14], head: ['stone', SD, 0.32, 0.08, 0.16], jambs: ['stone', SD, 0.15, 0.05], bars: ['plank', SASH, 2, 3, 0.05] });
+      // stone dressings: plinth, string course between the floors, pilasters, and a columned doorcase
+      kit.box('stone', -0.4, 0, 0.4, l / 2 - 1.9, 0.9, 0.54, ST2, 'n').box('stone', l / 2 + 1.9, 0, 0.4, l + 0.4, 0.9, 0.54, ST2, 'n').box('stone', -0.4, 5.45, 0.4, l + 0.4, 5.85, 0.58, SD, 'n').box('stone', -0.4, 10.6, 0.4, l + 0.4, 11.5, 0.5, SD, 'n');
+      for (const x of [0.1, 22.75, 30.25, 37.75, 45.25, l - 0.1]) kit.box('stone', x - 0.4, 0.9, 0.4, x + 0.4, 10.6, 0.53, SD, 'nt');
+      for (const sx of [-1, 1]) kit.cyl('stone', l / 2 + sx * 1.6, 0.85, 0.18, 3.9, 0.21, 0.18, 8, SD).box('stone', l / 2 + sx * 1.6 - 0.3, 0, 0.4, l / 2 + sx * 1.6 + 0.3, 0.18, 1.15, ST2, 'n');
+      kit.box('stone', l / 2 - 2.1, 3.9, 0.4, l / 2 + 2.1, 4.45, 1.15, SD, 'n').box('stone', l / 2 - 2.3, 4.45, 0.4, l / 2 + 2.3, 4.62, 1.3, SD, 'n');
+      return o;
+    });
+    kit.box('stone', -112.4, G + 11.5, 25.6, -43.6, G + 12.2, 37.4, 0xd8d0c0, 'b').box('stone', -112.75, G + 11.75, 25.4, -43.25, G + 12.05, 37.8, 0xf2eee2, '').box('stone', -112.2, G + 12.2, 25.9, -43.8, G + 13, 37.2, 0xd0c8b8, 'b'); kit.at(0, 0, 0, 0, () => kit.solid(-112, 26, -44, 37));
+    walls(kit, 'brick', -40, 2, 36, 30, G, 13, 0.5, 0xb8a498, (s, l) => { const o = [], n = Math.floor(l / 3.6); for (let k = 0; k < 4; k++) for (let i = 0; i < n; i++) { const h = { x: (l * (i + 0.5)) / n, y: k * 3.2 + 1, w: 1, h: 1.5, arch: 'round', fill: r() < 0.25 ? LIT : PANE }; kit.trim(h, 0.5, { head: ['brick', 0x988474, 0.24, 0.03], sill: ['stone', ST, 0.1, 0.12, 0.08] }); o.push(h); } return o; });
+    kit.box('stone', -40.68, G + 12.62, 1.32, 36.68, G + 12.92, 30.68, ST, 't').box('brick', -40.52, G + 12.92, 1.48, 36.52, G + 13.2, 30.52, 0xb8a498, 'tb');
+    kit.gable('slate', 'brick', -40, 2, 36, 30, G + 13.2, 4, { over: 0.9, wcol: 0xb8a498, col: 0xa8a8a8, barge: ['stone', ST2, 0.3] }); kit.at(0, 0, 0, 0, () => kit.solid(-40, 2, 36, 30));
   });
   { const b = props.bag(1830, INF); track(b, -640, -44, G + DECK + 0.02, RAILZ); track(b, -640, -44, G + DECK + 0.02, RAILZ + 5); }
   const TR = trainParts(), train = new THREE.InstancedMesh(TR.geo, vehicleMat(), 1); train.frustumCulled = false; train.castShadow = true; group.add(train);

@@ -104,18 +104,38 @@ const DRAW = {
 const BASE = { stone: '#cec4ac', rubble: '#5e5a50', brick: '#b8ab98', thatch: '#8a7040', tile: '#b05c3a', slate: '#626874', lead: '#8a9096', frame: '#dcd0b4', daub: '#d4c4a0', plank: '#80623e', cobble: '#7a756b', earth: '#a08660', strips: '#ffffff', glass: '#000', pane: '#000', lit: '#000', wheat: 'rgba(0,0,0,0)', smoke: 'rgba(0,0,0,0)' };
 /** How many metres one repeat of each texture covers. */
 export const TILE = { stone: 3, rubble: 3, brick: 1.2, thatch: 2.4, tile: 2.6, slate: 2.6, lead: 3, frame: 3, daub: 2.5, plank: 2, cobble: 1.8, earth: 5, strips: 44, glass: 1, pane: 0.9, lit: 0.9 };
-const SIZE = { glass: 512, strips: 512, pane: 64, lit: 64, smoke: 64 };
+const SIZE = { stone: 512, frame: 512, brick: 512, glass: 512, strips: 512, pane: 64, lit: 64, smoke: 64 };
 const texCache = {};
 export function texture(name) {
   if (texCache[name]) return texCache[name];
   const S = SIZE[name] || 256, [c, g] = canvas(S, BASE[name]); DRAW[name](g, S, rng(name.length * 77 + name.charCodeAt(0)));
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; t.colorSpace = THREE.SRGBColorSpace; return (texCache[name] = t);
 }
+/** A tangent-space normal map from the brightness of a drawn texture (dark is low; `inv`: dark stands proud, as timber does of its plaster). */
+const nrmCache = {};
+function normalMap(name, k = 2, inv = false) {
+  if (nrmCache[name]) return nrmCache[name];
+  const src = texture(name).image, S = src.width, d = src.getContext('2d').getImageData(0, 0, S, S).data, [c, g] = canvas(S, '#8080ff'), im = g.createImageData(S, S), o = im.data, H = new Float32Array(S * S);
+  for (let i = 0; i < S * S; i++) { const v = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11) / 255; H[i] = inv ? 1 - v : v; }
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const xl = (x + S - 1) % S, xr = (x + 1) % S, yu = (y + S - 1) % S, yd = (y + 1) % S, dx = (H[y * S + xr] - H[y * S + xl]) * k, dy = (H[yd * S + x] - H[yu * S + x]) * k, l = 1 / Math.hypot(dx, dy, 1), i = (y * S + x) * 4;
+    o[i] = (-dx * l * 0.5 + 0.5) * 255; o[i + 1] = (dy * l * 0.5 + 0.5) * 255; o[i + 2] = (l * 0.5 + 0.5) * 255; o[i + 3] = 255;
+  }
+  g.putImageData(im, 0, 0); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return (nrmCache[name] = t);
+}
 /** The year on screen: geometry carries the span of years it stands for (aSpan) and is drawn only within it. */
 export const YEAR = { value: 0 };
 function chain(m, key, fn) { const prev = m.onBeforeCompile; m.onBeforeCompile = (sh, rd) => { if (prev) prev(sh, rd); fn(sh); }; m.customProgramCacheKey = () => key; return m; }
 const spanCode = (sh) => { sh.uniforms.uYear = YEAR; sh.vertexShader = 'attribute vec2 aSpan; uniform float uYear;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n if (uYear < aSpan.x || uYear >= aSpan.y) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);'); };
 export const spanned = (m, key = 'span') => chain(m, key, spanCode);
+// Weathering by where a surface is in the world: broad patches of stain, streaks running down the walls, damp and splash at the foot, moss on roofs.
+const W_NOISE = 'float wHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\nfloat wNoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(wHash(i), wHash(i + vec2(1.0, 0.0)), f.x), mix(wHash(i + vec2(0.0, 1.0)), wHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n';
+const W_WALL = ' float wp = wNoise(vWxp.xz * 0.13 + vWxp.y * 0.09), ws = wNoise(vec2((vWxp.x + vWxp.z) * 1.4, vWxp.y * 0.1)), wf = wNoise(vWxp.xz * 1.1 + vWxp.y * 0.8);\n diffuseColor.rgb *= (0.86 + 0.24 * wp) * (0.89 + 0.18 * ws) * (0.95 + 0.1 * wf);\n diffuseColor.rgb *= mix(vec3(0.7, 0.72, 0.66), vec3(1.0), smoothstep(5.9, 6.4 + 1.8 * wp, vWxp.y));\n';
+const W_ROOF = ' float wp = wNoise(vWxp.xz * 0.21 + vWxp.y * 0.15), wf = wNoise(vWxp.xz * 1.3 + vWxp.y);\n diffuseColor.rgb *= (0.84 + 0.26 * wf) * (0.9 + 0.16 * wp);\n diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.7, 0.84, 0.56), smoothstep(0.55, 0.9, wp) * MOSS);\n';
+const weathered = (m, code) => chain(m, 'w', (sh) => {
+  sh.vertexShader = 'varying vec3 vWxp;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n vWxp = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = 'varying vec3 vWxp;\n' + W_NOISE + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n' + code);
+});
 let DEPTH;
 const depthMat = () => DEPTH || (DEPTH = spanned(new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking }), 'span-depth'));
 let MATS;
@@ -123,12 +143,15 @@ let MATS;
 export function materials() {
   if (MATS) return MATS;
   const M = {}, std = (name, o = {}) => (M[name] = new THREE.MeshStandardMaterial({ map: texture(name), vertexColors: true, roughness: 0.92, side: THREE.DoubleSide, ...o }));
-  for (const n of ['stone', 'rubble', 'brick', 'tile', 'slate', 'frame', 'thatch']) std(n, { bumpMap: texture(n), bumpScale: 1.5 });
-  for (const n of ['daub', 'plank', 'cobble', 'earth', 'strips']) std(n);
+  const relief = { stone: 2.2, rubble: 3, brick: 2.4, tile: 3, slate: 2.6, frame: 2.2, thatch: 2.5, plank: 2, cobble: 3, daub: 1.2 };
+  for (const n in relief) std(n, { normalMap: normalMap(n, relief[n], n === 'frame') });
+  for (const n of ['earth', 'strips']) std(n);
   std('lead', { roughness: 0.6, metalness: 0.35 });
   std('glass', { roughness: 0.3, emissive: 0xffffff, emissiveMap: texture('glass'), emissiveIntensity: 0.55 });
   std('pane', { roughness: 0.25, metalness: 0.3 });
   std('lit', { emissive: 0xffffff, emissiveMap: texture('lit'), emissiveIntensity: 1.3 });
+  for (const n of ['stone', 'rubble', 'brick', 'frame', 'daub', 'plank']) weathered(M[n], W_WALL);
+  for (const [n, moss] of [['tile', 0.5], ['thatch', 0.6], ['slate', 0.3], ['lead', 0.0]]) weathered(M[n], W_ROOF.replace('MOSS', moss.toFixed(2)));
   for (const n in M) spanned(M[n], 'span-' + n);
   for (const n of ['earth', 'strips', 'cobble']) { M[n].polygonOffset = true; M[n].polygonOffsetFactor = -2; M[n].polygonOffsetUnits = -2; }
   return (MATS = M);
@@ -167,7 +190,7 @@ const shapeOf = (P) => new THREE.Shape(P.map((p) => new THREE.Vector2(p[0], p[1]
 // Kit: textured geometry gathered by material and by the span of years it stands for
 // =====================================================================================
 export class Kit {
-  constructor() { this.B = new Map(); this.M = new THREE.Matrix4(); this.stack = []; this.span = [-Infinity, Infinity]; this.tag = ''; this.solids = []; }
+  constructor() { this.B = new Map(); this.M = new THREE.Matrix4(); this.stack = []; this.shell = false; this.span = [-Infinity, Infinity]; this.tag = ''; this.solids = []; }
   /** Everything added inside fn stands from year a to year b. */
   during(a, b, fn) { const s = this.span, t = this.tag; this.span = [a, b]; fn(); this.span = s; this.tag = t; }
   bucket(mat) { const k = mat + '|' + this.tag; let b = this.B.get(k); if (!b) this.B.set(k, b = { mat, tag: this.tag, p: [], n: [], uv: [], c: [], sp: [] }); b.s0 = Math.max(-1e9, this.span[0]); b.s1 = Math.min(1e9, this.span[1]); return b; }
@@ -207,23 +230,36 @@ export class Kit {
     return this.add(mat, g, mat4(x, (y0 + y1) / 2, z), col, (Math.max(r0, r1) * arc) / tile, Math.hypot(y1 - y0, r0 - r1) / tile);
   }
   /** A pitched roof over the rectangle (ridge along `axis`), with its gable ends in `wall`. h: height of the ridge above y. */
-  gable(roof, wall, x0, z0, x1, z1, y, h, { axis = 'x', over = 0.35, col, wcol, hip = 0 } = {}) {
+  gable(roof, wall, x0, z0, x1, z1, y, h, { axis = 'x', over = 0.35, col, wcol, hip = 0, eave, barge, ridge } = {}) {
+    const dk = (k) => lin(col || WHITE).map((v) => v * k), soft = roof === 'thatch';
+    if (eave === undefined) eave = [roof, dk(0.55), soft ? 0.3 : roof === 'lead' ? 0.3 : 0.11]; if (ridge === undefined) ridge = [roof, dk(soft ? 0.72 : 0.6), soft ? 0.8 : roof === 'lead' ? 0.5 : 0.32, soft ? 0.2 : roof === 'lead' ? 0.35 : 0.13];
     const P = (a, b, c) => (axis === 'x' ? [a, b, c] : [c, b, a]), [a0, a1, c0, c1] = axis === 'x' ? [x0, x1, z0, z1] : [z0, z1, x0, x1], cm = (c0 + c1) / 2, drop = (over * h) / ((c1 - c0) / 2);
     const r0 = a0 - over + hip, r1 = a1 + over - hip;
     this.poly(roof, [P(a0 - over, y - drop, c1 + over), P(a1 + over, y - drop, c1 + over), P(r1, y + h, cm), P(r0, y + h, cm)], col);
     this.poly(roof, [P(a1 + over, y - drop, c0 - over), P(a0 - over, y - drop, c0 - over), P(r0, y + h, cm), P(r1, y + h, cm)], col);
     if (hip) { this.poly(roof, [P(a0 - over, y - drop, c0 - over), P(a0 - over, y - drop, c1 + over), P(r0, y + h, cm)], col); this.poly(roof, [P(a1 + over, y - drop, c1 + over), P(a1 + over, y - drop, c0 - over), P(r1, y + h, cm)], col); }
-    else if (wall) { this.poly(wall, [P(a0, y, c0), P(a0, y, c1), P(a0, y + h, cm)], wcol); this.poly(wall, [P(a1, y, c1), P(a1, y, c0), P(a1, y + h, cm)], wcol); }
+    // trims that give the roof an edge: eave: [material, colour, thickness], barge: [material, colour, depth] (boards or copings up the gable), ridge: [material, colour, width, height]
+    if (eave) for (const c of [c1 + over, c0 - over]) this.poly(eave[0], [P(a0 - over, y - drop - (eave[2] || 0.14), c), P(a1 + over, y - drop - (eave[2] || 0.14), c), P(a1 + over, y - drop, c), P(a0 - over, y - drop, c)], eave[1]);
+    if (eave && hip) for (const a of [a0 - over, a1 + over]) this.poly(eave[0], [P(a, y - drop - (eave[2] || 0.14), c0 - over), P(a, y - drop - (eave[2] || 0.14), c1 + over), P(a, y - drop, c1 + over), P(a, y - drop, c0 - over)], eave[1]);
+    if (barge && !hip) for (const a of [a0 - over - 0.02, a1 + over + 0.02]) for (const c of [c1 + over, c0 - over]) { const b = barge[2] || 0.26; this.poly(barge[0], [P(a, y - drop - b, c), P(a, y + h - b, cm), P(a, y + h + 0.04, cm), P(a, y - drop + 0.04, c)], barge[1]); }
+    if (ridge) { const rw = (ridge[2] || 0.3) / 2, rh = ridge[3] || 0.14; if (axis === 'x') this.box(ridge[0], r0, y + h - 0.12, cm - rw, r1, y + h + rh, cm + rw, ridge[1], 'b'); else this.box(ridge[0], cm - rw, y + h - 0.12, r0, cm + rw, y + h + rh, r1, ridge[1], 'b'); }
+    if (hip) {} else if (wall) { this.poly(wall, [P(a0, y, c0), P(a0, y, c1), P(a0, y + h, cm)], wcol); this.poly(wall, [P(a1, y, c1), P(a1, y, c0), P(a1, y + h, cm)], wcol); }
     return this;
   }
   /**
    * A wall panel standing in the local xy plane (x 0..w, y 0..h), `depth` thick towards +z, pierced by `holes`
    * ({ x, y, w, h, arch, fill: [material, colour, 'fit' | 'tile', uvRect] } — the filling sits back in the reveal).
    */
-  panel(mat, w, h, holes = [], depth = 0.3, col, x0 = 0) {
+  panel(mat, w, h, holes = [], depth = 0.3, col, x0 = 0, back = true) {
     const s = shapeOf([[x0, 0], [w, 0], [w, h], [x0, h]]), tile = TILE[mat] || 1;
     for (const o of holes) s.holes.push(new THREE.Path(outline(o).map((p) => new THREE.Vector2(p[0], p[1]))));
-    this.add(mat, new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 1 }), null, col, 1 / tile);
+    let g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 1 });
+    if (!back) {   // the inner face of a closed building is never seen: leave it out
+      if (g.index) g = g.toNonIndexed(); const P = g.attributes.position, keep = [];
+      for (let i = 0; i < P.count; i += 3) if (P.getZ(i) > 1e-5 || P.getZ(i + 1) > 1e-5 || P.getZ(i + 2) > 1e-5) keep.push(i, i + 1, i + 2);
+      g.setIndex(keep);
+    }
+    this.add(mat, g, null, col, 1 / tile);
     for (const o of holes) if (o.fill) {
       const [fm, fc, mode = 'tile', rect = [0, 0, 1, 1]] = o.fill, g = new THREE.ShapeGeometry(shapeOf(outline(o))), U = g.attributes.uv, t = TILE[fm] || 1;
       for (let i = 0; i < U.count; i++) {
@@ -232,6 +268,30 @@ export class Kit {
       }
       this.add(fm, g, mat4(0, 0, depth * (o.back ?? 0.35)), fc);
     }
+    return this;
+  }
+  /**
+   * Dressings round an opening `o` of a panel, drawn in the panel's own frame (its outer face is at z = depth):
+   * sill: [material, colour, projection, thickness, overhang] · head: [material, colour, height, projection, overhang] (a lintel, or a ring of voussoirs over an arch)
+   * bars: [material, colour, across, up, thickness] (a frame with glazing bars or mullions in the reveal) · shutters: [material, colour, open 0–1] · step: [material, colour, tread, rise] · jambs: [material, colour, width, projection]
+   */
+  trim(o, depth, { sill, head, bars, shutters, step, jambs } = {}) {
+    const { x, y, w, h } = o, xa = x - w / 2, xb = x + w / 2, rise = o.arch === 'round' ? w / 2 : o.arch === 'point' ? Math.min(h * 0.6, w * (o.sharp || 0.9)) : 0, ys = y + h - rise;
+    if (sill) { const [m, c, pr = 0.1, th = 0.1, ov = 0.08] = sill; this.box(m, xa - ov, y - th, depth - 0.02, xb + ov, y, depth + pr, c, pr > 0.2 ? 'nb' : 'nbew'); }
+    if (jambs) { const [m, c, jw = 0.16, pr = 0.04] = jambs; for (const s of [-1, 1]) this.box(m, s < 0 ? xa - jw : xb, y, depth - 0.02, s < 0 ? xa : xb + jw, ys, depth + pr, c, 'nbt'); }
+    if (head) {
+      const [m, c, hh = 0.22, pr = 0.04, ov = 0.1, inn = 0] = head;
+      if (!rise) this.box(m, xa - ov, y + h, depth - 0.02, xb + ov, y + h + hh, depth + pr, c, pr > 0.045 ? 'nt' : 'ntew');
+      else { const off = (k) => outline(o).slice(2).map(([px, py]) => { const l = Math.hypot(px - x, py - ys) || 1; return [px + ((px - x) / l) * k, py + ((py - ys) / l) * k]; }), z = depth + pr, A = off(inn), Q = off(inn + hh); for (let i = 0; i < A.length - 1; i++) this.poly(m, [[A[i][0], A[i][1], z], [Q[i][0], Q[i][1], z], [Q[i + 1][0], Q[i + 1][1], z], [A[i + 1][0], A[i + 1][1], z]], c); }
+    }
+    if (bars) {
+      const [m, c, nx = 2, ny = 2, t = 0.05, rim = true] = bars, z = depth * (o.back ?? 0.35) + 0.025, q = (x0, y0, x1, y1) => this.poly(m, [[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]], c);
+      if (rim) { q(xa, y, xa + t, ys); q(xb - t, y, xb, ys); q(xa, y, xb, y + t); if (!rise) q(xa, y + h - t, xb, y + h); }
+      for (let i = 1; i < nx; i++) q(xa + (w * i) / nx - t / 2, y, xa + (w * i) / nx + t / 2, ys);
+      for (let j = 1; j < ny; j++) q(xa, y + ((ys - y) * j) / ny - t / 2, xb, y + ((ys - y) * j) / ny + t / 2);
+    }
+    if (shutters) { const [m, c, open = 1] = shutters, z = depth + 0.035, lw = w / 2; for (const s of [-1, 1]) { const e = s < 0 ? xa : xb, sw = Math.cos((1 - open) * 1.2), sz = Math.sin((1 - open) * 1.2); this.poly(m, [[e, y, z], [e + s * lw * sw, y, z + lw * sz], [e + s * lw * sw, y + h, z + lw * sz], [e, y + h, z]], c); } }
+    if (step) { const [m, c, tr = 0.4, ri = 0.17] = step; this.box(m, xa - 0.2, y - 0.02, depth - 0.02, xb + 0.2, y + ri, depth + tr, c, 'nb'); }
     return this;
   }
   /** Register a rectangle (local x0..x1, z0..z1) the visitor cannot walk through, for as long as the current span lasts. */
