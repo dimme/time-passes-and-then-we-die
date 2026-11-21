@@ -138,8 +138,8 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
         const a = G.items[i], w = a.w; if (u < a.u0 || u >= a.u1) continue;
         let x = a.x, z = a.z, rot = a.rot; w.ph = null; w.moving = false;
         if (a.path) {   // where it is along its path, and which way that runs
-          const d = a.phase * a.route + a.speed * t, L = a.cum[a.cum.length - 1], back = !a.loop && ((d % a.route) + a.route) % a.route > L ? -1 : 1;
-          along(a, d, _at); along(a, d - 0.3 * back, _a); along(a, d + 0.3 * back, _b); x = _at[0]; z = _at[1];
+          const d = a.phase * a.route + a.speed * t;   // along() folds the way back in, so d + 0.3 is always ahead
+          along(a, d, _at); along(a, d - 0.3, _a); along(a, d + 0.3, _b); x = _at[0]; z = _at[1];
           if (Math.hypot(_b[0] - _a[0], _b[1] - _a[1]) > 0.05) rot = Math.atan2(_a[1] - _b[1], _b[0] - _a[0]);
           w.ph = d / (w.stride * a.s); w.moving = true;
         }
