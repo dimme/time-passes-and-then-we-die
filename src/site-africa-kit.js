@@ -44,9 +44,9 @@ export class Stuff {
   constructor(world, group) { this.world = world; this.group = group; this.mats = {}; this.buckets = new Map(); this.meshes = []; }
   mat(name, material, cast = true) { this.mats[name] = { material, cast }; return this; }
   /** geos: one or more geometries modelled about the origin with y = 0 on the ground. `from`, `to` are years. */
-  add(mat, geos, x, z, { rot = 0, s = 1, y = 0, from = -Infinity, to = Infinity, ground = true } = {}) {
+  add(mat, geos, x, z, { rot = 0, s = 1, sy = 1, y = 0, from = -Infinity, to = Infinity, ground = true } = {}) {
     const key = mat + '|' + from + '|' + to; let b = this.buckets.get(key); if (!b) this.buckets.set(key, b = { mat, from, to, geos: [] });
-    _m.compose(_p.set(x, (ground ? drawnGround(this.world, x, z) : 0) + y, z), _q.setFromAxisAngle(UP, rot), _s.setScalar(s));
+    _m.compose(_p.set(x, (ground ? drawnGround(this.world, x, z) : 0) + y, z), _q.setFromAxisAngle(UP, rot), _s.set(s, s * sy, s));
     for (const g of [].concat(geos)) b.geos.push(prep(g).applyMatrix4(_m));
   }
   build() {

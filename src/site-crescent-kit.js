@@ -378,22 +378,56 @@ export function ladder(S, x, y, z, h, rot, col = lin(0x6a4c30)) {
 // ---------------------------------------------------------------------------------------------
 /** Circles and turned rectangles the visitor cannot enter, each for its own span of the timeline. */
 export class Solids {
-  constructor() { this.list = []; this.u = 0; }
+  constructor() { this.list = []; this.u = 0; this.feet = -Infinity; }
   circle(x, z, r, u0 = -Infinity, u1 = Infinity) { this.list.push({ x, z, r, u0, u1 }); return this; }
-  box(x, z, w, d, rot = 0, u0 = -Infinity, u1 = Infinity) { this.list.push({ x, z, w, d, c: Math.cos(rot), s: Math.sin(rot), u0, u1 }); return this; }
-  collide(pos, rad = 0.6) {
-    const u = this.u;
+  /** o: { rad (the visitor's radius against this one: smaller for the walls of a room, so that a doorway lets you through) } */
+  box(x, z, w, d, rot = 0, u0 = -Infinity, u1 = Infinity, o = {}) { this.list.push({ x, z, w, d, c: Math.cos(rot), s: Math.sin(rot), u0, u1, ...o }); return this; }
+  /**
+   * A block with a walkable top: it stops you from below, and once you are up on it (or it is a step of 0.6 m or less) it carries you.
+   * top: a height, or a function (x, z) -> height (a ramp, a ladder, a bridge deck). kind: 'deck' (a bridge: you can pass underneath it), 'ladder' (stops no one),
+   * 'rail' (a parapet along a deck, its top the deck's: it stops you only up there, and carries no one).
+   */
+  platform(x, z, w, d, rot, top, u0 = -Infinity, u1 = Infinity, kind) { this.list.push({ x, z, w, d, c: Math.cos(rot), s: Math.sin(rot), u0, u1, top, kind }); return this; }
+  static topOf(o, x, z) { return typeof o.top === 'function' ? o.top(x, z) : o.top; }
+  /** The highest walkable top under (x, z) now, or -Infinity. A deck high above the visitor's feet is passed under, not stepped onto. */
+  floorAt(x, z) {
+    let h = -Infinity; const u = this.u;
     for (const o of this.list) {
-      if (u < o.u0 || u >= o.u1) continue;
-      const dx = pos.x - o.x, dz = pos.z - o.z;
+      if (o.top === undefined || o.kind === 'rail' || u < o.u0 || u >= o.u1) continue;
+      const dx = x - o.x, dz = z - o.z; if (Math.abs(dx) + Math.abs(dz) > o.w + o.d) continue;
+      if (Math.abs(dx * o.c - dz * o.s) > o.w / 2 || Math.abs(dx * o.s + dz * o.c) > o.d / 2) continue;
+      const t = Solids.topOf(o, x, z); if (o.kind === 'deck' && t > this.feet + 1.2) continue; if (t > h) h = t;
+    }
+    return h;
+  }
+  collide(pos, rad0 = 0.6) {
+    const u = this.u, feet = pos.y - 1.7; this.feet = feet;
+    for (const o of this.list) {
+      if (u < o.u0 || u >= o.u1 || o.kind === 'ladder') continue;
+      const dx = pos.x - o.x, dz = pos.z - o.z; let rad = o.rad ?? rad0;
       if (o.r) { const dist = Math.hypot(dx, dz), need = o.r + rad; if (dist < need && dist > 1e-4) { pos.x = o.x + (dx / dist) * need; pos.z = o.z + (dz / dist) * need; } continue; }
       if (Math.abs(dx) + Math.abs(dz) > o.w + o.d + rad * 2) continue;
+      if (o.top !== undefined) {
+        const t = Solids.topOf(o, pos.x, pos.z);
+        if (o.kind === 'rail') { if (feet < t - 2) continue; rad = 0.3; }
+        else { if (feet > t - 0.6 || (o.kind === 'deck' && feet < t - 2)) continue; rad = 0.1; }
+      }
       const lx = dx * o.c - dz * o.s, lz = dx * o.s + dz * o.c, px = o.w / 2 + rad - Math.abs(lx), pz = o.d / 2 + rad - Math.abs(lz);
       if (px > 0 && pz > 0) {
         let nx = lx, nz = lz; if (px < pz) nx += (lx < 0 ? -1 : 1) * px; else nz += (lz < 0 ? -1 : 1) * pz;
         pos.x = o.x + nx * o.c + nz * o.s; pos.z = o.z - nx * o.s + nz * o.c;
       }
     }
+  }
+  /** The walls of a room w x d at (x, z) turned by rot, t thick, leaving gaps [face, along, width] (faces and `along` as in onFace). */
+  room(x, z, w, d, rot, t, gaps, u0, u1) {
+    for (let f = 0; f < 4; f++) {
+      const len = f % 2 ? d : w, cuts = gaps.filter((g) => g[0] === f).map((g) => { const a = f === 0 || f === 1 ? -g[1] : g[1]; return [a - g[2] / 2, a + g[2] / 2]; }).sort((a, b) => a[0] - b[0]);
+      let a = -len / 2; const runs = [];
+      for (const [c0, c1] of cuts) { runs.push([a, c0]); a = c1; } runs.push([a, len / 2]);
+      for (const [a0, a1] of runs) { if (a1 - a0 < 0.05) continue; const m = (a0 + a1) / 2, p = f % 2 ? local(x, z, rot, (f === 1 ? 1 : -1) * (w / 2 - t / 2), m) : local(x, z, rot, m, (f === 2 ? 1 : -1) * (d / 2 - t / 2)); this.box(p[0], p[1], f % 2 ? t : a1 - a0, f % 2 ? a1 - a0 : t, rot, u0, u1, { rad: 0.3 }); }
+    }
+    return this;
   }
 }
 
@@ -436,7 +470,7 @@ export function onFace(x, z, w, d, rot, f, along, out) {
 /** A dark opening framed in the wall on face f: a doorway (y0 = 0) or a window. o: { out, col, lintel, sill (material of a sill or threshold), sillCol } */
 export function opening(S, x, y, z, w, d, rot, f, along, ow, oh, y0, frame, o = {}) {
   const P = (a, out, h) => { const q = onFace(x, z, w, d, rot, f, a, out); return [q[0], y + h, q[1]]; }, e = o.out || 0.05;
-  S.quad('plain', P(along - ow / 2, e, y0), P(along + ow / 2, e, y0), P(along + ow / 2, e, y0 + oh), P(along - ow / 2, e, y0 + oh), o.col || DARK);
+  if (!o.hole) S.quad('plain', P(along - ow / 2, e, y0), P(along + ow / 2, e, y0), P(along + ow / 2, e, y0 + oh), P(along - ow / 2, e, y0 + oh), o.col || DARK);
   if (o.lintel !== false) S.beam('wood', P(along - ow / 2 - 0.22, e + 0.05, y0 + oh + 0.07), P(along + ow / 2 + 0.22, e + 0.05, y0 + oh + 0.07), 0.075, 0.075, 5, TIMBER);
   if (frame) for (const k of [-1, 1]) {   // jambs standing proud of the wall
     const a0 = along + k * (ow / 2 + 0.11), q = onFace(x, z, w, d, rot, f, a0, e * 0.5);
@@ -458,11 +492,11 @@ export function chamf(x, z, w, d, rot, c) {
  *      soft (corner rounding, m), wear (false: no weathering), spouts (wooden rain spouts through the parapet), mat (a reed mat rolled up over the door) }
  */
 export function house(S, r, x, y, z, w, d, h, rot, o = {}) {
-  const m = o.m || 'plaster', col = o.col || lin(0xb89a70), bat = o.batter ?? 0.1, par = o.parapet ?? 0.3, ch = o.soft ?? 0.24, foot = o.footing !== false;
+  const open = !!o.open, m = o.m || 'plaster', col = o.col || lin(0xb89a70), bat = open ? 0 : o.batter ?? 0.1, par = o.parapet ?? 0.3, ch = open ? 0.002 : o.soft ?? 0.24, foot = o.footing !== false;
   const q = rng(((Math.abs(x) * 73.1 + Math.abs(z) * 19.7) | 0) + 5000);   // its own dice, so that the details do not disturb where things stand
   if (foot) S.prism('stone', chamf(x, z, w + 0.2, d + 0.2, rot, ch), y - 0.3, y + 0.45, { col: lin(0xb8ac98), cap: 'stone' });
   const plan = chamf(x, z, w, d, rot, ch); let rad = 0; for (const p of plan) rad += Math.hypot(p[0] - x, p[1] - z) / plan.length;
-  S.prism(m, plan, y, y + h + par, { col, batter: bat, cap: false });
+  if (!open) S.prism(m, plan, y, y + h + par, { col, batter: bat, cap: false });
   const k = 1 - bat / rad, tw = w * k, td = d * k, th = 0.32, cc = ch * k;
   S.cap(o.roofM || 'plaster', chamf(x, z, tw - th, td - th, rot, cc), y + h, o.roofCol || shade(col, 1.08));   // the roof, a hand's depth below the parapet
   { const A = chamf(x, z, tw, td, rot, cc), B = chamf(x, z, tw - th * 2, td - th * 2, rot, cc * 0.6), Y = y + h + par, n = A.length;   // the parapet: its inner face and its rounded top
@@ -471,7 +505,7 @@ export function house(S, r, x, y, z, w, d, h, rot, o = {}) {
   /** how far the battered wall has leant back from its foot on face f at height t */
   const rec = (f, t) => (bat * ((f % 2 ? w : d) / 2) / rad) * (t / (h + par));
   const F = (f, a, t, out) => { const p = onFace(x, z, w, d, rot, f, a, out - rec(f, t)); return [p[0], y + t, p[1]]; };
-  if (o.wear !== false) {
+  if (o.wear !== false && !open) {
     // the foot of the wall, dark with damp and eaten back by splash; the roof's edge of reed and mud standing a little proud; rain streaks and newer patches
     const b0 = foot ? 0.45 : 0, bh = (foot ? 0.3 : 0.55) + q() * 0.3;
     S.prism(m, chamf(x, z, w + 0.12, d + 0.12, rot, ch), y + b0, y + b0 + bh, { col: shade(col, 0.72), batter: 0.075, cap: false });
@@ -493,12 +527,44 @@ export function house(S, r, x, y, z, w, d, h, rot, o = {}) {
     S.beam('wood', p, e, 0.075, 0.065, 5, shade(TIMBER, 0.85));
     S.quad(m, F(f, a - 0.1, 0.5, 0.035), F(f, a + 0.1, 0.5, 0.035), F(f, a + 0.2, h - 0.1, 0.035), F(f, a - 0.2, h - 0.1, 0.035), shade(col, 0.62), [q() * 5, 0]);
   }
-  const f = o.door ?? 2, span = f % 2 ? d : w, da = (r() - 0.5) * span * 0.4, dh = Math.min(1.6, h - 0.7);
-  opening(S, x, y, z, w, d, rot, f, da, 0.8, dh, 0, { m, col: shade(col, 0.92) }, { out: 0.1, sill: foot ? 'stone' : m, sillCol: foot ? lin(0xa89c88) : shade(col, 0.8) });
+  const f = o.door ?? 2, span = f % 2 ? d : w, da = (r() - 0.5) * span * 0.4, dh = open ? Math.min(2.05, h - 0.35) : Math.min(1.6, h - 0.7), dw = open ? 1.0 : 0.8;
+  opening(S, x, y, z, w, d, rot, f, da, dw, dh, 0, { m, col: shade(col, 0.92) }, { out: 0.1, sill: foot ? 'stone' : m, sillCol: foot ? lin(0xa89c88) : shade(col, 0.8), hole: open });
+  if (open) openWalls(S, m, x, y, z, w, d, h, par, rot, f, da, dw, dh, col);
   if (o.mat && o.beams !== false && q() < 0.6) { const t = dh * (0.45 + q() * 0.35), c = shade(lin(0xc8ac6c), 0.8 + q() * 0.3), P = (a, hh, out) => { const p = onFace(x, z, w, d, rot, f, a, out); return [p[0], y + hh, p[1]]; };
     S.quad('wood', P(da - 0.4, t, 0.125), P(da + 0.4, t, 0.125), P(da + 0.4, dh, 0.125), P(da - 0.4, dh, 0.125), c, [[0, 0], [0.8, 0], [0.8, 1.2], [0, 1.2]]); S.beam('wood', P(da - 0.42, t, 0.15), P(da + 0.42, t, 0.15), 0.05, 0.05, 5, shade(c, 0.85)); }
   for (let i = 0; i < (o.windows ?? 2); i++) { const wf = (f + 1 + ((r() * 3) | 0)) % 4, sp = wf % 2 ? d : w; opening(S, x, y, z, w, d, rot, wf, (r() - 0.5) * sp * 0.6, 0.32, 0.36, h - 1.0, null, { lintel: false, out: 0.07, sill: m, sillCol: shade(col, 1.06) }); }
-  return { x, z, w, d, h, rot, door: f, da };
+  return { x, z, w, d, h, rot, door: f, da, dw, t: WALL_T };
+}
+const WALL_T = 0.32;
+/**
+ * The walls of a house you can walk into, drawn face by face so that its doorway is a real gap: the outer faces, the inner faces,
+ * the reveals of the doorway, a plastered floor and the underside of the roof on its beams.
+ */
+function openWalls(S, m, x, y, z, w, d, h, par, rot, fd, da, dw, dh, col) {
+  const t = WALL_T, inCol = shade(col, 0.78), P = (f, a, out, hh) => { const q = onFace(x, z, w, d, rot, f, a, out); return [q[0], y + hh, q[1]]; };
+  const face = (f, a0, a1, h0, h1, out, inward, c) => inward ? S.quad(m, P(f, a1, out, h0), P(f, a0, out, h0), P(f, a0, out, h1), P(f, a1, out, h1), c) : S.quad(m, P(f, a0, out, h0), P(f, a1, out, h0), P(f, a1, out, h1), P(f, a0, out, h1), c);
+  for (let f = 0; f < 4; f++) {
+    const L = (f % 2 ? d : w) / 2, Li = L - t;
+    if (f !== fd) { face(f, -L, L, 0, h + par, 0, false, col); face(f, -Li, Li, 0, h, -t, true, inCol); continue; }
+    const g0 = da - dw / 2, g1 = da + dw / 2;
+    face(f, -L, g0, 0, h + par, 0, false, col); face(f, g1, L, 0, h + par, 0, false, col); face(f, g0, g1, dh, h + par, 0, false, col);
+    face(f, -Li, g0, 0, h, -t, true, inCol); face(f, g1, Li, 0, h, -t, true, inCol); face(f, g0, g1, dh, h, -t, true, inCol);
+    for (const g of [g0, g1]) { const A = P(f, g, 0, 0), B = P(f, g, -t, 0), C = P(f, g, -t, dh), D = P(f, g, 0, dh); S.quad(m, A, B, C, D, shade(col, 0.85)).quad(m, B, A, D, C, shade(col, 0.85)); }
+    { const A = P(f, g0, 0, dh), B = P(f, g1, 0, dh), C = P(f, g1, -t, dh), D = P(f, g0, -t, dh); S.quad(m, A, B, C, D, shade(col, 0.7)).quad(m, B, A, D, C, shade(col, 0.7)); }
+  }
+  S.cap('plaster', rect(x, z, w - 2 * t, d - 2 * t, rot), y + 0.03, shade(lin(0xc8b89a), 0.9));
+  S.cap('reed', rect(x, z, w - 2 * t, d - 2 * t, rot), y + h - 0.02, lin(0x8a7650), true);
+  for (let a = -w / 2 + t + 0.4; a < w / 2 - t - 0.2; a += 0.75) { const p = local(x, z, rot, a, -d / 2 + t), e = local(x, z, rot, a, d / 2 - t); S.beam('wood', [p[0], y + h - 0.12, p[1]], [e[0], y + h - 0.12, e[1]], 0.08, 0.07, 5, TIMBER, false); }
+}
+/** Things in a house: a hearth, a quern with its rubbing stone, sleeping mats of reed, jars along the wall, a low bench. hs: what house() returned. */
+export function furnish(S, hs, y, q, o = {}) {
+  const { x, z, w, d, rot, t } = hs, iw = w - 2 * t, id = d - 2 * t, L = (px, pz) => local(x, z, rot, px * iw / 2, pz * id / 2);
+  { const p = L(0.05, 0.1); hearth(S, p[0], y + 0.03, p[1], q, 0.36); }
+  { const p = L(-0.62, -0.55); S.box('stone', p[0], y, p[1], 0.75, 0.16, 0.45, rot + 0.3, { col: lin(0x8a8274) }); const b = local(p[0], p[1], rot + 0.3, 0.05, 0); S.box('stone', b[0], y + 0.16, b[1], 0.22, 0.09, 0.32, rot + 0.3, { col: lin(0x9a9284) }); }   // the quern and its rubbing stone
+  for (const [px, s] of [[0.45, 1], [0.78, 0.8]]) { const p = L(px, -0.45), A = local(p[0], p[1], rot, -0.35, -0.9 * s), B = local(p[0], p[1], rot, 0.35, -0.9 * s), C = local(p[0], p[1], rot, 0.35, 0.9 * s), D = local(p[0], p[1], rot, -0.35, 0.9 * s);
+    S.quad('reed', [A[0], y + 0.06, A[1]], [D[0], y + 0.06, D[1]], [C[0], y + 0.06, C[1]], [B[0], y + 0.06, B[1]], shade(lin(0xc8a860), 0.8 + q() * 0.3), null, [0, 1, 0]); }   // sleeping mats
+  for (let k = 0; k < 4; k++) { const p = L(-0.85 + k * 0.17, 0.82); pot(S, p[0], y, p[1], k % 2 ? 'jar' : 'bowl', shade(lin(0x9a7250), 0.8 + q() * 0.4), 0.8); }
+  { const p = L(0.6, 0.8); S.box(o.benchM || 'plaster', p[0], y, p[1], iw * 0.3, 0.42, 0.5, rot, { col: shade(lin(0xb89a70), 0.85) }); }   // a bench of mud along the wall
 }
 /** A hearth: a ring of fire-cracked stones round a bed of ash and charred ends. q: a random source. */
 export function hearth(S, x, y, z, q, rad = 0.42) {

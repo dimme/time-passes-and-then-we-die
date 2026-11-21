@@ -202,7 +202,9 @@ function build({ world, group }) {
   block(CAMP[0], CAMP[1], 0.7, FIRE, S0);
   // our own camp: brush shelters in a ring, opening on the fires; red ochre where it is ground
   const SHELTER = [20, 75, 128, 205, 258, 312].map((d, i) => { const a = d * Math.PI / 180, x = CAMP[0] + cos(a) * 14.5, z = CAMP[1] + sin(a) * 14.5; return [x, z, facing(x, z, CAMP[0], CAMP[1]), i]; });
-  for (const [x, z, rot, i] of SHELTER) { const s = brushShelter(60 + i); stuff.add('thatch', [s.thatch, s.bed], x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('wood', s.wood, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('rock', s.stones, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); block(x, z, 1.5, S0); }
+  // the shelters are domes of grass open on the side towards the fire, tall enough to walk into: you are kept off the thatch, not out of them
+  const HUT_SY = 1.6, huts = [];
+  for (const [x, z, rot, i] of SHELTER) { const s = brushShelter(60 + i); stuff.add('thatch', s.thatch, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1), sy: HUT_SY }); stuff.add('thatch', s.bed, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('wood', s.wood, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1), sy: HUT_SY }); stuff.add('rock', s.stones, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); huts.push([x, z, rot, 1 + 0.12 * sin(i * 2.1)]); }
   const OCH = [CAMP[0] + 2, CAMP[1] - 9.5];
   stuff.add('plain', [part(new THREE.CircleGeometry(0.9, 12), OCHRE, 0, 0.02, 0, -1.5708), ball(0.09, OCHRE, 0.5, 0.05, 0.4), ball(0.07, OCHRE, -0.4, 0.04, 0.5), ball(0.11, 0x9a3418, 0.2, 0.06, -0.6)], OCH[0] + 0.6, OCH[1], { from: S0 });
   stuff.build(); fires.build();
@@ -329,6 +331,11 @@ function build({ world, group }) {
       cone.visible = u < U_COLLAPSE; caldera.visible = !cone.visible; plume.visible = u > U_SMOKE && u < U_COLLAPSE;
     },
     collide(pos) {
+      if (uNow >= Y(S0)) for (const [x, z, rot, k] of huts) {
+        const dx = pos.x - x, dz = pos.z - z, c = Math.cos(rot), sn = Math.sin(rot), lx = dx * c - dz * sn, lz = dx * sn + dz * c, rho = Math.hypot(lx, lz), R = 1.75 * 1.08 * k;
+        if (rho < R - 0.75 || rho > R + 0.45 || Math.abs(Math.atan2(lz, lx)) < 0.95 || rho < 1e-4) continue;
+        const to = rho < R - 0.15 ? R - 0.75 : R + 0.45; pos.x = x + (dx / rho) * to; pos.z = z + (dz / rho) * to;
+      }
       for (const [x, z, rad, u0, u1] of solid) {
         if (uNow < u0 || uNow >= u1) continue;
         const dx = pos.x - x, dz = pos.z - z, d = Math.hypot(dx, dz), R = rad + 0.5;

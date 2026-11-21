@@ -1,10 +1,10 @@
 // The Fertile Crescent at Jericho, 9600 – 4000 BCE: a spring under dry hills, and the first people who stayed
 // in one place to grow their food. Round houses and a stone tower first; later square houses, herds and pots.
 import * as THREE from 'three';
-import { rng, smooth } from './util.js';
+import { rng, smooth, clamp } from './util.js';
 import { yearToU, uToYear } from './timeline.js';
 import { actors } from './people-actors.js';
-import { bundle, hearth, rack, onFace, Shape, field, sheaf, heap, pot, ladder, house, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js';
+import { bundle, hearth, rack, onFace, Shape, field, sheaf, heap, pot, ladder, house, furnish, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js';
 import { livestock, standing, drove } from './site-crescent-animals.js';
 
 const FLAT = 3, SEA = 2.1;
@@ -32,6 +32,11 @@ const toStream = (x, z) => { let d = 1e9; for (let i = 0; i < STREAM.length - 1;
 const set = (c, r, g, b) => { c[0] = r; c[1] = g; c[2] = b; };
 
 const Y = yearToU;
+// the stair in the tower: along its east-west axis in from the door (local x from the tower's centre), its passage SW_HALF either side
+const DOOR_H = 2.1, SW_HALF = 0.55, STEPS = 22, ST_X0 = 3.8, ST_RUN = 7 / 22, ST_RISE = 8.5 / 22, HEAD = 2.25, TOP_Y = FLAT + 8.5, TOP_R = 3.55;
+const HOLE_K = Math.ceil((8.5 - HEAD) / ST_RISE) - 1;   // the steps from which the passage is open to the sky
+const stairAt = (lx) => (lx > ST_X0 ? FLAT : FLAT + ST_RISE * (Math.min(STEPS - 1, Math.floor((ST_X0 - lx) / ST_RUN)) + 1));
+const ceilAt = (lx) => (lx > ST_X0 ? FLAT + DOOR_H : Math.min(TOP_Y + 9, stairAt(lx) + HEAD > TOP_Y ? TOP_Y + 9 : stairAt(lx) + HEAD));
 const MUD = lin(0xb89a70), MUD2 = lin(0xa88a62), LIME = lin(0xd8d0bc), CLAY = lin(0x9a7250), STONE = lin(0xc0b49c), STRAW = lin(0xd8b45c), TIMBER = lin(0x6a4c30), WATER = lin(0x2c5650);
 
 function build({ world, group }) {
@@ -134,11 +139,23 @@ function build({ world, group }) {
   for (const [a, flip] of [[g0, 0], [g1, 1]]) { const c = Math.cos(a), s = Math.sin(a), p = (rr, h) => [V[0] + c * rr, FLAT - 0.4 + h, V[1] + s * rr], q = [p(VR + 1, 0), p(VR - 0.9, 0), p(VR - 0.75, 4), p(VR + 0.75, 4)]; flip ? SW.quad('stone', q[0], q[1], q[2], q[3], STONE) : SW.quad('stone', q[1], q[0], q[3], q[2], STONE); }
   const TW = [V[0] - VR + 6.5, V[1]];
   { const prof = []; for (let k = 0; k < 10; k++) prof.push([4.6 - 0.11 * k, k * 0.89], [4.6 - 0.11 * (k + 1) + 0.065, (k + 1) * 0.89]);   // each lift of stones set back a little from the one below
-    SW.lathe('stone', TW[0], FLAT - 0.4, TW[1], prof, 28, { col: shade(STONE, 0.95), cap: 'stone' });
+    const DA = 0.125, lift = prof.filter((q) => q[1] > DOOR_H + 0.45); lift.unshift([4.6 - 0.118 * (DOOR_H + 0.4), DOOR_H + 0.4]);   // the stone face, round the doorway, and the courses over it
+    SW.lathe('stone', TW[0], FLAT - 0.4, TW[1], prof, 28, { col: shade(STONE, 0.95), cap: 'stone', a0: DA, a1: Math.PI * 2 - DA }); SW.lathe('stone', TW[0], FLAT - 0.4, TW[1], lift, 2, { col: shade(STONE, 0.95), cap: 'stone', a0: -DA, a1: DA });
     for (let k = 0; k < 26; k++) { const a = q2() * 6.283, hh = 0.5 + q2() * 8, rr = 4.6 - 0.118 * hh; SW.lathe('stone', TW[0] + Math.cos(a) * rr, FLAT - 0.4 + hh, TW[1] + Math.sin(a) * rr, [[0.26 + q2() * 0.14, -0.12], [0.3, 0], [0.2, 0.14]], 5, { col: shade(STONE, 0.8 + q2() * 0.3), sx: 1.5, rot: -a + 1.5708 }); } }   // stones standing proud of the face
-  SW.lathe('plain', TW[0], FLAT + 8.52, TW[1], [[0.55, 0], [0.01, 0.0]], 8, { col: lin(0x14100c) });   // the head of the stair inside
-  { const p = (dz, h) => [TW[0] + 4.56 - h * 0.085, FLAT + h, TW[1] + dz]; SW.quad('plain', p(0.4, 0), p(-0.4, 0), p(-0.4, 1.5), p(0.4, 1.5), lin(0x14100c)); SW.beam('stone', p(0.7, 1.62), p(-0.7, 1.62), 0.16, 0.16, 5, shade(STONE, 0.8)); }   // the low door at its foot
-  solids.circle(TW[0], TW[1], 4.6, Y(-8500));
+  { // the stair inside: from the low door at its foot, twenty-two steep steps up a passage roofed with slabs, out through the top
+    const X = (lx) => TW[0] + lx, Zs = (s) => TW[1] + s * SW_HALF, two = (a, b, c, d, col) => SW.quad('stone', a, b, c, d, col).quad('stone', b, a, d, c, col), dim = shade(STONE, 0.62), dimmer = shade(STONE, 0.5);
+    for (let k = 0; k < STEPS; k++) {
+      const x0 = ST_X0 - ST_RUN * k, x1 = x0 - ST_RUN, top = FLAT + ST_RISE * (k + 1), ceil = Math.min(TOP_Y, top + HEAD);
+      SW.box('stone', X((x0 + x1) / 2), FLAT - 0.4, TW[1], ST_RUN + 0.01, top - FLAT + 0.4, SW_HALF * 2, 0, { col: shade(STONE, 0.78 + q2() * 0.15) });
+      for (const s of [-1, 1]) two([X(x0), FLAT - 0.4, Zs(s)], [X(x1), FLAT - 0.4, Zs(s)], [X(x1), ceil, Zs(s)], [X(x0), ceil, Zs(s)], dim);
+      if (top + HEAD < TOP_Y) two([X(x0), ceil, Zs(-1)], [X(x1), ceil, Zs(-1)], [X(x1), ceil, Zs(1)], [X(x0), ceil, Zs(1)], dimmer);
+    }
+    for (const s of [-1, 1]) two([X(4.7), FLAT - 0.4, Zs(s)], [X(ST_X0), FLAT - 0.4, Zs(s)], [X(ST_X0), FLAT + DOOR_H, Zs(s)], [X(4.7), FLAT + DOOR_H, Zs(s)], dim);   // the passage from the door to the first step
+    two([X(4.7), FLAT + DOOR_H, Zs(-1)], [X(ST_X0), FLAT + DOOR_H, Zs(-1)], [X(ST_X0), FLAT + DOOR_H, Zs(1)], [X(4.7), FLAT + DOOR_H, Zs(1)], dimmer);
+    const xe = ST_X0 - ST_RUN * STEPS; two([X(xe), FLAT - 0.4, Zs(-1)], [X(xe), FLAT - 0.4, Zs(1)], [X(xe), TOP_Y, Zs(1)], [X(xe), TOP_Y, Zs(-1)], dim);
+    const xh = ST_X0 - ST_RUN * HOLE_K; SW.quad('plain', [X(xe), TOP_Y + 0.02, Zs(1)], [X(xh), TOP_Y + 0.02, Zs(1)], [X(xh), TOP_Y + 0.02, Zs(-1)], [X(xe), TOP_Y + 0.02, Zs(-1)], lin(0x14100c), null, [0, 1, 0]);   // the head of the stair, open on the top
+    const p = (dz, h) => [TW[0] + 4.56 - h * 0.085, FLAT + h, TW[1] + dz]; SW.beam('stone', p(0.8, DOOR_H + 0.1), p(-0.8, DOOR_H + 0.1), 0.16, 0.16, 5, shade(STONE, 0.8));   // the lintel over the door
+  }
   // while it is being raised: stone heaps, carriers, men dragging blocks
   for (let k = 0; k < 6; k++) heap(SK, TW[0] + 9 + r() * 8, FLAT, TW[1] - 6 + r() * 12, 0.8 + r() * 0.8, 0.5 + r() * 0.4, shade(STONE, 0.8 + r() * 0.3), 'stone');
   for (let k = 0; k < 6; k++) P(M, 'carry', 0, 0, 0, { path: [[TW[0] + 12, TW[1] + (k - 3) * 2], [TW[0] + 6, TW[1] + (k - 3) * 0.8]], prop: 'basket', phase: r(), u0: Y(-8500), u1: Y(-8300) });
@@ -187,8 +204,10 @@ function build({ world, group }) {
   for (let k = 0; k < 38; k++) {
     const w = 5 + r() * 2.6, d = 3.8 + r() * 1.6, h = 2.4 + r() * 0.6, it = place(square, Math.hypot(w, d) / 2 + 0.3); if (!it) continue;
     const rot = ((r() * 2) | 0) * Math.PI / 2 + (r() - 0.5) * 0.25 + 0.3, c = shade(r() < 0.25 ? LIME : MUD, 0.85 + r() * 0.25);
-    const hs = house(SB, r, it.x, FLAT, it.z, w, d, h, rot, { m: 'adobe', roofM: 'adobe', col: c, door: (r() * 4) | 0 }); it.h = h; it.w = w; it.d = d; it.rot = rot;
-    solids.box(it.x, it.z, w, d, rot, Y(-7600));
+    const open = square.length <= 2;   // the first two have their doors open: you can walk in
+    const hs = house(SB, r, it.x, FLAT, it.z, w, d, h, rot, { m: 'adobe', roofM: 'adobe', col: c, door: (r() * 4) | 0, open, footing: !open }); it.h = h; it.w = w; it.d = d; it.rot = rot;
+    if (open) { solids.room(it.x, it.z, w, d, rot, hs.t, [[hs.door, hs.da, hs.dw]], Y(-7600)); furnish(SB, hs, FLAT, rng(5100 + square.length)); it.open = hs; }
+    else solids.platform(it.x, it.z, w + 0.2, d + 0.2, rot, FLAT + h, Y(-7600));   // its flat roof, for whoever climbs up
     { const pf = hs.door === 0 ? 2 : 0, at = (a, out) => onFace(it.x, it.z, w, d, rot, pf, a, out), pk = q2(), sd = q2() < 0.5 ? -1 : 1;
       if (pk < 0.45) { const p = at(sd * w * 0.22, 0.5); rack(SB, p[0], FLAT, p[1], rot, q2, 1.5 + q2() * 0.6, 1.4 + q2() * 0.3); }
       if (pk > 0.3 && pk < 0.75) { const p = at(-sd * w * 0.25, 0.7); hearth(SB, p[0], FLAT, p[1], q2); }
@@ -197,7 +216,9 @@ function build({ world, group }) {
         for (const s of [-1, 1]) { const b = local(p[0], p[1], rot, 0.3, s * 0.22), t = local(p[0], p[1], rot, 0.42, s * 0.2); SB.beam('wood', [b[0], Yr, b[1]], [t[0], Yr + 0.85, t[1]], 0.035, 0.03, 5, TIMBER); }
         const b = local(p[0], p[1], rot, 0.36, -0.22), t = local(p[0], p[1], rot, 0.36, 0.22); for (const hh of [0.25, 0.58]) SB.beam('wood', [b[0], Yr + hh, b[1]], [t[0], Yr + hh, t[1]], 0.022, 0.022, 4, TIMBER, false); }
     }
-    if (r() < 0.4) { const q = local(it.x, it.z, rot, w / 2 + 1.0, (r() - 0.5) * d * 0.5); ladder(SB, q[0], FLAT, q[1], h + 0.3, rot + Math.PI); }
+    if (r() < 0.4 && !open) { const al = (r() - 0.5) * d * 0.5, q = local(it.x, it.z, rot, w / 2 + 1.0, al), m = local(it.x, it.z, rot, w / 2 + 0.55, al), c0 = Math.cos(rot), s0 = Math.sin(rot);
+      ladder(SB, q[0], FLAT, q[1], h + 0.3, rot + Math.PI);
+      solids.platform(m[0], m[1], 1.1, 0.7, rot, (X, Z) => FLAT + h * clamp(1 - ((X - it.x) * c0 - (Z - it.z) * s0 - w / 2) / 1.0, 0, 1), Y(-7600), Infinity, 'ladder'); }   // up the ladder onto the roof
     if (r() < 0.5) for (let j = 0; j < 3; j++) { const q = local(it.x, it.z, rot, (r() - 0.5) * (w - 1.6), (r() - 0.5) * (d - 1.6)); r() < 0.5 ? heap(SB, q[0], FLAT + h, q[1], 0.45, 0.25, STRAW, 'wood') : pot(SP, q[0], FLAT + h, q[1], 'jar', shade(CLAY, 0.8 + r() * 0.4), 0.8); }
   }
   for (let k = 0; k < 8; k++) { const it = place(square, 1.0); if (it) { bin(SB, it.x, it.z, 1 + r() * 0.3); solids.list.pop(); solids.circle(it.x, it.z, 0.75, Y(-7600)); } }
@@ -272,18 +293,40 @@ function build({ world, group }) {
   const folk = actors(world, people, { seed: 96 }); group.add(...folk.meshes);
   const groups = [always, early, late, herding, grown, pots, cows, works, walls];
 
+  // the tower: solid stone but for the passage of its stair; you stand on its top once you have climbed it
+  const tower = {
+    s: 1, off: 0, sunk: 0,
+    w: (y) => y * tower.s + tower.off,   // a height in the tower as built to where it stands now (rising, later half buried)
+    collide(pos) {
+      if (solids.u < Y(-8500)) return;
+      const lx = pos.x - TW[0], lz = pos.z - TW[1], d = Math.hypot(lx, lz), feet = pos.y - 1.7; if (d > 5.2 || feet > tower.w(TOP_Y) - 0.6) return;
+      if (tower.sunk < 0.05 && Math.abs(lz) < SW_HALF && lx > ST_X0 - ST_RUN * STEPS) { pos.z = TW[1] + clamp(lz, -SW_HALF + 0.3, SW_HALF - 0.3); pos.x = TW[0] + Math.max(lx, ST_X0 - ST_RUN * STEPS + 0.3); return; }
+      if (d > 1e-4) { pos.x = TW[0] + (lx / d) * 5.2; pos.z = TW[1] + (lz / d) * 5.2; }
+    },
+    floorAt(x, z) {
+      if (solids.u < Y(-8500)) return -Infinity;
+      const lx = x - TW[0], lz = z - TW[1], d = Math.hypot(lx, lz);
+      if (tower.sunk < 0.05 && Math.abs(lz) < SW_HALF && lx > ST_X0 - ST_RUN * STEPS && lx < 4.7 && solids.feet < tower.w(ceilAt(lx)) - 0.3) return tower.w(stairAt(lx));   // in the passage, under its roof
+      return d < TOP_R * (0.3 + 0.7 * tower.s) + (1 - tower.s) * 1.1 ? tower.w(TOP_Y) : -Infinity;
+    },
+  };
+
   return {
+    floorAt(x, z) { return Math.max(solids.floorAt(x, z), tower.floorAt(x, z)); },
+    audit: { solids, tower: TW, square },   // for the numerical walking tests
     update(u, t, env, camera, view) {
       const year = uToYear(u); solids.u = u;
       for (const g of groups) g.visible = u >= g.userData.u0 && u < g.userData.u1;
       // the tower rises over two centuries; four thousand years later the town's own rubble has half buried it and the wall
       const rise = smooth((year + 8500) / 200), sunk = smooth((year + 7600) / 500);
       for (const m of wallMeshes) { m.scale.y = 0.3 + 0.7 * rise; m.position.y = (FLAT - 0.4) * (1 - m.scale.y) - 2.4 * sunk; }
+      tower.s = 0.3 + 0.7 * rise; tower.off = (FLAT - 0.4) * (1 - tower.s) - 2.4 * sunk; tower.sunk = sunk;
       for (const h of herds) h.update(u);
       droves.update(u, t); folk.update(u, t, view);
     },
     collide(pos) {
       solids.collide(pos);
+      tower.collide(pos);
       if (solids.u >= Y(-8500)) {   // the wall: a ring with one gap
         const dx = pos.x - V[0], dz = pos.z - V[1], d = Math.hypot(dx, dz);
         if (Math.abs(d - VR) < 1.6) { let a = Math.atan2(dz, dx) - GATE; a = Math.atan2(Math.sin(a), Math.cos(a)); if (Math.abs(a) * VR > 2.2) { const to = d < VR ? VR - 1.6 : VR + 1.6; pos.x = V[0] + (dx / d) * to; pos.z = V[1] + (dz / d) * to; } }
