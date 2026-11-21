@@ -286,7 +286,8 @@ function build({ world, group }) {
   B.when(113, Infinity); B.push(-94.5, H(-94.5, -215), -215, 0); B.box('marble', C.marble, 5.6, 5, 5.6, 0, 0, 0); B.cyl('marble', C.marble, 1.6, 1.85, 27, 0, 5, 0, 20); for (let k = 0; k < 22; k++) B.cyl('marble', shade(C.marble, 0.82), 1.9 - k * 0.011, 1.9 - k * 0.011, 0.14, 0, 5.6 + k * 1.2, 0, 20); B.box('marble', C.marble, 4.4, 0.9, 4.4, 0, 32, 0); statue(K, 0, 32.9, 0, PI / 2, 3.6, { base: 0, col: C.gold }); B.pop(); CB.rect(-94.5, -215, 3, 3, 0, 113);   // Trajan's column
 
   // ------------------------------------------------------------------ the Tiber: the stone bridge, the wharf, the round temple
-  const bry = Math.atan2(TU[0], TU[1]) + PI / 2, [bx, bz] = bank(520, 0), deck = F - 2.5;
+  const bry = Math.atan2(TU[0], TU[1]),   // the deck runs across the stream, bank to bank
+  [bx, bz] = bank(520, 0), deck = F - 2.5;
   B.when(-150, -142); B.push(bx, 0, bz, bry); for (let k = -2; k <= 2; k++) B.box('ashlar', C.tufa, 6, deck + 6, 9, k * 22, -7, 0); B.box('wood', C.oldWood, 124, 0.5, 7, 0, deck - 0.5, 0); for (const e of [1, -1]) B.box('wood', C.wood, 124, 1, 0.2, 0, deck, e * 3.4); B.pop();
   B.when(-142, Infinity); B.push(bx, 0, bz, bry); for (let k = -2.5; k <= 2.5; k++) { B.geo('ashlar', C.tufa, archGeo(22, deck + 1, 8.5, 16, 0.4), k * 22, -1, 0); archRing(B, C.travertine, k * 22, -1, 0, 0, 8.5, 16, 0.4, 1.2); } for (let k = -3; k <= 3; k++) B.box('ashlar', C.travertine, 6.4, deck + 6, 10, k * 22, -7, 0); B.box('ashlar', C.travertine, 134, 0.5, 9.5, 0, deck, 0); for (const e of [1, -1]) B.box('ashlar', C.travertine, 134, 1.1, 0.5, 0, deck + 0.5, e * 4.5); B.pop();
   B.when(); const wharf = bank(455, 60), wa = Math.atan2(-TU[1], TU[0]);
