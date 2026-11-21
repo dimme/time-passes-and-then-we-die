@@ -16,7 +16,7 @@ const PI = Math.PI;
 // =====================================================================================
 const C = {
   coat: fin(0x6a4428, 0.85), plain: fin(0xffffff, 0.7), leather: fin(0x1e150f, 0.55), wood: fin(0x7a5a36, 0.85), plank: fin(0x8f7450, 0.9), green: fin(0x34503a, 0.7), wheel: fin(0x8a3220, 0.7),
-  iron: fin(0x26262a, 0.5, 0.7), sack: fin(0xb09a6c, 0.95), cask: fin(0x6e4a28, 0.8), coatCloth: fin(0x2a2c34, 0.9), trousers: fin(0x5a4a38, 0.9), skin: fin(0xc89a78, 0.8), hat: fin(0x1a1614, 0.9),
+  iron: fin(0x26262a, 0.5, 0.7), sack: fin(0xb09a6c, 0.95), cask: fin(0x6e4a28, 0.8), coatCloth: fin(0x2a2c34, 0.9), trousers: fin(0x5a4a38, 0.9), skin: fin(0xc89a78, 0.8), hat: fin(0x1a1614, 0.9), hair: fin(0x3a2a1e, 0.9), eyeWhite: fin(0xe8e2d8, 0.4), pupil: fin(0x241a14, 0.2), lips: fin(0x9a5a50, 0.7),
 };
 const HORSE_X = 2.8;   // the horse stands this far ahead of the wagon's origin
 /** `horse` false leaves the horse out (the game puts a living, walking one in the shafts); the harness is still fitted to it. */
@@ -64,7 +64,14 @@ export function cartParts(M, { horse: keep = true } = {}) {
   // driver
   const fig = { ref: [0, 0, 1], sub: 2 };
   sweep(bag, [[0.08, 1.8, 0, 0.9], [0.1, 2.05, 0, 1.05], [0.14, 2.3, 0, 0.85], [0.15, 2.36, 0, 0.4]], oval(0.1, 0.18), C.coatCloth, fig);
-  bag.ball(C.skin, 0.17, 2.48, 0, 0.1, 0.115, 0.095); bag.cyl(C.hat, 0.2, 0.2, 0.02, 0.17, 2.56, 0, 12); bag.cyl(C.hat, 0.095, 0.11, 0.12, 0.17, 2.62, 0, 10);
+  bag.ball(C.skin, 0.17, 2.48, 0, 0.1, 0.115, 0.095); bag.cyl(C.hat, 0.2, 0.2, 0.02, 0.17, 2.56, 0, 12);
+  // a face: hair under the hat, eyes, brows, nose and ears (he looks ahead, along +x, to the horse)
+  bag.ball(C.hair, 0.13, 2.52, 0, 0.09, 0.06, 0.1);
+  for (const s of [1, -1]) {
+    bag.ball(C.eyeWhite, 0.257, 2.5, s * 0.034, 0.012, 0.011, 0.017); bag.ball(C.pupil, 0.267, 2.5, s * 0.034, 0.005, 0.008, 0.008);
+    bag.ball(C.hair, 0.262, 2.522, s * 0.035, 0.007, 0.005, 0.02); bag.ball(C.skin, 0.17, 2.485, s * 0.098, 0.018, 0.03, 0.01);
+  }
+  bag.ball(C.skin, 0.272, 2.475, 0, 0.022, 0.03, 0.014); bag.ball(C.lips, 0.262, 2.437, 0, 0.008, 0.007, 0.022); bag.cyl(C.hat, 0.095, 0.11, 0.12, 0.17, 2.62, 0, 10);
   for (const s of [1, -1]) {
     sweep(bag, [[0.08, 1.83, s * 0.09], [0.47, 1.82, s * 0.11], [0.68, 1.42, s * 0.11]], oval(0.07, 0.07, 6), C.trousers, fig); bag.ball(C.hat, 0.75, 1.36, s * 0.11, 0.13, 0.06, 0.055, 0, 0, 0.7);
     sweep(bag, [[0.13, 2.26, s * 0.2], [0.2, 2.02, s * 0.23], [0.46, 1.94, s * 0.1]], oval(0.048, 0.048, 6), C.coatCloth, fig); bag.ball(C.skin, 0.5, 1.93, s * 0.09, 0.05);
