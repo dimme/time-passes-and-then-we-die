@@ -69,7 +69,8 @@ function build({ world, group }) {
     B.when(y0, y1); const N = 72, pt = (i) => { const a = (i / N) * 6.2832, c = Math.cos(a), s = Math.sin(a); return [125 * 0.83 * Math.sign(c) * Math.abs(c) ** (2 / 2.6), 66 * 0.83 * Math.sign(s) * Math.abs(s) ** (2 / 2.6)]; };
     for (let i = 0; i < N; i++) {
       const a = pt(i), b = pt(i + 1), mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2; if (mx < -90 && Math.abs(mz) < 15) continue;
-      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); B.box(mat, tone(col, r, 0.06), L + 1, 12 + up, th, mx, TOP - 12, mz, toward(a[0], a[1], b[0], b[1]));
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); B.slab(mat, tone(col, r, 0.06), L + 1, 12 + up, th, mx, TOP - 12, mz, toward(a[0], a[1], b[0], b[1]));
+      if (y0 > -1000) B.box(mat, shade(col, 1.1), L + 1.05, 0.45, th + 0.5, mx, TOP + up - 0.45, mz, toward(a[0], a[1], b[0], b[1]));   // a coping course, throwing a line of shadow
       if (y0 < -1000) CB.rect(mx, mz, L / 2 + 0.5, 1.6, toward(a[0], a[1], b[0], b[1]));
       else if (mz < -30 && i % 2 === 0 && Math.abs(mx) < 60) B.cyl('marble', shade(C.pentelic, 0.85), 0.9, 0.9, 1.1, mx, TOP + 0.6, mz - 1.4, 14);   // drums of the burnt temple built into the north wall
     }
@@ -91,7 +92,7 @@ function build({ world, group }) {
   B.when(-570, -480); temple(K, old);
   B.when(-480, -421); temple(K, { ...old, ruin: 0.9, burnt: 1 });
   const parth = { x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
-  B.when(-488, Infinity); B.box('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.rect(22, 24, 39.8, 21.2, 0, -488);
+  B.when(-488, Infinity); B.slab('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.rect(22, 24, 39.8, 21.2, 0, -488);
   B.when(-488, -480); temple(K, { ...parth, stage: 0.08 });
   B.when(-480, -447); temple(K, { ...parth, stage: 0.08, burnt: 1 });
   const works = (x0, z0, x1, z1, h, cranes) => {   // scaffolding round a building and cranes on its floor
