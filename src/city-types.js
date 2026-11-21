@@ -107,6 +107,8 @@ function shop(k, r, x0, x1, g, o = {}) {
   for (const x of [mid - sd / 2, mid + sd / 2]) k.box(M.trim, paint, 0.07, top - 0.14, 0.1, x, 0, zg + 0.05, 'kb');
   k.box(M.trim, paint, sd, 0.1, 0.1, mid, 2.2, zg + 0.05, 'k'); k.quad(M.trim, 0x8a8478, [mid - sd / 2, 0, zg + 0.11], [mid + sd / 2, 0, zg + 0.11], [mid + sd / 2, 0.12, zg + 0.11], [mid - sd / 2, 0.12, zg + 0.11]);
   if (o.awning ?? r() < 0.45) awning(k, a - 0.1, b + 0.1, top + 0.05, r);
+  if (r() < 0.5) { const bx = r() < 0.5 ? x0 + 0.25 : x1 - 0.25; k.rod(M.trim, IRON, 0.04, [bx, top + 1.45, 0], [bx, top + 1.45, 1]); k.box(M.trim, sign, 0.06, 0.75, 0.8, bx, top + 0.66, 0.58); k.box(M.trim, 0xe8e0c8, 0.07, 0.3, 0.5, bx, top + 0.9, 0.58); }      // a blade sign on an iron bracket
+  if (r() < 0.55) { const n = 1 + Math.floor(r() * 3), s = r() < 0.5 ? 1 : -1, e = s > 0 ? a : b; for (let j = 0; j < n; j++) k.box(M.trim, j % 2 ? 0x8a6a44 : 0x6a5236, 0.55, 0.38 + (j % 2) * 0.1, 0.4, e + s * (0.4 + j * 0.62), 0, 0.3, 'b'); if (r() < 0.5) k.cyl(M.trim, 0x5a4028, 0.26, 0.23, 0.78, e + s * (0.45 + n * 0.62), 0, 0.33, 8); }      // crates and a barrel under the window
 }
 /** Iron fire escape down the front of a tenement: a balcony at every storey of the facade f, joined by stairs. */
 function fireEscape(k, F, f, i0, n = f.nf) {
@@ -133,7 +135,13 @@ export function lobby(k, r, fw, g, frame, glow = OFFICE, canopy = true) {
   k.box(M.trim, 0x38383a, fw, 0.35, 0.12, 0, 0, -0.08, 'kb'); k.quad(M.lit, glow, [-fw / 2, 0.35, -0.15], [fw / 2, 0.35, -0.15], [fw / 2, top, -0.15], [-fw / 2, top, -0.15]);
   for (let q = 0; q <= n; q++) { const end = q % n === 0; k.box(M.trim, frame, end ? 0.55 : 0.1, top, end ? 0.36 : 0.16, -fw / 2 + (q * fw) / n + (q ? (end ? -0.275 : 0) : 0.275), 0, end ? -0.02 : -0.08, 'kb'); }
   k.box(M.trim, frame, fw, 0.1, 0.14, 0, 2.7, -0.09, 'k'); k.box(M.trim, frame, fw, 0.7, 0.34, 0, top, -0.03, 'k');
-  if (canopy) { const cx = (r() - 0.5) * Math.max(0, fw - 8); k.box(M.trim, frame, 5.2, 0.2, 2.3, cx, 3.25, 1.05); for (const s of [-1, 1]) k.box(M.trim, 0x141414, 0.06, 2.35, 0.06, cx + s * 0.9, 0.35, -0.1, 'kb'); }
+  let cx = 0;
+  if (canopy) { cx = (r() - 0.5) * Math.max(0, fw - 8); k.box(M.trim, frame, 5.2, 0.2, 2.3, cx, 3.25, 1.05); for (const s of [-1, 1]) k.box(M.trim, 0x141414, 0.06, 2.35, 0.06, cx + s * 0.9, 0.35, -0.1, 'kb'); }
+  // a revolving door in its glass drum, a swing door either side with steel pulls, the street number in steel over them
+  k.cyl(M.lit, glow, 1.05, 1.05, 2.3, cx, 0.35, 0.15, 10, true); k.cyl(M.trim, frame, 1.12, 1.12, 0.2, cx, 2.62, 0.15, 10); k.cyl(M.trim, 0x38383a, 1.12, 1.12, 0.06, cx, 0.3, 0.15, 10);
+  for (const a of [0.5, 0.5 + PI / 2]) k.at(cx, 0, 0.15, a, () => k.box(M.metal, 0x8a8e92, 1.96, 2.2, 0.035, 0, 0.38, 0, 'b'));
+  for (const s of [-1, 1]) { for (const x of [1.4, 2.5]) k.box(M.trim, frame, 0.08, 2.35, 0.16, cx + s * x, 0.35, -0.08, 'kb'); k.box(M.metal, 0xc8ccd0, 0.05, 1, 0.07, cx + s * 1.62, 1, -0.09, 'kb'); }
+  k.box(M.metal, 0xc8ccd0, 2.4, 0.3, 0.05, cx, top + 0.2, 0.17, 'kb');
 }
 /** A lattice radio mast: two crossed planes of truss, a pole and a warning light. */
 export function mast(k, x, y, z, h, w = 1.2, light = true) {
@@ -206,6 +214,8 @@ export const TYPES = {
         for (const q of i === n - 1 ? [0] : [-1, 1]) k.box(M.trim, stone, i === n - 1 ? hw * 2 + 0.1 : tw + 0.1, 0.08, T + 0.1, q * (hw - tw / 2), (i + 1) * sh, 0, 'b');
       }
       if (s < 0) return;
+      for (const q of [-1, 1]) { k.box(M.trim, IRON, 0.07, 0.55, 0.04, q * w * 0.3, -0.75, T / 2 + 0.02, 'k'); k.box(M.trim, IRON, 0.07, 0.45, 0.04, q * w * 0.16, sh * 1.1, T / 2 + 0.02, 'k'); }      // wrought-iron wall anchors
+      k.rod(M.trim, IRON, 0.035, [0, n * sh, 0], [0, n * sh + 1.2, 0]); k.sheet(M.trim, IRON, [0, n * sh + 0.85, 0], [0.5, n * sh + 0.98, 0], [0, n * sh + 1.1, 0]);      // weathervane
       k.box(M.trim, paint, 0.9, 1.25, 0.05, 0, 0.45, T / 2 + 0.02, 'k'); k.box(M.trim, stone, 1.1, 0.1, 0.1, 0, 0.35, T / 2 + 0.03, 'k');     // loft door and hoist beam
       k.box(M.trim, WOOD, 0.13, 0.13, 0.95, 0, 2.05, T / 2 + 0.4, 'k'); glaze(k, 0, sh * (n - 2) + 0.1, 0.45, 0.55, T / 2 + 0.01, DARK, 1, 1, 0xe2dac4, 0.05);
     });
@@ -388,11 +398,16 @@ export const TYPES = {
         const st = street(i, corner), hh = t.y1 - t.y0;
         if (ti || st) piers(k, f, fw, hh, pc, 0.46, 0.24, ti === T.length - 1 ? 2 : 1.1);
         band(k, fw, hh - 0.7, 0.5, F.dark, 0.05);
+        if (f.nf > 2) {   // metal spandrels with a chevron under the top storey of every stage
+          const ya = (f.nf - 2 + F.wy + F.wh) * f.fh + 0.1, sh = (1 - F.wh) * f.fh - 0.2, hw = (f.bw * F.ww) / 2;
+          for (let q = 0; q < f.n; q++) { const x = -fw / 2 + (q + 0.5) * f.bw; k.quad(M.metal, gold, [x - hw, ya, 0.03], [x + hw, ya, 0.03], [x + hw, ya + sh, 0.03], [x - hw, ya + sh, 0.03]); k.quad(M.trim, F.dark, [x - hw * 0.8, ya + sh * 0.15, 0.045], [x + hw * 0.8, ya + sh * 0.15, 0.045], [x, ya + sh * 0.85, 0.045]); }
+        }
         if (ti) return;
         if (!st) { k.wall(F, -fw / 2, fw / 2, -g, 0, 0, tint, 0, 2); return; }
         k.at(0, -g, 0, 0, () => decoBase(k, f, fw, g, stone, base, gold, i === 0));
       });
       flatRoof(k, t.w, t.d, 0, t.y1, 0, wc, 1, TAR, pc);
+      if (ti < T.length - 1) for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const x = a * (t.w / 2 - 0.75), z = b * (t.d / 2 - 0.75); k.box(M.trim, pc, 1.5, 2.5, 1.5, x, t.y1, z, 'b'); k.box(M.trim, pc, 0.95, 1.2, 0.95, x, t.y1 + 2.5, z, 'b'); k.box(M.metal, gold, 0.4, 0.9, 0.4, x, t.y1 + 3.7, z, 'b'); }      // stepped corner blocks at each setback
     });
     // the crown
     const top = T[T.length - 1], yT = top.y1, tw = top.w, td = top.d, kind = tall ? 0 : Math.floor(r() * 3);
@@ -457,6 +472,10 @@ export const TYPES = {
     // roof plant: a louvred penthouse, cooling towers, sometimes a mast
     k.box(M.trim, louvre, tw * 0.55, 4.6, td * 0.5, tx - tw * 0.1, top, tz, 'b');
     for (let q = 0; q < 2; q++) { const x = tx + tw * 0.33, z = tz + (q - 0.5) * td * 0.4; k.box(M.trim, 0x8a8e90, 2.6, 2.4, 2.6, x, top, z, 'b'); k.cyl(M.trim, 0x5a5e60, 1, 1, 0.5, x, top + 2.4, z, 10); }
+    { const bx = tx - tw * 0.36, bz = tz + td / 2 - 2.4, zo = tz + td / 2 + 0.9, yc = top - 9;      // the window-cleaning rig and its cradle
+      k.box(M.trim, 0xd0a428, 1.6, 1.3, 2.2, bx, top, bz, 'b'); k.rod(M.trim, 0xd0a428, 0.28, [bx, top + 1.2, bz], [bx, top + 3.4, zo]); for (const s of [-1, 1]) k.rod(M.trim, 0x1c1c1c, 0.04, [bx + s, yc + 1.1, zo], [bx, top + 3.4, zo]);
+      k.box(M.trim, 0x9a9ea2, 2.6, 0.25, 0.7, bx, yc, zo); k.rail(0x30343a, bx - 1.3, zo + 0.35, bx + 1.3, zo + 0.35, yc + 0.25, 0.9); k.rail(0x30343a, bx - 1.3, zo - 0.35, bx + 1.3, zo - 0.35, yc + 0.25, 0.9);
+      around(k, tw - 0.7, td - 0.7, tx, top + 1.3, tz, (fw) => k.rail(0x30343a, -fw / 2, 0, fw / 2, 0, 0, 0.9)); }
     if (H > 120 && r() < 0.45) mast(k, tx - tw * 0.1, top + 4.6, tz, 22 + r() * 30, 1.4, false);
     return finish(k, W, D);
   },
@@ -541,7 +560,7 @@ export const TYPES = {
 
   /** 2200–3000, the imagined megacity: black arcologies stepping up into the rain, strung with neon, signs, decks, ducts and bridges. */
   mega(r, corner = 0) {
-    const k = new Kit(r), F = facadeOf('neon'), W = 22 + r() * 2.5, D = 19 + r() * 2, H = 220 + r() * r() * 650, c1 = pick(r, NEON), c2 = pick(r, NEON), hull = 0x15151c;
+    const k = new Kit(r), F = facadeOf('neon'), W = 22 + r() * 2.5, D = 19 + r() * 2, H = 220 + r() * r() * 650, c1 = pick(r, NEON), c2 = pick(r, NEON), hull = 0x15151c, steel = 0x24252f;
     /** a sign in an alphabet nobody alive today can read */
     const sign = (x, y, w, h, col, vertical) => {
       k.box(M.trim, 0x08080c, w, h, 0.5, x, y, 0.25, 'kb'); const e = 0.25, z = 0.52;
@@ -557,14 +576,28 @@ export const TYPES = {
       const y1 = Math.round((H * (0.2 + 0.8 * ((i + 1) / n) ** 1.4)) / F.ch) * F.ch; tiers.push({ w, d, x, z, y, y1 });
       stage(k, F, w, d, x, z, y, y1, WHITE, (f, fw, fi) => {
         const hh = y1 - y;
-        if ((fi + i) % 2 === 0) k.box(M.glow, i % 2 ? c2 : c1, 0.4, hh, 0.4, -fw / 2 + 0.1, 0, 0.12, 'kb');
+        // the megaframe: corner columns, a belt truss every dozen storeys and a diagonal across each bay of it
+        const nb = Math.max(1, Math.round(hh / 44)), bh = hh / nb;
+        for (const s of [-1, 1]) k.box(M.trim, steel, 1.5, hh, 0.7, s * (fw / 2 - 0.75), 0, 0.3, 'kb');
+        for (let j = 0; j < nb; j++) { const s = (j + fi) % 2 ? 1 : -1; k.box(M.trim, steel, fw - 3, 1.4, 0.55, 0, (j + 1) * bh - 2.8, 0.26, 'k'); k.rod(M.trim, steel, 0.9, [s * (fw / 2 - 1.2), j * bh, 0.24], [-s * (fw / 2 - 1.2), (j + 1) * bh - 2.8, 0.24], 4, 0.45); }
+        if ((fi + i) % 2 === 0) k.box(M.glow, i % 2 ? c2 : c1, 0.4, hh, 0.3, -fw / 2 + 0.75, 0, 0.72, 'kb');
         if (i < 2 && r() < 0.75) { const v = r() < 0.6, sw = v ? 3 + r() * 2.5 : fw * (0.5 + r() * 0.3), sh = v ? Math.min(hh * 0.5, 18 + r() * 30) : 5 + r() * 4; sign((r() - 0.5) * (fw - sw - 2), (i ? 6 : 14) + r() * Math.max(1, hh - sh - 24), sw, sh, pick(r, NEON), v); }
         if (fi === 2 || (fi % 2 && r() < 0.5)) for (let q = 0; q < 3; q++) k.cyl(M.trim, 0x22232c, 0.55, 0.55, hh, fw * 0.2 + q * 1.5, 0, 0.5, 6, true);      // ducts
         if (i || !street(fi, corner)) return;
         // the street: a dark arcade of lit stalls
         k.box(M.trim, hull, fw, 0.9, 0.5, 0, 5.2, 0.25, 'k'); k.quad(M.glow, c2, [-fw / 2, 5.2, 0.52], [fw / 2, 5.2, 0.52], [fw / 2, 5.45, 0.52], [-fw / 2, 5.45, 0.52]);
         const m = Math.round(fw / 4.2);
-        for (let q = 0; q < m; q++) { const sx = -fw / 2 + (q + 0.5) * (fw / m), col = pick(r, NEON); k.box(M.trim, hull, 0.6, 5.2, 0.5, sx - fw / m / 2 + 0.3, 0, 0.25, 'kb'); if (r() < 0.8) { k.quad(M.glow, mul(lin(col), [0.5, 0.5, 0.5]), [sx - 1.3, 0.2, 0.04], [sx + 1.5, 0.2, 0.04], [sx + 1.5, 3.1, 0.04], [sx - 1.3, 3.1, 0.04]); k.quad(M.glow, col, [sx - 1.3, 3.5, 0.3], [sx + 1.5, 3.5, 0.3], [sx + 1.5, 4.4, 0.3], [sx - 1.3, 4.4, 0.3]); } }
+        for (let q = 0; q < m; q++) {
+          const sw = fw / m, sx = -fw / 2 + (q + 0.5) * sw, col = pick(r, NEON), a = sx - sw / 2 + 0.6, b = sx + sw / 2, c = (a + b) / 2;
+          k.box(M.trim, hull, 0.6, 5.2, 0.5, sx - sw / 2 + 0.3, 0, 0.25, 'kb');
+          if (r() < 0.85) {   // an open stall: lit shelves of goods behind a counter, a canopy edged in neon, its sign above
+            k.quad(M.glow, mul(lin(col), [0.2, 0.2, 0.2]), [a, 0.2, 0.04], [b, 0.2, 0.04], [b, 3.4, 0.04], [a, 3.4, 0.04]);
+            for (const y of [1.45, 2.05, 2.65]) { k.box(M.trim, 0x0a0a10, b - a, 0.06, 0.3, c, y, 0.2, 'k'); k.quad(M.glow, mul(lin(pick(r, NEON)), [0.45, 0.45, 0.45]), [a + 0.2, y + 0.06, 0.12], [b - 0.2, y + 0.06, 0.12], [b - 0.2, y + 0.4, 0.12], [a + 0.2, y + 0.4, 0.12]); }      // goods on the shelves, one lit strip a shelf
+            k.box(M.trim, 0x1c1d26, b - a - 0.2, 1, 0.4, c, 0, 0.42, 'kb'); k.box(M.metal, 0x5a5e68, b - a, 0.06, 0.5, c, 1, 0.42, 'k');
+            k.sheet(M.trim, 0x14141c, [a - 0.1, 3.05, 1.7], [b + 0.1, 3.05, 1.7], [b + 0.1, 3.5, 0.3], [a - 0.1, 3.5, 0.3]); k.quad(M.glow, col, [a - 0.1, 2.93, 1.71], [b + 0.1, 2.93, 1.71], [b + 0.1, 3.05, 1.71], [a - 0.1, 3.05, 1.71]);
+            sign(c, 3.75, (b - a) * (0.5 + r() * 0.4), 1.15, col, false);
+          } else { k.box(M.metal, 0x2a2c34, b - a, 3.4, 0.06, c, 0.1, 0.07, 'kb'); for (let j = 1; j < 9; j++) k.box(M.trim, 0x101016, b - a, 0.04, 0.03, c, 0.1 + j * 0.38, 0.1, 'kb'); }      // shuttered
+        }
         k.box(M.trim, hull, 0.6, 5.2, 0.5, fw / 2 - 0.3, 0, 0.25, 'kb');
       });
       // a service deck rings the top of every tier
@@ -586,6 +619,14 @@ export const TYPES = {
     const prof = (t) => (0.3 + 0.7 * (1 - t) ** 1.3 + 0.45 * Math.exp(-t * 22) + (kind === 1 ? 0.3 * Math.exp(-(((t - 0.87) / 0.06) ** 2)) : kind === 2 ? 0.5 * Math.max(0, (t - 0.8) / 0.2) ** 1.5 : 0)) * R;
     for (let j = 0; j <= M2; j++) { const t = (j / M2) ** 0.9, rad = prof(t); rings.push({ y: t * H, pts: Array.from({ length: N }, (_, i) => [Math.sin((i / N) * PI * 2) * rad, Math.cos((i / N) * PI * 2) * rad]) }); }
     k.skin(F, rings, WHITE, true);
+    // structure: eight ribs that leave the ground like roots and wind up the shaft, a floor ring every few storeys, four arched doors
+    const ribC = 0xdfe8ea, tw = (r() < 0.5 ? 1 : -1) * (0.5 + r()), at = (an, rad, y) => [Math.sin(an) * rad, y, Math.cos(an) * rad];
+    for (let i = 0; i < 8; i++) for (let j = 0; j < M2; j++) {
+      const [A, B] = [j, j + 1].map((q) => { const t = (q / M2) ** 0.9, rad = prof(t), an = (i / 8) * PI * 2 + t * tw, w = 0.45 / rad; return [at(an - w, rad * 0.95, t * H), at(an, rad + 0.8 + 3 * Math.exp(-t * 18), t * H), at(an + w, rad * 0.95, t * H)]; });
+      k.sheet(M.trim, ribC, A[0], A[1], B[1], B[0]); k.sheet(M.trim, ribC, A[1], A[2], B[2], B[1]);
+    }
+    for (let y = 26; y < H * 0.93; y += 26) { const a = prof(y / H); k.lathe(M.trim, white, [[a - 0.15, 0], [a + 0.75, 0.12], [a + 0.75, 0.32], [a - 0.15, 0.5]], 0, y, 0, N); }
+    for (let i = 0; i < 4; i++) k.at(0, 0, 0, (i * PI) / 2 + PI / 8, () => { const r0 = prof(0), zf = r0 * 0.93; k.box(M.trim, white, 3.8, 5.8, r0 * 0.3, 0, 0, r0 * 0.78, 'b'); k.quad(M.lit, [0.5, 1.2, 1.3], [-1.3, 0, zf + 0.02], [1.3, 0, zf + 0.02], [1.3, 3.9, zf + 0.02], [-1.3, 3.9, zf + 0.02]); k.geo(M.lit, [0.5, 1.2, 1.3], new THREE.CircleGeometry(1.3, 10, 0, PI), 0, 3.9, zf + 0.02); });
     // hanging gardens
     for (const t of [0.2 + r() * 0.08, 0.42 + r() * 0.08, 0.63 + r() * 0.06]) {
       const y = t * H, a = prof(t), b = a + 4.5 + r() * 3.5;

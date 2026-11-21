@@ -164,19 +164,18 @@ export function bridge(r) {
   const cable = (x) => { const m = x < T0 ? (x - A0) / (T0 - A0) : x > T1 ? (A1 - x) / (A1 - T1) : -1; if (m >= 0) return DY + 1 + (TOP - 1.5 - DY - 1) * m - 5 * m * (1 - m); const t = (2 * (x - T0)) / (T1 - T0) - 1; return DY + 3 + (TOP - 1.5 - DY - 3) * t * t; };
   for (const z of [-HW + 0.4, -1.3, 1.3, HW - 0.4]) for (let x = A0; x < A1 - 0.1;) { const x1 = Math.min(A1, x + 9.5); k.rod(M.trim, iron, 0.42, [x, cable(x), z], [x1, cable(x1), z]); x = x1; }
   const obj = k.build();
-  // the web of suspenders and stays hangs in four planes; it is drawn once per span as a see-through sheet
-  const web = (x0, x1) => {
-    const c = document.createElement('canvas'), W = 1024, Hh = 256, g = c.getContext('2d'), L = x1 - x0, X = (x) => ((x - x0) / L) * W, Y = (y) => Hh - ((y - DY) / (TOP - DY)) * Hh;
-    c.width = W; c.height = Hh; g.strokeStyle = '#fff'; g.lineWidth = 1.3;
-    for (let x = x0 + 2.4; x < x1 - 1; x += 2.4) { g.beginPath(); g.moveTo(X(x), Y(cable(x))); g.lineTo(X(x), Hh); g.stroke(); }
-    for (const tx of [T0, T1]) if (tx >= x0 && tx <= x1) for (const s of [-1, 1]) for (let q = 1; q <= 13; q++) { const x = tx + s * q * 5.4; if (x < x0 || x > x1) continue; g.beginPath(); g.moveTo(X(tx + s * 4.5), Y(TOP - 1.5)); g.lineTo(X(x), Hh); g.stroke(); }
-    const t = new THREE.CanvasTexture(c); t.anisotropy = 8;
-    const m = new THREE.MeshStandardMaterial({ map: t, color: iron, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.7 });
-    const p = [], uv = [], n = [];
-    for (const z of [-HW + 0.4, -1.3, 1.3, HW - 0.4]) { for (const [x, y, u, v] of [[x0, DY, 0, 0], [x1, DY, 1, 0], [x1, TOP, 1, 1], [x0, DY, 0, 0], [x1, TOP, 1, 1], [x0, TOP, 0, 1]]) { p.push(x, y, z); uv.push(u, v); n.push(0, 0, 1); } }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-    obj.add(new THREE.Mesh(geo, m));
-  };
-  web(A0, T0); web(T0, T1); web(T1, A1);
+  // the web of suspenders and stays hangs in four planes; all three spans are drawn as one see-through sheet
+  const c = document.createElement('canvas'), W = 1024, Hh = 256, g = c.getContext('2d'), p = [], uv = [], n = [];
+  c.width = W; c.height = Hh * 3; g.strokeStyle = '#fff'; g.lineWidth = 1.3;
+  [[A0, T0], [T0, T1], [T1, A1]].forEach(([x0, x1], row) => {
+    const L = x1 - x0, X = (x) => ((x - x0) / L) * W, Y = (y) => (row + 1) * Hh - 2 - ((y - DY) / (TOP - DY)) * (Hh - 4), B = (row + 1) * Hh - 2;
+    for (let x = x0 + 2.4; x < x1 - 1; x += 2.4) { g.beginPath(); g.moveTo(X(x), Y(cable(x))); g.lineTo(X(x), B); g.stroke(); }
+    for (const tx of [T0, T1]) if (tx >= x0 && tx <= x1) for (const s of [-1, 1]) for (let q = 1; q <= 13; q++) { const x = tx + s * q * 5.4; if (x < x0 || x > x1) continue; g.beginPath(); g.moveTo(X(tx + s * 4.5), Y(TOP - 1.5)); g.lineTo(X(x), B); g.stroke(); }
+    const v0 = 1 - (B / (Hh * 3)), v1 = 1 - (row * Hh + 2) / (Hh * 3);
+    for (const z of [-HW + 0.4, -1.3, 1.3, HW - 0.4]) { for (const [x, y, u, v] of [[x0, DY, 0, v0], [x1, DY, 1, v0], [x1, TOP, 1, v1], [x0, DY, 0, v0], [x1, TOP, 1, v1], [x0, TOP, 0, v1]]) { p.push(x, y, z); uv.push(u, v); n.push(0, 0, 1); } }
+  });
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 8;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(n, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  obj.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: t, color: iron, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.7 })));
   return obj;
 }

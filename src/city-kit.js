@@ -119,6 +119,11 @@ function facade(st, seed) {
   if (st.band) for (let cy = 0; cy <= G; cy++) { const e = 0.5 * my; R(0, cy * C - e / 2, S, e, st.band, 0.95, 0.7); shade(0, cy * C - e / 2, S, 3, 0.2); fade(0, cy * C + e / 2, S, 0.2 * my, 0.45); for (let q = 0; q < S; q += 0.16 * mx) shade(q, cy * C + e * 0.1, 0.07 * mx, e * 0.3, -0.16); }
   if (st.planter) for (let cy = 0; cy < G; cy++) { const yb = (cy + 1) * C - C * st.wy; R(0, yb, S, 0.35 * my, st.planter, 0.9, 0.95); for (let q = 0; q < 220; q++) shade(r() * S, yb - 3 + r() * (0.35 * my + 6), 3 + r() * 6, 2 + r() * 5, (r() - 0.6) * 0.5); fade(0, yb + 0.35 * my, S, 0.25 * my, 0.35); }
   if (st.panels) for (let i = 0; i < 60; i++) { const x = Math.floor(r() * G * 2) * C / 2, y = r() * S; shade(x, y, 2, 40 + r() * 200, -0.5); shade(r() * S, Math.floor(r() * G * 4) * C / 4, 30 + r() * 160, 2, 0.08); }
+  if (st.curtain) {   // pressure caps stand proud on every mullion, a deeper transom marks each slab edge, with a thin shadow below it
+    const mw = Math.max(2, 0.09 * mx), tw = Math.max(2, 0.12 * my);
+    for (let cx = 0; cx <= G; cx++) { R(cx * C - mw / 2, 0, mw, S, st.wall, 0.95, 0.3, 0.85); shade(cx * C - mw / 2, 0, 1, S, 0.25); shade(cx * C + mw / 2, 0, 2, S, -0.35); }
+    for (let cy = 0; cy <= G; cy++) { const y = cy * C + 0.05 * my; R(0, y - tw / 2, S, tw, st.wall, 0.95, 0.3, 0.85); shade(0, y - tw / 2, S, 1, 0.3); fade(0, y + tw / 2, S, 0.25 * my, 0.35); }
+  }
   if (st.kind === 'metal' && !st.curtain) for (let cx = 0; cx < G; cx++) { shade(cx * C + C * (1 - st.ww) / 2 - 2, 0, 2, S, -0.3); shade(cx * C, 0, 2, S, 0.2); }
   for (let i = 0; i < (st.holes || 0); i++) {
     const x = r() * S, y = r() * S, a = 8 + r() * 26, b = 8 + r() * 36, moss = r() < 0.75;
@@ -204,6 +209,20 @@ export const M = {
   earth: surface((g, hg, S) => { const n = tileNoise(S, 6, 5, 31), a = g.createImageData(S, S), b = hg.createImageData(S, S); for (let i = 0; i < S * S; i++) { const v = 150 + n[i] * 105; a.data.set([v, v, v, 255], i * 4); b.data.set([n[i] * 255, 0, 0, 255], i * 4); } g.putImageData(a, 0, 0); hg.putImageData(b, 0, 0); }, [4, 4], { bump: 6, mat: { roughness: 1 } }),
 };
 M.lit.onBeforeCompile = (s) => { s.fragmentShader = s.fragmentShader.replace('#include <color_fragment>', '').replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance *= vColor.rgb;'); };
+// One material stands in for trim, metal, glazing and neon wherever a Kit builds them, so a building is drawn in one call instead of four:
+// a per-vertex `pbr` attribute carries roughness, metalness and the kind (0 matt paint, 1 glazing lit from inside at night, 2 self-lit).
+const NIGHT_U = { value: 0 };
+M.one = vc({});
+M.one.onBeforeCompile = (s) => {
+  s.uniforms.uNight = NIGHT_U;
+  s.vertexShader = s.vertexShader.replace('#include <common>', 'attribute vec3 pbr;\nvarying vec3 vPbr;\n#include <common>').replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvPbr = pbr;');
+  s.fragmentShader = s.fragmentShader.replace('#include <common>', 'varying vec3 vPbr;\nuniform float uNight;\n#include <common>')
+    .replace('#include <color_fragment>', '#include <color_fragment>\n\tif ( vPbr.z > 0.5 ) diffuseColor.rgb = vPbr.z > 1.5 ? vec3( 0.0 ) : vec3( 0.254, 0.323, 0.392 );')
+    .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n\troughnessFactor = vPbr.x;')
+    .replace('#include <metalnessmap_fragment>', '#include <metalnessmap_fragment>\n\tmetalnessFactor = vPbr.y;')
+    .replace('#include <emissivemap_fragment>', 'totalEmissiveRadiance = vPbr.z > 1.5 ? vColor.rgb : vPbr.z > 0.5 ? vColor.rgb * uNight : vec3( 0.0 );');
+};
+const MODES = new Map([[M.trim, [0.85, 0, 0]], [M.metal, [0.25, 0.92, 0]], [M.lit, [0.06, 0.95, 1]], [M.glow, [1, 0, 2]]]);
 M.lamp = new THREE.MeshBasicMaterial({ vertexColors: true });      // street-lamp glass: brightens at night
 M.lit.userData.cast = false; M.glow.userData.cast = false; M.lamp.userData.cast = false;
 
@@ -226,7 +245,7 @@ M.grille = () => {
 export function conform(obj, hill) {
   obj.traverse((m) => { const d = m.geometry && m.geometry.userData.lift; if (!d) return; const p = m.geometry.attributes.position; for (let i = 0; i < d.l.length; i++) p.setY(i, d.y[i] + d.l[i] * hill); p.needsUpdate = true; m.geometry.computeBoundingSphere(); });
 }
-export function setNight(n) { for (const m of NIGHT) m.emissiveIntensity = n * 1.6; M.lit.emissiveIntensity = n * 1.3; M.lamp.color.setRGB(1, 0.92, 0.75).multiplyScalar(0.35 + n * 5); }
+export function setNight(n) { for (const m of NIGHT) m.emissiveIntensity = n * 1.6; M.lit.emissiveIntensity = n * 1.3; NIGHT_U.value = n * 1.3; M.lamp.color.setRGB(1, 0.92, 0.75).multiplyScalar(0.35 + n * 5); }
 export const groundNormal = () => shared().groundNormal;
 
 // ---------- geometry accumulator ----------
@@ -238,7 +257,9 @@ export class Kit {
   constructor(r, lift) { this.r = r; this.lift = lift; this.lf = 0; this.bk = new Map(); this.su = this.sv = 1;       // su, sv: texture repeats for geometries that bring their own UVs
     this.co = 1; this.si = 0; this.ox = 0; this.oy = 0; this.oz = 0; }
   bucket(mat) {
+    const mode = this.split ? null : MODES.get(mat); if (mode) mat = M.one;
     let b = this.bk.get(mat);
+    if (mode) { if (b) { b.mode = mode; b.solid ||= !mode[2]; } else { this.bk.set(mat, b = { p: [], n: [], c: [], i: [], m: [], mode, solid: !mode[2], l: this.lift ? [] : null, uv: null, uv1: null, tile: WHITE }); return b; } }
     if (!b) this.bk.set(mat, b = { p: [], n: [], c: [], i: [], l: this.lift ? [] : null, uv: mat.userData.uv ? [] : null, uv1: mat.userData.uv > 1 ? [] : null, tile: mat.userData.tile || WHITE });
     return b;
   }
@@ -254,7 +275,7 @@ export class Kit {
   v(b, x, y, z, nx, ny, nz, c, u = 0, w = 0, u1 = 0, w1 = 0) {
     const co = this.co, si = this.si;
     b.p.push(x * co + z * si + this.ox, y + this.oy, -x * si + z * co + this.oz); b.n.push(nx * co + nz * si, ny, -nx * si + nz * co); b.c.push(c[0], c[1], c[2]);
-    if (b.uv) b.uv.push(u, w); if (b.uv1) b.uv1.push(u1, w1); if (b.l) b.l.push(this.lf);
+    if (b.m) b.m.push(b.mode[0], b.mode[1], b.mode[2]); if (b.uv) b.uv.push(u, w); if (b.uv1) b.uv1.push(u1, w1); if (b.l) b.l.push(this.lf);
     return b.p.length / 3 - 1;
   }
   /** Flat polygon from 3 or 4 corners, anticlockwise seen from outside. Textured materials are mapped in metres along the dominant axes. */
@@ -355,9 +376,9 @@ export class Kit {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(b.p, 3)); geo.setAttribute('normal', new THREE.Float32BufferAttribute(b.n, 3)); geo.setAttribute('color', new THREE.Float32BufferAttribute(b.c, 3));
       if (b.uv) geo.setAttribute('uv', new THREE.Float32BufferAttribute(b.uv, 2)); if (b.uv1) geo.setAttribute('uv1', new THREE.Float32BufferAttribute(b.uv1, 2));
-      geo.setIndex(b.i);
+      if (b.m) geo.setAttribute('pbr', new THREE.Float32BufferAttribute(b.m, 3)); geo.setIndex(b.i);
       if (b.l && b.l.some((v) => v)) geo.userData.lift = { l: Float32Array.from(b.l), y: Float32Array.from(b.p.filter((_, i) => i % 3 === 1)) };
-      const m = new THREE.Mesh(geo, mat); m.castShadow = mat.userData.cast !== false; m.receiveShadow = true; g.add(m);
+      const m = new THREE.Mesh(geo, mat); m.castShadow = mat.userData.cast !== false && (!b.m || b.solid); m.receiveShadow = true; g.add(m);
     }
     return g;
   }
