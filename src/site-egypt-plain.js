@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { rng, smooth, clamp, lerp } from './util.js';
 import { makeKinds } from './flora.js';
-import { C, lin, shade, put, block, wall, lathe, vault, bar, skin, fin, cropTex, papyrusTex } from './site-egypt-kit.js';
+import { C, lin, shade, put, block, wall, lathe, vault, bar, skin, fin, cropTex, papyrusTex , rectOb, boxOb, stripOb } from './site-egypt-kit.js';
 import { terrain, ground, PLAIN, BASINS, TOWN } from './site-egypt-land.js';
 
 /** Where things on the plain are, for the people who work there. */
@@ -65,9 +65,11 @@ function house(P, span, r, x, z, w, d, h, ry) {
     for (const s of [-1, 1]) P.add('plain', span, T(bar([s * 1.4, 0, d / 2 + 2.2], [s * 1.4, 2.1, d / 2 + 2.2], 0.05), 0, 0, 0), C.wood);
     P.add('reed', span, T(put(block(3.4, 0.06, 2.6), 0, 2.1, d / 2 + 1.1, 0, -0.08), 0, 0, 0), C.reed, 1.5);
   }
-  if (r() < 0.4) for (let k = 0; k < 6; k++) P.add('brick', span, T(block(0.8, (h * (k + 1)) / 6, 0.5), -w / 2 - 0.4, 0, -d / 2 + 0.5 + k * 0.5), shade(c, 0.9));   // outside stair
+  // the house stops you at its walls; its flat roof carries whoever comes up the outside stair
+  const at = (lx, lz) => [x + lx * Math.cos(ry) + lz * Math.sin(ry), z - lx * Math.sin(ry) + lz * Math.cos(ry)], obs = [boxOb(x, z, w, d, ry, -1e9, 1e9, { top: y + h + 0.3 })];
+  if (r() < 0.4) for (let k = 0; k < 6; k++) { P.add('brick', span, T(block(0.8, (h * (k + 1)) / 6, 0.5), -w / 2 - 0.4, 0, -d / 2 + 0.5 + k * 0.5), shade(c, 0.9)); const q = at(-w / 2 - 0.4, -d / 2 + 0.5 + k * 0.5); obs.push(boxOb(q[0], q[1], 0.8, 0.5, ry, -1e9, 1e9, { top: y + (h * (k + 1)) / 6 })); }   // outside stair
   for (let k = 0; k < 3; k++) if (r() < 0.6) P.add('plain', span, T(lathe([[0.001, 0], [0.16, 0.02], [0.24, 0.3], [0.2, 0.55], [0.1, 0.62], [0.13, 0.7]], 8), w / 2 + 0.5 + r() * 0.6, 0.3, -d / 2 + 0.6 + k * 0.7), shade(C.clay, 0.8 + r() * 0.3));
-  return [x - Math.max(w, d) / 2 - 0.3, x + Math.max(w, d) / 2 + 0.3, z - Math.max(w, d) / 2 - 0.3, z + Math.max(w, d) / 2 + 0.3];
+  return obs;
 }
 /** A beehive granary of plastered mud, filled through the top and emptied by a hatch at the foot. */
 function silo(P, span, x, z, s = 1) {
@@ -94,7 +96,7 @@ export function boat(P, span, [x, z, ry, kind], load) {
 }
 
 export function buildPlain({ P, group, mats, world }) {
-  const r = rng(77), obstacles = [], ob = (rect, a = -1e9, b = 1e9) => obstacles.push({ r: rect, a, b });
+  const r = rng(77), obstacles = [], ob = (it, a = -1e9, b = 1e9) => { for (const e of typeof it[0] === 'number' ? [rectOb(it)] : it) obstacles.push({ ...e, a: Math.max(e.a ?? -1e9, a), b: Math.min(e.b ?? 1e9, b) }); };
   skirts(world, group);
 
   // ---- fields: strips of barley and emmer, green or ripe, flax, and ploughland; ditches between ----
@@ -144,13 +146,13 @@ export function buildPlain({ P, group, mats, world }) {
   for (let i = 0; i < 5; i++) ob(silo(P, 'all', V.x1 + 6, V.z0 + 30 + i * 3.4, 0.9 + (i % 2) * 0.15));
   {   // bakery yard: a low wall, bell-shaped bread moulds heating in stacks, vats for the beer mash
     const bx = V.x1 + 8, bz = V.z0 + 62, y = ground(bx, bz) - 0.2;
-    for (const [a, b, c, d] of [[-7, -6, 7, -6], [-7, 6, 3, 6], [-7, -6, -7, 6]]) P.add('brick', 'all', wall(bx + a, bz + b, bx + c, bz + d, 1.3, 0.5, y, 0.03), C.mud);
+    for (const [a, b, c, d] of [[-7, -6, 7, -6], [-7, 6, 3, 6], [-7, -6, -7, 6]]) { P.add('brick', 'all', wall(bx + a, bz + b, bx + c, bz + d, 1.3, 0.5, y, 0.03), C.mud); ob([stripOb([bx + a, bz + b], [bx + c, bz + d], 0.25)]); }
     for (let i = 0; i < 26; i++) P.add('plain', 'all', put(lathe([[0.07, 0], [0.2, 0.28], [0.22, 0.34], [0.001, 0.34]], 8), bx - 5 + (i % 6) * 0.5 + r() * 0.1, y + 0.2 + (i > 17 ? 0.33 : 0), bz - 4.6 + Math.floor(i / 6) * 0.5), shade(C.clay, 0.6 + r() * 0.5));
     for (let i = 0; i < 4; i++) P.add('plain', 'all', put(lathe([[0.2, 0], [0.42, 0.3], [0.45, 0.75], [0.36, 0.9], [0.4, 0.95], [0.001, 0.8]], 10), bx + 3.6, y + 0.2, bz - 4 + i * 1.3), shade(C.clay, 0.9));
   }
   {   // cattle pen of reed fencing
     const px = V.x1 + 10, pz = V.z0 + 6, y = ground(px, pz) - 0.1;
-    for (const [a, b, c, d] of [[-6, -5, 6, -5], [-6, 5, 6, 5], [-6, -5, -6, 5], [6, -5, 6, 2]]) P.add('reed', 'all', wall(px + a, pz + b, px + c, pz + d, 1.25, 0.12, y, 0), C.reed, 1.2);
+    for (const [a, b, c, d] of [[-6, -5, 6, -5], [-6, 5, 6, 5], [-6, -5, -6, 5], [6, -5, 6, 2]]) { P.add('reed', 'all', wall(px + a, pz + b, px + c, pz + d, 1.25, 0.12, y, 0), C.reed, 1.2); ob([stripOb([px + a, pz + b], [px + c, pz + d], 0.06)]); }
   }
 
   // ---- the builders' town (while the pyramids rise): the Wall of the Crow, galleries of barracks, bakeries, the royal granary ----
@@ -170,15 +172,16 @@ export function buildPlain({ P, group, mats, world }) {
     ob([TOWN.x0 + 7, TOWN.x0 + 58, TOWN.z0 + 4, TOWN.z0 + 40], -2605, -2450); ob([TOWN.x0 + 7, TOWN.x0 + 58, TOWN.z0 + 48, TOWN.z0 + 84], -2605, -2450); ob([TOWN.x0 + 7, TOWN.x0 + 58, TOWN.z0 + 92, TOWN.z0 + 128], -2605, -2450);
     for (let i = 0; i < 18; i++) { const hx = TOWN.x0 + 74 + (i % 3) * 16 + r() * 4, hz = TOWN.z0 + 14 + Math.floor(i / 3) * 22 + r() * 4; ob(house(P, 'town', r, hx, hz, 7 + r() * 4, 6 + r() * 3, 2.8 + r(), r() * 6.28), -2605, -2450); }
     const ax = TOWN.x0 + 34, az = TOWN.z0 + 170, ay = ground(ax, az) - 0.4;   // the royal granary: a walled court of silos
-    for (const [a, b, c, d] of [[-24, -20, 24, -20], [-24, 20, 24, 20], [-24, -20, -24, 20], [24, -20, 24, -4], [24, 4, 24, 20]]) P.add('brick', 'town', wall(ax + a, az + b, ax + c, az + d, 3.6, 1.6, ay, 0.05), C.mud);
-    for (let i = 0; i < 14; i++) silo(P, 'town', ax - 18 + (i % 7) * 5.4, az - 8 + Math.floor(i / 7) * 14, 1.5);
-    ob([ax - 25, ax + 25, az - 21, az + 21], -2605, -2450);
+    for (const [a, b, c, d] of [[-24, -20, 24, -20], [-24, 20, 24, 20], [-24, -20, -24, 20], [24, -20, 24, -4], [24, 4, 24, 20]]) { P.add('brick', 'town', wall(ax + a, az + b, ax + c, az + d, 3.6, 1.6, ay, 0.05), C.mud); ob([stripOb([ax + a, az + b], [ax + c, az + d], 0.8)], -2605, -2450); }   // a court you can walk into by its gate
+    for (let i = 0; i < 14; i++) ob(silo(P, 'town', ax - 18 + (i % 7) * 5.4, az - 8 + Math.floor(i / 7) * 14, 1.5), -2605, -2450);
   }
 
   // ---- harbours: quays, boats ----
   for (const b of BOATS.quayA) boat(P, 'building', b, true);
   boat(P, 'all', BOATS.quayB[0], false); boat(P, 'old', BOATS.quayB[1], true);
   for (const b of BOATS.skiffs) boat(P, 'all', b);
+  // the boats at their moorings are solid too (you can wade round them)
+  for (const [list, from, to] of [[BOATS.quayA, -2605, -2500], [[BOATS.quayB[0]], -1e9, 1e9], [[BOATS.quayB[1]], -1e9, -2150], [BOATS.skiffs, -1e9, 1e9]]) for (const [x, z, ry, kind] of list) ob([boxOb(x, z, kind === 1 ? 7 : 19, kind === 1 ? 1.2 : 4.6, ry)], from, to);
   for (const [x, z] of [[440, 190], [440, 250], [505, -512], [505, -438]]) for (let i = 0; i < 4; i++) P.add('plain', 'all', put(bar([0, -1, 0], [0, 1.6, 0], 0.11), x + (i % 2) * 1.5, ground(x, z), z + (i > 1 ? 1.5 : 0)), C.wood);   // mooring posts
   // shadufs: the counterpoised water-lift reaches Egypt in the New Kingdom
   for (const [x, z] of SHADUFS) {

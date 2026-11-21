@@ -5,6 +5,7 @@ import { shared } from './textures.js';
 import { animTime } from './organic.js';
 import { C, Parts, masonry, reedTex } from './site-egypt-kit.js';
 import { terrain, K1, K2, K3, RH, SLOPE, RAMP, rampScale, builtCourses } from './site-egypt-land.js';
+import { Obstacles } from './site-egypt-kit.js';
 import { buildMonuments } from './site-egypt-monuments.js';
 import { buildPlain } from './site-egypt-plain.js';
 import { buildPeople } from './site-egypt-people.js';
@@ -61,26 +62,45 @@ export default {
     const plain = buildPlain({ P, group, mats, world });
     const people = buildPeople({ world, group, mats });
     P.build(group, mats);
-    const obstacles = [...monuments.obstacles, ...plain.obstacles];
+    const O = new Obstacles([...monuments.obstacles, ...plain.obstacles]), inside = monuments.insides;
 
-    // Khufu's pyramid is solid, except that you can walk up the ramp onto whatever has been built so far
+    // The pyramids are solid, except that you can walk into their passages and chambers, up Khufu's ramp (the ground's relief) onto
+    // whatever has been built of it so far, and up the ramps of the other two (obstacles with a top) onto theirs.
     const half = K1.b / 2, last = { x: 0, z: 0, ok: false }; let year = 0;
-    const blocked = (x, z) => {
-      for (const o of obstacles) if (year >= o.a && year < o.b && x > o.r[0] && x < o.r[1] && z > o.r[2] && z < o.r[3]) return true;
+    const blocked = (x, z, feet) => {
+      if (inside.find(x, z, feet) !== null) return false;   // in a passage or a chamber: its own walls keep you in
+      if (O.blocked(x, z, feet)) return true;
+      for (const K of [K1, K2, K3]) {   // under the ground near a pyramid (the lower passage of Khafre): only inside a passage
+        const c = Math.max(Math.abs(x - K.x), Math.abs(z - K.z)) - K.b / 2; if (c < 25 && year >= K.y0 && feet < world.heightAt(x, z) - 0.6) return true;
+        if (K === K1 || c > 0.3 || year < K.y0) continue;
+        const built = year >= K.y1 ? K.H : (builtCourses(K, year) * K.H) / K.n, k = K.b / 2 / K.H, solid = K.lvl + Math.min(built, (0.3 - c + (year >= K.y1 ? 0.35 : 0)) / k);
+        if (built > 0.5 && feet < solid - 0.6) return true;
+      }
       const d = half - Math.max(Math.abs(x - K1.x), Math.abs(z - K1.z));
-      if (d > 0 && year >= K1.y0) { const top = (builtCourses(K1, year) * K1.H) / K1.n; if (top > 0.5 && (year >= K1.y1 || top > RH + 0.5 || world.hill * terrain.relief(x, z) < Math.min(top, d / SLOPE) - 0.6)) return true; }
+      if (d > -0.3 && year >= K1.y0) { const top = (builtCourses(K1, year) * K1.H) / K1.n;
+        if (year >= K1.y1) { if (feet < K1.lvl + (d + 0.35) / (half / K1.H) - 0.6) return true; }   // the finished pyramid: you can stand on what stands outside its face (the stair)
+        else if (d > 0 && top > 0.5 && (top > RH + 0.5 || world.hill * terrain.relief(x, z) < Math.min(top, d / SLOPE) - 0.6)) return true; }
       if (year >= K1.y0 && year < K1.y1 && z < RAMP.z0 && z > RAMP.z1) { const ax = Math.abs(x - RAMP.x), h = world.hill * RH * (RAMP.z0 - z) / (RAMP.z0 - RAMP.z1); if (h > 1.2 && ax > RAMP.half && ax < RAMP.half + h / 2 + 8) return true; }   // the ramp's embankments
       return false;
     };
-    return {
+    const api = {
+      audit: { O, inside, P, mats, blocked: (x, z, f) => blocked(x, z, f) },   // for the numerical tests of what stops you and what carries you
+      floorAt(x, z) { const y = inside.find(x, z, O.feet, 0); return y !== null ? y : O.floorAt(x, z); },
       update(u, t, env, camera, view) {
-        year = uToYear(u); eye = camera.position; animTime.value = t;
+        year = uToYear(u); O.year = year; eye = camera.position; animTime.value = t;
         monuments.update(year, world.hill); P.update(u); plain.update(u, t, camera, year); people.update(u, t, view, year);
       },
       collide(pos) {
-        if (blocked(pos.x, pos.z) && last.ok) { if (!blocked(pos.x, last.z)) pos.z = last.z; else if (!blocked(last.x, pos.z)) pos.x = last.x; else { pos.x = last.x; pos.z = last.z; } }
-        last.x = pos.x; last.z = pos.z; last.ok = !blocked(pos.x, pos.z);
+        const f = pos.y - 1.7; O.feet = f;
+        if (blocked(pos.x, pos.z, f) && last.ok) { if (!blocked(pos.x, last.z, f)) pos.z = last.z; else if (!blocked(last.x, pos.z, f)) pos.x = last.x; else { pos.x = last.x; pos.z = last.z; } }
+        last.x = pos.x; last.z = pos.z; last.ok = !blocked(pos.x, pos.z, f);
       },
     };
+    // The ground under the visitor's feet is the world's, raised by what they stand on - except in the passages below the ground (Khufu's
+    // Subterranean Chamber is 30 m down in the rock), where the floor of the passage is what they stand on. world.surfaceAt cannot go below
+    // the terrain, so while this place is the one shown it is given that one exception; elsewhere it behaves as before.
+    const proto = Object.getPrototypeOf(world).surfaceAt;
+    world.surfaceAt = function (x, z) { if (this.floorAt && this.floorAt === api.floorAt) { const y = inside.find(x, z, O.feet, 0); if (y !== null) return this.ice > -50 ? Math.max(y, this.ice) : y; } return proto.call(this, x, z); };
+    return api;
   },
 };

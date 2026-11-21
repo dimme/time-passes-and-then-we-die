@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { rng, smooth, clamp } from './util.js';
 import { yearToU, uToYear } from './timeline.js';
 import { actors } from './people-actors.js';
-import { Shape, field, sheaf, heap, pot, ladder, house, opening, Solids, kinds, planted, lin, shade, local, rect } from './site-crescent-kit.js';
+import { Shape, field, sheaf, heap, pot, ladder, house, opening, furnish, Solids, kinds, planted, lin, shade, local, rect } from './site-crescent-kit.js';
 import { livestock, standing, drove, loopOf, onLoop } from './site-crescent-animals.js';
 
 const FLAT = 3, CANAL = 135, RIVER = 310;
@@ -45,7 +45,17 @@ function niched(S, m, a, b, y0, y1, o = {}) {
 /** A building whose four walls are niched and buttressed, with a flat roof. */
 function nichedBlock(S, m, x, z, w, d, rot, y0, h, o = {}) {
   const C = rect(x, z, w, d, rot).reverse(), dep = o.depth || 0.35;
-  for (let k = 0; k < 4; k++) niched(S, m, C[k], C[(k + 1) % 4], y0, y0 + h, o);
+  for (let k = 0; k < 4; k++) {
+    const A = C[k], B = C[(k + 1) % 4], dr = o.door && o.door.k === k ? o.door : null;
+    if (!dr) { niched(S, m, A, B, y0, y0 + h, o); continue; }
+    const L = Math.hypot(B[0] - A[0], B[1] - A[1]), at = (t) => [A[0] + ((B[0] - A[0]) * t) / L, A[1] + ((B[1] - A[1]) * t) / L];
+    niched(S, m, A, at(dr.a0), y0, y0 + h, o); niched(S, m, at(dr.a1), B, y0, y0 + h, o);
+    const P0 = at(dr.a0), P1 = at(dr.a1), nx = -(B[1] - A[1]) / L, nz = (B[0] - A[0]) / L, t = dr.depth;   // its outer side is on the left: (-dz, dx)
+    const q = (p, off, y) => [p[0] - nx * off, y, p[1] - nz * off];
+    S.quad(m, q(P0, 0, y0 + dr.h), q(P1, 0, y0 + dr.h), q(P1, 0, y0 + h), q(P0, 0, y0 + h), o.col);   // over the door
+    S.quad(m, q(P1, 0, y0 + dr.h), q(P0, 0, y0 + dr.h), q(P0, t, y0 + dr.h), q(P1, t, y0 + dr.h), shade(o.col, 0.7));   // its soffit
+    S.quad(m, q(P0, 0, y0), q(P0, t, y0), q(P0, t, y0 + dr.h), q(P0, 0, y0 + dr.h), shade(o.col, 0.85)).quad(m, q(P1, t, y0), q(P1, 0, y0), q(P1, 0, y0 + dr.h), q(P1, t, y0 + dr.h), shade(o.col, 0.85));   // and reveals
+  }
   S.cap('plaster', rect(x, z, w - dep * 3.9, d - dep * 3.9, rot), y0 + h - 0.02, o.roofCol || shade(o.col, 0.95));
   // the niches stop short of the top: a plain band of wall closes them and stands a finger proud as a coping; a darker course at the foot
   const bh = o.band ?? Math.min(1, h * 0.13), e = 0.04;
@@ -109,19 +119,43 @@ function build({ world, group }) {
   const TC = [-72, -90];
   // the White Temple: 17.5 × 22.3 m, washed with gypsum, niches all round
   ST1.box('plaster', TC[0], 0, TC[1], 19.5, 0.5, 24.3, 0, { col: shade(WHITE, 0.9) });
-  nichedBlock(ST1, 'plaster', TC[0], TC[1], 17.5, 22.3, 0, 0.5, 7, { col: WHITE, depth: 0.32 });
+  nichedBlock(ST1, 'plaster', TC[0], TC[1], 17.5, 22.3, 0, 0.5, 7, { col: WHITE, depth: 0.32, door: { k: 1, a0: 22.3 / 2 - 0.65, a1: 22.3 / 2 + 0.65, h: 3.4, depth: 1.0 } });
+  { // inside: a long middle hall under a high roof lit from the clerestory, rooms either side, an altar at the north end and an offering table
+    const X0 = TC[0], Z0 = TC[1], IN = shade(WHITE, 0.82), y0 = 0.5, face = (x0, z0, x1, z1, ya, yb, n, c = IN) => { const rx = n[1], rz = -n[0]; if ((x1 - x0) * rx + (z1 - z0) * rz < 0) [x0, z0, x1, z1] = [x1, z1, x0, z0]; ST1.quad('plaster', [x0, ya, z0], [x1, ya, z1], [x1, yb, z1], [x0, yb, z0], c); };
+    const ix = 7.75, iz = 10.15, hx = 3.2, pt = 0.5, ys = 6.0, yh = 9.4, gz = 0.7;
+    face(X0 - ix, Z0 - iz, X0 - ix, Z0 + iz, y0, ys, [1, 0]); face(X0 - ix, Z0 - iz, X0 + ix, Z0 - iz, y0, ys, [0, 1]); face(X0 - ix, Z0 + iz, X0 + ix, Z0 + iz, y0, ys, [0, -1]);
+    face(X0 + ix, Z0 - iz, X0 + ix, Z0 - 0.65, y0, ys, [-1, 0]); face(X0 + ix, Z0 + 0.65, X0 + ix, Z0 + iz, y0, ys, [-1, 0]); face(X0 + ix, Z0 - 0.65, X0 + ix, Z0 + 0.65, y0 + 3.4, ys, [-1, 0]);
+    for (const sd of [-1, 1]) {   // the walls of the hall: pierced at the middle, rising above the side rooms to the clerestory
+      const xi = X0 + sd * hx, xo = X0 + sd * (hx + pt);
+      for (const [za, zb] of [[Z0 - iz, Z0 - gz], [Z0 + gz, Z0 + iz]]) { face(xi, za, xi, zb, y0, yh, [-sd, 0]); face(xo, za, xo, zb, y0, ys, [sd, 0]); }
+      face(xi, Z0 - gz, xi, Z0 + gz, y0 + 3.0, yh, [-sd, 0]); face(xo, Z0 - gz, xo, Z0 + gz, y0 + 3.0, ys, [sd, 0]);
+      for (const z of [Z0 - gz, Z0 + gz]) ST1.quad('plaster', [xi, y0, z], [xo, y0, z], [xo, y0 + 3.0, z], [xi, y0 + 3.0, z], shade(IN, 0.9)).quad('plaster', [xo, y0, z], [xi, y0, z], [xi, y0 + 3.0, z], [xo, y0 + 3.0, z], shade(IN, 0.9));
+      ST1.cap('plaster', rect(X0 + sd * (hx + pt + (ix - hx - pt) / 2), Z0, ix - hx - pt, 2 * iz), ys, shade(IN, 0.75), true);   // the ceilings of the side rooms
+      for (let k = -3; k <= 3; k++) { const z = Z0 + k * 2.6; face(xi - sd * 0.01, z - 0.4, xi - sd * 0.01, z + 0.4, 8.35, 9.0, [-sd, 0], lin(0xfff4dc)); }   // daylight through the clerestory
+    }
+    for (const z of [Z0 - iz, Z0 + iz]) face(X0 - hx, z, X0 + hx, z, ys, yh, [0, z < Z0 ? 1 : -1]);
+    ST1.cap('plaster', rect(X0, Z0, 2 * hx, 2 * iz), yh, shade(IN, 0.7), true);
+    ST1.cap('plaster', rect(X0, Z0, 2 * ix, 2 * iz), y0 + 0.02, shade(BUFF, 0.95));
+    ST1.box('plaster', X0, y0, Z0 - iz + 1.3, 3.0, 0.4, 2.2, 0, { col: shade(WHITE, 0.9) }); ST1.box('plaster', X0, y0 + 0.4, Z0 - iz + 1.0, 2.2, 0.9, 1.4, 0, { col: shade(WHITE, 0.95) });   // the stepped altar
+    ST1.box('brick', X0, y0, Z0 + 2.5, 1.6, 0.8, 1.1, 0, { col: shade(BUFF, 0.9) }); ST1.cap('plain', rect(X0, Z0 + 2.5, 1.0, 0.6), y0 + 0.81, BITUMEN);   // the offering table, black with burning
+    for (let k = 0; k < 5; k++) pot(ST1, X0 - ix + 0.6, y0, Z0 - 6 + k * 1.1, 'pithos', shade(CLAY, 0.85 + r() * 0.2), 0.8);
+    solids.room(X0, Z0, 17.5, 22.3, 0, 1.0, [[1, 0, 1.3]], Y(-3490));
+    for (const sd of [-1, 1]) for (const [za, zb] of [[Z0 - iz, Z0 - gz], [Z0 + gz, Z0 + iz]]) solids.box(X0 + sd * (hx + pt / 2), (za + zb) / 2, pt, zb - za, 0, Y(-3490), Infinity, { rad: 0.3 });
+    solids.box(X0, Z0 - iz + 1.2, 3.0, 2.4, 0, Y(-3490), Infinity, { rad: 0.3 }).box(X0, Z0 + 2.5, 1.6, 1.1, 0, Y(-3490), Infinity, { rad: 0.3 });
+    solids.platform(X0, Z0, 19.5, 24.3, 0, () => FLAT + PH * world.hill + 0.5, Y(-3490));
+  }
   ST1.box('plaster', TC[0], 7.45, TC[1], 6.4, 2.0, 19.6, 0, { col: shade(WHITE, 0.98), batter: 0.08 });   // the long middle hall stands higher than the rooms on either side, lit from under its roof
   ST1.box('plaster', TC[0], 9.42, TC[1], 6.7, 0.16, 19.9, 0, { col: shade(WHITE, 0.9) });
   for (let k = -3; k <= 3; k++) for (const s of [-1, 1]) { const X = TC[0] + s * 3.21, z = TC[1] + k * 2.6;
     ST1.quad('plain', [X, 8.35, z + s * 0.4], [X, 8.35, z - s * 0.4], [X, 9.0, z - s * 0.4], [X, 9.0, z + s * 0.4], DARK); }
-  for (const [f, a] of [[1, 0], [2, 3]]) opening(ST1, TC[0], 0.5, TC[1], 17.5, 22.3, 0, f, a, 1.3, 3.4, 0, null, { out: 0.03 });
+  for (const [f, a] of [[1, 0], [2, 3]]) opening(ST1, TC[0], 0.5, TC[1], 17.5, 22.3, 0, f, a, 1.3, 3.4, 0, null, { out: 0.03, hole: f === 1 });
   for (let k = 0; k < 4; k++) pot(ST1, TC[0] + 12, 0, TC[1] - 4.5 + k * 3, 'pithos', shade(CLAY, 0.9), 1);
   ST1.box('plaster', TC[0] + 14, 0, TC[1], 1.6, 1.0, 1.2, 0, { col: shade(WHITE, 0.95) });   // an offering table
   // the smaller temple that stood here before
   ST0.box('plaster', TC[0], 0, TC[1], 14, 0.4, 17, 0, { col: MUD2 });
   nichedBlock(ST0, 'plaster', TC[0], TC[1], 12, 15, 0, 0.4, 5, { col: shade(BUFF, 0.95), depth: 0.3 });
   opening(ST0, TC[0], 0.4, TC[1], 12, 15, 0, 1, 0, 1.1, 2.6, 0, null, { out: 0.03 });
-  solids.box(TC[0], TC[1], 19.5, 24.3).box(PX0, -90, 1, 61).box(-70, PZ0, 61, 1).box(-70, PZ1, 61, 1).box(PX1, (PZ0 - 95) / 2, 1, 26).box(PX1, (PZ1 - 85) / 2, 1, 26).box(-25, -97.5, 30, 5).box(-25, -82.5, 30, 5);
+  solids.box(TC[0], TC[1], 19.5, 24.3, 0, -Infinity, Y(-3490)).box(PX0, -90, 1, 61).box(-70, PZ0, 61, 1).box(-70, PZ1, 61, 1).box(PX1, (PZ0 - 95) / 2, 1, 26).box(PX1, (PZ1 - 85) / 2, 1, 26).box(-25, -97.5, 30, 5).box(-25, -82.5, 30, 5);
 
   // ---------- Eanna, the precinct of Inanna ----------
   const EC = [92, -130];
@@ -149,8 +183,11 @@ function build({ world, group }) {
     if (blocked(x, z, Math.max(w, d) / 2) || z > -16 || r() < 0.07) continue;
     const dist = Math.hypot(x - ROAD, z + 90), Sx = dist < 135 ? S : dist < 215 ? S2 : S3, from = dist < 135 ? -Infinity : dist < 215 ? Y(-3700) : Y(-3150), rot = (r() - 0.5) * 0.12;
     const nearRoad = Math.abs(x - ROAD) < 45 || dist < 70;
-    house(Sx, r, x, FLAT, z, w, d, h, rot, { m: r() < 0.75 ? 'brick' : 'plaster', col: shade(r() < 0.12 ? BUFF : MUD, 0.82 + r() * 0.3), footing: false, parapet: 0.45, beams: nearRoad, door: (r() * 4) | 0, windows: nearRoad ? 2 : 1, batter: 0.14, spouts: true, mat: true });
-    solids.box(x, z, w, d, rot, from); homes.push({ x, z, w, d, h, rot, from, nearRoad });
+    const open = nearRoad && Sx === S && h < 5 && homes.filter((q) => q.open).length < 2;   // two houses by the road stand open: walk in
+    const hs = house(Sx, r, x, FLAT, z, w, d, h, rot, { m: r() < 0.75 ? 'brick' : 'plaster', col: shade(r() < 0.12 ? BUFF : MUD, 0.82 + r() * 0.3), footing: false, parapet: 0.45, beams: nearRoad, door: (r() * 4) | 0, windows: nearRoad ? 2 : 1, batter: 0.14, spouts: true, mat: true, open });
+    if (open) { solids.room(x, z, w, d, rot, hs.t, [[hs.door, hs.da, hs.dw]], from); furnish(Sx, hs, FLAT, rng(3400 + homes.length), { benchM: 'brick' }); }
+    else solids.box(x, z, w, d, rot, from);
+    homes.push({ x, z, w, d, h, rot, from, nearRoad, open: open ? hs : null });
     if (nearRoad && r() < 0.3) { const q = local(x, z, rot, w / 2 + 1, (r() - 0.5) * d * 0.4); ladder(Sx, q[0], FLAT, q[1], h + 0.5, rot + Math.PI); }
   }
   // houses where Eanna will be laid out
@@ -344,13 +381,30 @@ function build({ world, group }) {
     for (let k = 0; k < 420; k++) { const z = -420 + r() * 840; if (z > 108 && z < 162) continue; clump(253 + r() * 9, z); if (k % 2) clump(358 + r() * 10, z); }
     for (let k = 0; k < 260; k++) { const x = -430 + r() * 680; if (x > ROAD - 26 && x < ROAD + 36) continue; clump(x, r() < 0.4 ? 124.5 + r() * 3 : 142.5 + r() * 4); }
   }
+  // a bridge of palm trunks and planks across the canal, where the road from the quay meets it, and a path on to the far fields
+  const BR = { x: ROAD, z0: CANAL - 17, z1: CANAL + 17, hw: 1.3 }, deckY = (z) => FLAT + 0.08 + 0.75 * Math.sin(Math.PI * clamp((z - BR.z0) / (BR.z1 - BR.z0), 0, 1));
+  const deckAt = (x, z) => (Math.abs(x - BR.x) < BR.hw && z > BR.z0 && z < BR.z1 ? deckY(z) : -Infinity);
+  { const n = 34, c = shade(TIMBER, 1.1);
+    for (let i = 0; i < n; i++) { const za = BR.z0 + ((BR.z1 - BR.z0) * i) / n, zb = BR.z0 + ((BR.z1 - BR.z0) * (i + 1)) / n, ya = deckY(za), yb = deckY(zb), k = 0.85 + r() * 0.3;
+      S.quad('wood', [BR.x - BR.hw, ya, za], [BR.x - BR.hw, yb, zb], [BR.x + BR.hw, yb, zb], [BR.x + BR.hw, ya, za], shade(c, k), null, [0, 1, 0]);
+      for (const sd of [-1, 1]) S.quad('wood', [BR.x + sd * BR.hw, ya - 0.25, za], [BR.x + sd * BR.hw, yb - 0.25, zb], [BR.x + sd * BR.hw, yb, zb], [BR.x + sd * BR.hw, ya, za], shade(c, 0.7)); }
+    for (const sd of [-1, 1]) { S.beam('wood', [BR.x + sd * BR.hw * 0.7, deckY(BR.z0) - 0.3, BR.z0], [BR.x + sd * BR.hw * 0.7, deckY(CANAL) - 0.3, CANAL], 0.2, 0.2, 6, TIMBER); S.beam('wood', [BR.x + sd * BR.hw * 0.7, deckY(CANAL) - 0.3, CANAL], [BR.x + sd * BR.hw * 0.7, deckY(BR.z1) - 0.3, BR.z1], 0.2, 0.2, 6, TIMBER);   // the palm-trunk stringers
+      for (let k = 0; k <= 8; k++) { const z = BR.z0 + ((BR.z1 - BR.z0) * k) / 8, y = deckY(z); S.beam('wood', [BR.x + sd * (BR.hw + 0.05), y, z], [BR.x + sd * (BR.hw + 0.05), y + 1.0, z], 0.05, 0.045, 5, TIMBER); }   // the posts of the hand-rail
+      for (let k = 0; k < 8; k++) { const za = BR.z0 + ((BR.z1 - BR.z0) * k) / 8, zb = BR.z0 + ((BR.z1 - BR.z0) * (k + 1)) / 8; S.beam('wood', [BR.x + sd * (BR.hw + 0.05), deckY(za) + 0.95, za], [BR.x + sd * (BR.hw + 0.05), deckY(zb) + 0.95, zb], 0.035, 0.035, 5, TIMBER, false); }
+      for (const z of [CANAL - 6, CANAL, CANAL + 6]) S.beam('wood', [BR.x + sd * BR.hw * 0.7, base(BR.x, z) - 0.5, z], [BR.x + sd * BR.hw * 0.7, deckY(z) - 0.35, z], 0.14, 0.12, 6, shade(TIMBER, 0.8)); }   // piers driven into the canal bed
+    S.quad('plaster', [ROAD - 3, FLAT + 0.03, BR.z1], [ROAD + 3, FLAT + 0.03, BR.z1], [ROAD + 3, FLAT + 0.03, 176], [ROAD - 3, FLAT + 0.03, 176], lin(0xb8a680), [0, 0], [0, 1, 0]);   // the path on to the fields
+  }
+  solids.platform(BR.x, CANAL, BR.hw * 2, BR.z1 - BR.z0, 0, (x, z) => deckY(z), -Infinity, Infinity, 'deck');
+  for (const sd of [-1, 1]) solids.platform(BR.x + sd * (BR.hw + 0.1), CANAL, 0.2, BR.z1 - BR.z0 - 1, 0, (x, z) => deckY(z), -Infinity, Infinity, 'rail');
+  for (let k = 0; k < 3; k++) P(k % 2 ? F : M, 'carry', 0, 0, 0, { path: [[ROAD + 0.4, 100], [ROAD + 0.4, 176], [ROAD + 12, 186], [ROAD + 0.4, 176], [ROAD + 0.4, 100]], prop: k ? 'basket' : 'bucket', phase: k * 0.33, speed: 1.1 });
   // fields across the canal
   for (let i = 0; i < 26; i++) for (let j = 0; j < 2; j++) if (r() < 0.8) field(S, r, -400 + i * 24 + 10, 178 + j * 46 + 20, 40, 19, Math.PI / 2, FLAT, STAGES[(r() * STAGES.length) | 0], { tall: 1.1 });
 
   // ---------- meshes, people ----------
   S.mesh(always); S2.mesh(town2); S3.mesh(town3); SE.mesh(eanna); SPre.mesh(preEanna); SW.mesh(walled); SPl.mesh(plat);
   const tOld = new THREE.Group(), tNew = new THREE.Group(); oldTemple.add(tOld); whiteTemple.add(tNew); ST0.mesh(tOld); ST1.mesh(tNew);
-  const folk = actors(world, people, { seed: 33 }); group.add(...folk.meshes);
+  const onDeck = { heightAt: (x, z) => Math.max(world.heightAt(x, z), deckAt(x, z)), get sea() { return world.sea; } };   // people on the bridge walk on its deck
+  const folk = actors(onDeck, people, { seed: 33 }); group.add(...folk.meshes);
   const groups = [always, town2, town3, eanna, preEanna, walled, wheels, oldTemple, whiteTemple, plat], _o = [0, 0], _a = [0, 0];
 
   return {
@@ -369,6 +423,8 @@ function build({ world, group }) {
       folk.update(u, t, view);
     },
     collide(pos) { solids.collide(pos); },
+    floorAt(x, z) { return solids.floorAt(x, z); },
+    audit: { solids, homes, deckAt },
   };
 }
 

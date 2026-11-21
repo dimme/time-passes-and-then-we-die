@@ -186,3 +186,46 @@ export class Track {
   }
   at(d, out, span = 0.6) { this.pt(d - span, this._a); this.pt(d + span, this._b); this.pt(d, out); out[2] = Math.atan2(this._a[1] - this._b[1], this._b[0] - this._a[0]); return out; }
 }
+
+// ---------- things to bump into, and to stand on ----------
+/**
+ * An obstacle: an axis-aligned rectangle r = [x0, x1, z0, z1] (or, with `box`, a turned rectangle inside it), standing in years
+ * [a, b). With `top` (a height, or a function (x, z, year) -> height) it is something you can stand on: it stops you only while your
+ * feet are more than 0.6 m below its top, and carries you once you are up. `deck`: you can also pass underneath it.
+ */
+export const rectOb = (r, a = -1e9, b = 1e9, o = {}) => ({ r, a, b, ...o });
+/** A w x d rectangle centred on (x, z), turned by ry as put() turns things (local x along (cos ry, -sin ry)). */
+export function boxOb(x, z, w, d, ry, a = -1e9, b = 1e9, o = {}) {
+  const c = Math.cos(ry), s = Math.sin(ry), ex = (Math.abs(c) * w + Math.abs(s) * d) / 2, ez = (Math.abs(s) * w + Math.abs(c) * d) / 2;
+  return { r: [x - ex, x + ex, z - ez, z + ez], a, b, box: { x, z, c, s, hw: w / 2, hd: d / 2 }, ...o };
+}
+/** A strip of half-width hw from p to q ([x, z]). */
+export const stripOb = (p, q, hw, a, b, o) => boxOb((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, Math.hypot(q[0] - p[0], q[1] - p[1]), hw * 2, -Math.atan2(q[1] - p[1], q[0] - p[0]), a, b, o);
+export class Obstacles {
+  constructor(list) { this.list = list; this.year = 0; this.feet = -Infinity; }
+  static inside(o, x, z, pad) {
+    if (x < o.r[0] - pad || x > o.r[1] + pad || z < o.r[2] - pad || z > o.r[3] + pad) return false;
+    if (!o.box) return true;
+    const b = o.box, dx = x - b.x, dz = z - b.z;
+    return Math.abs(dx * b.c - dz * b.s) < b.hw + pad && Math.abs(dx * b.s + dz * b.c) < b.hd + pad;
+  }
+  topOf(o, x, z) { return typeof o.top === 'function' ? o.top(x, z, this.year) : o.top; }
+  /** Does something stop a visitor whose feet are at `feet` from standing at (x, z)? rad: how close they may come. */
+  blocked(x, z, feet, rad = 0.3) {
+    for (const o of this.list) {
+      if (this.year < o.a || this.year >= o.b || !Obstacles.inside(o, x, z, o.top !== undefined ? 0.05 : rad)) continue;   // a step: only its own edge
+      if (o.top !== undefined) { const t = this.topOf(o, x, z); if (feet > t - 0.6 || (o.deck && feet < t - 2.4)) continue; }
+      return o;
+    }
+    return null;
+  }
+  /** The highest top under (x, z) that the visitor can be standing on, or -Infinity. */
+  floorAt(x, z) {
+    let h = -Infinity;
+    for (const o of this.list) {
+      if (o.top === undefined || o.rail || this.year < o.a || this.year >= o.b || !Obstacles.inside(o, x, z, 0)) continue;
+      const t = this.topOf(o, x, z); if (t > h && t < this.feet + 1.2) h = t;
+    }
+    return h;
+  }
+}
