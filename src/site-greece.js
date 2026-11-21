@@ -1,7 +1,7 @@
 // Athens, 1250 – 150 BCE: the rock of the Acropolis above the agora, olive groves, and the sea at Piraeus.
 // A Mycenaean citadel first, then a village under its old wall, a painted archaic town, the Persian fire, and the marble of Pericles.
 import * as THREE from 'three';
-import { rng, clamp, smooth } from './util.js';
+import { rng, clamp, smooth, merge } from './util.js';
 import { yearToU, uToYear } from './timeline.js';
 import { actors } from './people-actors.js';
 import { species } from './animals.js';
@@ -18,6 +18,8 @@ function base(x, z) {
   h += 2.5 * Math.sin(x * 0.021 + 1) * Math.cos(z * 0.017) * smooth((Math.hypot(x + 60, z + 60) - 330) / 150);
   h += 120 * Math.max(0, 1 - Math.hypot(x - 340, z + 360) / 230) ** 1.6;                         // Lykabettos
   h += 170 * smooth((x - 620) / 380) * (0.7 + 0.3 * Math.sin(z * 0.006)) + 130 * smooth((-z - 780) / 380) * (0.75 + 0.25 * Math.sin(x * 0.007));   // Hymettos, Parnes
+  { const dz = z - 100, r = Math.hypot(x - 25, dz); if (r < 34) {   // the theatre's bowl cut into the slope: the ground stays just under the tiers and the orchestra
+    const cap = dz > 0 ? PLAIN + Math.max(0, r - 12.05) * 0.6 : PLAIN + clamp((r - 12.05) / 0.95, 0, 15) * 0.42 - 0.05, k = smooth((r - (dz > 0 ? 13 : 26.3)) / 7); h = Math.min(h, cap * (1 - k) + h * k); } }
   const s = SEA[0] * x + SEA[1] * z, f = smooth((s - 280) / 200);
   h = h * (1 - f) - 7 * f;
   h += 60 * Math.max(0, 1 - Math.hypot(x + 760, z - 900) / 260) ** 1.4 * smooth((s - 600) / 200);   // Salamis across the strait
@@ -46,6 +48,20 @@ const events = [
   { y: -280, t: 'A city of schools', h: 'Zeno teaches in the Painted Stoa, which is why his followers are called Stoics; Epicurus teaches in his garden. Foreign kings pay for colonnades to be remembered here.', w: 'The library at Alexandria is collecting every book in the world. About 240 BCE Eratosthenes measures the Earth. Rome and Carthage go to war.' },
   { y: -160, t: 'Rome arrives', h: 'King Attalos of Pergamon gives the agora a stoa two storeys high. In 146 BCE Greece becomes a Roman province; young Romans come here to study.', w: 'Carthage and Corinth are destroyed in the same year. The centre of this story moves west.' },
 ];
+
+// The seating of the theatre, centred on (25, PLAIN, 100) and opening to +z: 15 tiers, each 0.95 deep and 0.42 high, the lowest at radius 12.05..13.
+const CAVEA = (() => {
+  const R0 = 12.05, D = 0.95, S = 0.42, N = 15, pts = [new THREE.Vector2(R0, -2)];
+  for (let i = 0; i < N; i++) pts.push(new THREE.Vector2(R0 + i * D, (i + 1) * S), new THREE.Vector2(R0 + (i + 1) * D, (i + 1) * S));
+  pts.push(new THREE.Vector2(R0 + N * D, -2));
+  const flip = (g) => { const p = g.attributes.position; let ny = 0; g.computeVertexNormals(); for (let k = 0; k < p.count; k++) ny += g.attributes.normal.getY(k); if (ny < 0) { for (let k = 0; k < p.count; k += 3) for (const c of [0, 1, 2]) { const t = p.array[(k + 1) * 3 + c]; p.array[(k + 1) * 3 + c] = p.array[(k + 2) * 3 + c]; p.array[(k + 2) * 3 + c] = t; } g.computeVertexNormals(); } return g; };
+  const bowl = flip(new THREE.LatheGeometry(pts, 28, Math.PI / 2, Math.PI).toNonIndexed());
+  const end = (e) => { const sh = new THREE.Shape(pts.map((q) => new THREE.Vector2(e * q.x, q.y))); return new THREE.ShapeGeometry(sh).toNonIndexed(); };
+  const ends = merge([end(1), end(-1)]);
+  const top = (x, z) => { const dz = z - 100, r = Math.hypot(x - 25, dz); if (dz > 0 || r < R0 || r > R0 + N * D) return -Infinity; return PLAIN + (Math.min(N - 1, Math.floor((r - R0) / D)) + 1) * S; };
+  const stop = (pos) => { const dx = pos.x - 25, dz = pos.z - 100, r = Math.hypot(dx, dz); if (r > R0 + (N - 1.5) * D) { const k = (R0 + N * D + 0.15) / r; pos.x = 25 + dx * k; pos.z = 100 + dz * k; } };
+  return { bowl, ends, at: top, stop };
+})();
 
 function build({ world, group }) {
   const r = rng(4471), B = new Batch(), CB = new Blocks(), K = { B, C: CB, world, r }, H = (x, z) => world.heightAt(x, z), M = species();
@@ -91,15 +107,11 @@ function build({ world, group }) {
   const old = { x: 5, z: -22, w: 18, l: 40, nf: 6, ns: 12, colH: 7.6, d: 1.55, mat: 'ashlar', col: C.poros, y: TOP };
   B.when(-570, -480); temple(K, old);
   B.when(-480, -421); temple(K, { ...old, ruin: 0.9, burnt: 1 });
-  const parth = { pass: 1, x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
+  const parth = { idol: { h: 8, base: 1, col: C.gold, robe: 0xe8dcc0 }, x: 22, z: 24, w: 30.9, l: 69.5, nf: 8, ns: 17, colH: 10.4, d: 1.9, col: C.pentelic, roofCol: C.tileMarble, capCol: C.pentelic, y: PY };
   B.when(-488, Infinity); B.slab('ashlar', C.poros, 79, 12, 42, 22, PY - 12, 24); for (let k = 0; k < 10; k++) B.box('ashlar', C.poros, 1, PY - TOP - k * 0.4, 12, -18 - k * 0.5, TOP, 24); CB.platform(22, 24, 39.5, 21, PY, -488);
-  // the visitor can climb the west stair onto the foundation, then the three steps onto the floor of the Parthenon, and walk round inside the colonnade
+  // the visitor can climb the west stair onto the foundation, then the three steps onto the floor of the Parthenon (temple() makes those),
+  // walk round inside the colonnade and in through the open east door to Athena in gold and ivory
   for (let k = 0; k < 10; k++) CB.platform(-18 - k * 0.5, 24, 0.5, 6, PY - k * 0.4, -488);
-  { const sH = 0.42, steps = 3, m = parth.d * 0.78, X = parth.l / 2 - m, Z = parth.w / 2 - m, sz = (2 * Z) / (parth.nf - 1), sx = (2 * X) / (parth.ns - 1);
-    for (let i = 0; i < steps; i++) { const e = 2 * 0.5 * (steps - 1 - i); CB.platform(parth.x, parth.z, (parth.l + e) / 2, (parth.w + e) / 2, PY + (i + 1) * sH, -447); }
-    for (let i = 0; i < parth.nf; i++) for (const e of [1, -1]) CB.circle(parth.x + e * X, parth.z - Z + i * sz, parth.d / 2, -447);
-    for (let j = 1; j < parth.ns - 1; j++) for (const e of [1, -1]) CB.circle(parth.x - X + j * sx, parth.z + e * Z, parth.d / 2, -447);
-    const xb = -X + sx * 1.5, xf = X - sx * 1.5, cz = Z - sz * 0.95; CB.rect(parth.x + (xb + xf) / 2, parth.z, (xf - xb) / 2 + 0.4, cz, 0, -447); }   // the cella: walls all round
   B.when(-488, -480); temple(K, { ...parth, stage: 0.08 });
   B.when(-480, -447); temple(K, { ...parth, stage: 0.08, burnt: 1 });
   const works = (x0, z0, x1, z1, h, cranes) => {   // scaffolding round a building and cranes on its floor
@@ -116,7 +128,7 @@ function build({ world, group }) {
   B.when(-456, Infinity); statue(K, -64, TOP, -20, PI, 7.5, { base: 2, spear: 1, shield: 1 });   // Athena Promachos, in bronze, looking to the gate
   B.when(-560, Infinity); B.box('ashlar', C.poros, 9, 1.6, 4.5, 72, TOP, -8); B.box('ashlar', C.poros, 10.5, 0.4, 6, 72, TOP, -8); CB.rect(72, -8, 5.2, 3, 0, -560);
   // the gate of Mnesikles
-  const gate = { x: -97, z: 0, ry: PI, w: 21, l: 17, nf: 6, colH: 8.6, d: 1.55, porch: 1, rear: 1, peripteral: false, cella: false, steps: 1, sH: 0.1, col: C.pentelic, roofCol: C.tileMarble, y: TOP, pass: 1 };
+  const gate = { x: -97, z: 0, ry: PI, w: 21, l: 17, nf: 6, colH: 8.6, d: 1.55, porch: 1, rear: 1, peripteral: false, cella: false, steps: 1, sH: 0.1, col: C.pentelic, roofCol: C.tileMarble, y: TOP };
   B.when(-437, -432); temple(K, { ...gate, stage: 0.62 }); scaffold(K, [-106.5, -11], [-106.5, 11], 9, TOP - 0.6);
   B.when(-432, Infinity); temple(K, gate);
   for (const e of [1, -1]) { temple(K, { x: -99, z: e * 19, ry: e * PI / 2, w: 12, l: 10, nf: 3, colH: 5.8, d: 1.05, porch: 1, peripteral: false, steps: 1, col: C.pentelic, roofCol: C.tileMarble, y: TOP }); B.box('marble', C.pentelic, 17, 6, 0.8, -97, TOP, e * 3.4 + e * 0.01); }
@@ -134,11 +146,13 @@ function build({ world, group }) {
   // ------------------------------------------------------------------ the theatre on the south slope
   for (const [y0, y1, col, mat] of [[-500, -330, C.wood, 'wood'], [-330, Infinity, C.poros, 'ashlar']]) {
     B.when(y0, y1); B.push(25, PLAIN, 100, 0);
-    for (let i = 0; i < 15; i++) B.geo(mat, i % 2 ? col : shade(col, 0.9), new THREE.CylinderGeometry(13 + i * 0.95, 13 + i * 0.95, (i + 1) * 0.42 + 2, 28, 1, false, PI / 2, PI), 0, ((i + 1) * 0.42 + 2) / 2 - 2, 0);
+    B.geo(mat, col, CAVEA.bowl, 0, 0, 0); B.geo(mat, shade(col, 0.9), CAVEA.ends, 0, 0, 0);
     B.box(mat, col, 30, 5, 6, 0, 0, 13); B.box('tile', C.tile, 31, 0.2, 7, 0, 5, 13, 0, 0.12); for (let k = -3; k <= 3; k++) column(B, mat === 'wood' ? 'wood' : 'marble', mat === 'wood' ? C.red : C.marble, k * 3.6, 0, 9.4, 3.8, 0.5, 'doric', { lo: 1 });
     B.pop();
   }
-  CB.rect(25, 113, 15.5, 3.5, 0, -500); keep.push([-12, 66, 62, 122]);
+  CB.rect(25, 113, 15.5, 3.5, 0, -500); for (const e of [1, -1]) CB.rect(25 + e * 19.2, 99.8, 7.2, 0.25, 0, -500);   // the side walls of the seating
+  CB.surface(25, 87, 28, CAVEA.at, -500, Infinity, CAVEA.stop);
+  keep.push([-12, 66, 62, 122]);
 
   // ------------------------------------------------------------------ the agora
   keep.push([112, -246, 244, -148], [92, -152, 150, -136], [-232, -226, -80, -78], [-300, -200, -225, -100], [-90, -262, 10, -196], [38, -152, 92, -124], [-278, -258, -234, -224], [104, -112, 136, -86]);
