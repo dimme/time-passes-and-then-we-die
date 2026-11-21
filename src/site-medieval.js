@@ -25,28 +25,65 @@ const eye = { x: -150, z: 18 };
 const PLAGUE = 1348;
 
 const DARK = ['pane', 0x30363c, 'tile'];
+const rd = rng(9731);   // chance for the detail alone: the town's layout keeps its own sequence
+const TIMBER = [0x4a382a, 0x3e3026, 0x57422e, 0x352a22], SHUT = [0x6a4a30, 0x5a3c28, 0x7a5a3a, 0x4a4a3a, 0x6a3a2a, 0x3a4a44];
 /** A hut of the early village: low wattle-and-daub walls under a deep hipped thatch. */
 function hut(kit, r, w = 6.5, d = 4.6) {
-  const c = [0xc8b890, 0xb8a47c, 0xd0c0a0][Math.floor(r() * 3)];
-  walls(kit, 'daub', -w / 2, -d / 2, w / 2, d / 2, 0, 1.7, 0.25, c, (s, l) => (s === 's' ? [{ x: l * 0.4, y: 0, w: 0.9, h: 1.55, arch: 'flat', fill: ['plank', 0x4a3424, 'tile'] }] : []));
+  const c = [0xc8b890, 0xb8a47c, 0xd0c0a0][Math.floor(r() * 3)]; kit.shell = true;
+  walls(kit, 'daub', -w / 2, -d / 2, w / 2, d / 2, 0, 1.7, 0.25, c, (s, l) => {
+    if (s !== 's') return [];
+    const o = { x: l * 0.4, y: 0, w: 0.9, h: 1.55, arch: 'flat', fill: ['plank', 0x4a3424, 'tile'] };
+    kit.trim(o, 0.25, { head: ['plank', 0x4a382a, 0.14, 0.06, 0.2], jambs: ['plank', 0x4a382a, 0.12, 0.06] }); return [o];
+  });
+  kit.shell = false;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) kit.box('plank', sx * (w / 2 + 0.3) - 0.09, 0, sz * (d / 2 + 0.3) - 0.09, sx * (w / 2 + 0.3) + 0.09, 1.72, sz * (d / 2 + 0.3) + 0.09, 0x4a382a, 'tb');   // the corner posts stand proud of the daub
   kit.gable('thatch', null, -w / 2, -d / 2, w / 2, d / 2, 1.7, 3 + r() * 0.6, { over: 0.75, hip: 1.9, col: [0.75 + r() * 0.25, 0.75 + r() * 0.2, 0.7 + r() * 0.2] });
   kit.solid(-w / 2, -d / 2, w / 2, d / 2);
 }
-/** A town house: timber frame (or stone below), upper floors jettied over the street, a steep roof. Front faces +z. */
+/** A town house: timber frame (or stone below), upper floors jettied over the street on their joists, shuttered windows, a steep roof. Front faces +z. */
 function house(kit, r, { w, d, floors, late }) {
   const fh = 3, wallM = late || r() < 0.6 ? 'frame' : 'daub', roofM = late ? (r() < 0.85 ? 'tile' : 'thatch') : r() < 0.6 ? 'thatch' : 'tile', jet = floors > 1 && wallM === 'frame' ? 0.45 : 0;
   const tint = [[0.96, 0.93, 0.86], [0.9, 0.84, 0.72], [0.98, 0.9, 0.78], [0.85, 0.82, 0.76]][Math.floor(r() * 4)], stoneBase = late && r() < 0.3;
+  const D = 0.22, tc = TIMBER[Math.floor(rd() * 4)], sc = SHUT[Math.floor(rd() * 6)], framed = wallM === 'frame', xo = w / 2 + D, shop = late && rd() < 0.45, PALE = 0xcfc7b6;
+  kit.shell = true;
   for (let k = 0; k < floors; k++) {
-    const z1 = d / 2 + jet * k, y = k * fh;
-    walls(kit, k === 0 && stoneBase ? 'stone' : wallM, -w / 2, -d / 2, w / 2, z1, y, fh, 0.22, k === 0 && stoneBase ? 0xe0d8c8 : tint, (s, l) => {
-      if (s === 's') return k === 0 ? [{ x: l * 0.28, y: 0, w: 1.05, h: 2.1, arch: stoneBase ? 'point' : 'flat', fill: ['plank', 0x5a3c28, 'tile'], back: 0.7 }, { x: l * 0.7, y: 1, w: 1.5, h: 1.2, arch: 'flat', fill: DARK }] : [{ x: l * 0.28, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }, { x: l * 0.72, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }];
-      return s === 'n' && r() < 0.6 ? [{ x: l / 2, y: 1.1, w: 0.8, h: 1.1, arch: 'flat', fill: DARK }] : [];
+    const z1 = d / 2 + jet * k, y = k * fh, stone = k === 0 && stoneBase;
+    walls(kit, stone ? 'stone' : wallM, -w / 2, -d / 2, w / 2, z1, y, fh, D, stone ? 0xe0d8c8 : tint, (s, l) => {
+      if (s === 's') {
+        const o = k === 0 ? [{ x: l * 0.28, y: 0, w: 1.05, h: 2.1, arch: stoneBase ? 'point' : 'flat', fill: ['plank', 0x5a3c28, 'tile'], back: 0.7 }, { x: l * 0.7, y: 1, w: 1.5, h: 1.2, arch: 'flat', fill: DARK }] : [{ x: l * 0.28, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }, { x: l * 0.72, y: 1, w: 1, h: 1.3, arch: 'flat', fill: DARK }];
+        o.forEach((h, i) => {
+          const m = stone ? 'stone' : 'plank', c = stone ? PALE : tc;
+          if (k === 0 && i === 0) kit.trim(h, D, { head: [m, c, stone ? 0.3 : 0.2, 0.06, 0.16], jambs: stone ? undefined : ['plank', tc, 0.14, 0.06], step: ['stone', 0xb0a898, 0.42, 0.16] });
+          else kit.trim(h, D, { sill: [m, c, 0.1, 0.11, 0.1], head: [m, c, 0.15, 0.05, 0.1], bars: ['plank', tc, h.w > 1.2 ? 3 : 2, 1, 0.07], shutters: !(k === 0 && shop) && rd() < 0.8 ? ['plank', sc, 0.75 + rd() * 0.25] : undefined });
+        });
+        return o;
+      }
+      if (s === 'n' && r() < 0.6) { const h = { x: l / 2, y: 1.1, w: 0.8, h: 1.1, arch: 'flat', fill: DARK }; kit.trim(h, D, { sill: ['plank', tc, 0.08, 0.1, 0.08], head: ['plank', tc, 0.13, 0.05, 0.08] }); return [h]; }
+      return [];
     });
-    if (jet && k > 0) kit.box('plank', -w / 2 - 0.25, y - 0.22, d / 2 + jet * (k - 1), w / 2 + 0.25, y + 0.02, z1 + 0.25, 0x5a4634, '');
+    if (framed && !stone) for (const sx of [-1, 1]) kit.box('plank', sx * xo - (sx > 0 ? 0.2 : 0.06), y, z1 + D - 0.2, sx * xo + (sx > 0 ? 0.06 : 0.2), y + fh, z1 + D + 0.06, tc, 'tb');   // corner posts, proud of the plaster
+    if (jet && k > 0) {
+      const zp = d / 2 + jet * (k - 1) + D, n = Math.max(4, Math.round(w / 1.05));
+      kit.box('plank', -w / 2 - 0.3, y - 0.24, zp - D, w / 2 + 0.3, y + 0.04, z1 + D + 0.08, tc, '');   // the bressumer carrying the floor above
+      for (let i = 0; i <= n; i++) { const x = -w / 2 + (w * i) / n; kit.box('plank', x - 0.08, y - 0.4, zp, x + 0.08, y - 0.24, z1 + D + 0.05, tc, 'tnew'); }   // joist ends
+      for (const sx of [-1, 1]) kit.poly('plank', [[sx * (xo - 0.1), y - 0.4, zp], [sx * (xo - 0.1), y - 0.4, z1 + D], [sx * (xo - 0.1), y - 1.15, zp]], tc);   // brackets
+    }
   }
-  const zf = d / 2 + jet * (floors - 1), ridge = r() < 0.6 ? 'z' : 'x', span = ridge === 'z' ? w : d + jet * (floors - 1);
-  kit.gable(roofM, wallM, -w / 2, -d / 2, w / 2, zf, floors * fh, span * (roofM === 'thatch' ? 0.62 : 0.72), { axis: ridge, over: 0.45, wcol: tint, col: [0.8 + r() * 0.2, 0.8 + r() * 0.2, 0.8 + r() * 0.2] });
-  if (late && r() < 0.5) kit.box('stone', -w / 2 + 0.3, floors * fh, -d / 2 + 0.6, -w / 2 + 1.2, floors * fh + span * 0.72 + 1, -d / 2 + 1.5, 0xc8c0b0, '');
+  kit.shell = false;
+  // a low stone plinth keeps the sill beam off the wet ground
+  if (!stoneBase) { const dx = -w / 2 + w * 0.28; kit.box('stone', -xo - 0.05, 0, -d / 2 - D - 0.05, xo + 0.05, 0.4, d / 2 + D, 0xa8a090, 'bs'); kit.box('stone', -xo - 0.05, 0, d / 2, dx - 0.7, 0.4, d / 2 + D + 0.05, 0xa8a090, 'bn'); kit.box('stone', dx + 0.7, 0, d / 2, xo + 0.05, 0.4, d / 2 + D + 0.05, 0xa8a090, 'bn'); }
+  const zf = d / 2 + jet * (floors - 1), ridge = r() < 0.6 ? 'z' : 'x', span = ridge === 'z' ? w : d + jet * (floors - 1), thatch = roofM === 'thatch', H = floors * fh, rh = span * (thatch ? 0.62 : 0.72);
+  kit.gable(roofM, wallM, -w / 2, -d / 2, w / 2, zf, H, rh, { axis: ridge, over: 0.55, wcol: tint, col: [0.8 + r() * 0.2, 0.8 + r() * 0.2, 0.8 + r() * 0.2], barge: thatch ? ['thatch', [0.5, 0.46, 0.36], 0.34] : ['plank', tc, 0.26] });
+  if (framed) { if (ridge === 'z') kit.box('plank', -xo, H - 0.12, zf + D - 0.04, xo, H + 0.12, zf + D + 0.07, tc, 'n'); else for (const sx of [-1, 1]) kit.box('plank', sx * xo - 0.07, H - 0.12, -d / 2, sx * xo + 0.07, H + 0.12, zf + D, tc, ''); }   // the tie beam under the gable
+  if (late && r() < 0.5) { const top = H + rh + 1; kit.box('stone', -w / 2 + 0.3, H, -d / 2 + 0.6, -w / 2 + 1.2, top, -d / 2 + 1.5, 0xc8c0b0, ''); kit.box('stone', -w / 2 + 0.18, top - 0.3, -d / 2 + 0.48, -w / 2 + 1.32, top - 0.08, -d / 2 + 1.62, 0xa8a094, ''); }
+  else if (thatch || rd() < 0.5) { const m = ridge === 'z' ? [0, (zf - d / 2) / 2 - d * 0.15] : [-w * 0.15, (zf - d / 2) / 2], q = 0.45; kit.gable(roofM, 'plank', m[0] - q, m[1] - q, m[0] + q, m[1] + q, H + rh - 0.05, 0.5, { axis: ridge, over: 0.12, wcol: 0x2a2018, col: [0.6, 0.58, 0.55], eave: false, ridge: false }); }   // a smoke louvre on the ridge
+  if (shop) {   // a shop: the shutter let down as a counter, and a pentice over it
+    const gx = -w / 2 + w * 0.7, z = d / 2 + D;
+    kit.box('plank', gx - 0.85, 0.9, z, gx + 0.85, 0.97, z + 0.48, sc, 'n'); for (const sx of [-1, 1]) kit.box('plank', gx + sx * 0.75 - 0.04, 0, z + 0.38, gx + sx * 0.75 + 0.04, 0.9, z + 0.45, tc, 'tb');
+    kit.poly(roofM === 'tile' ? 'tile' : 'plank', [[gx - 1.15, 2.32, z + 0.8], [gx + 1.15, 2.32, z + 0.8], [gx + 1.15, 2.74, z], [gx - 1.15, 2.74, z]], roofM === 'tile' ? [0.8, 0.78, 0.76] : sc);
+    for (const sx of [-1, 1]) kit.poly('plank', [[gx + sx * 1.05, 2.3, z + 0.72], [gx + sx * 1.05, 2.7, z], [gx + sx * 1.05, 1.85, z]], tc);
+  }
+  if (late && floors > 1 && rd() < 0.3) { const sx = -w / 2 + w * 0.5, z = zf + D; kit.box('plank', sx - 0.035, fh + 2.5, z, sx + 0.035, fh + 2.57, z + 1, tc, 'n'); kit.box('plank', sx - 0.025, fh + 1.9, z + 0.4, sx + 0.025, fh + 2.44, z + 0.95, [0x8a3a2a, 0x2a4a6a, 0xb89a3a, 0x3a5a3a][Math.floor(rd() * 4)], ''); }   // a hanging sign
   kit.solid(-w / 2, -d / 2, w / 2, d / 2);
 }
 
@@ -124,10 +161,23 @@ function build({ world, group }) {
         if (gate) {
           kit.panel('stone', l, 12, [{ x: l / 2, y: 0, w: 4.4, h: 5.6, arch: 'point', sharp: 0.7 }, { x: l / 2, y: 7.4, w: 0.5, h: 2, arch: 'flat', fill: DARK }], 3, 0xf0ebe0);
           kit.solid(0, 0, l / 2 - 2.2, 3).solid(l / 2 + 2.2, 0, l, 3); kit.cyl('tile', l / 2, 1.5, 12, 16, 9, 0.05, 4, 0xffffff, { a0: Math.PI / 4 });
-        } else { kit.box('stone', 0, 0, 0, l, 8, 1.8, 0xf0ebe0, 'b'); kit.solid(0, 0, l, 1.8); }
+          const gh = { x: l / 2, y: 0, w: 4.4, h: 5.6, arch: 'point', sharp: 0.7 };
+          for (let i = 0; i < 2; i++) kit.trim(gh, 3, { head: ['stone', i ? 0xd0c8b8 : 0xe0d8c8, 0.42, 0.08 + i * 0.14, 0, i * 0.42] });   // two orders round the arch
+          kit.poly('plank', [[l / 2 - 2.2, 3.5, 1.2], [l / 2 + 2.2, 3.5, 1.2], [l / 2 + 2.2, 5.6, 1.2], [l / 2 - 2.2, 5.6, 1.2]], 0x3a3028);   // the portcullis, raised
+          kit.box('stone', l / 2 - 3.3, 9.2, 3, l / 2 + 3.3, 11.3, 3.8, 0xe8e2d4, 'n'); for (let x = l / 2 - 3; x <= l / 2 + 3.01; x += 1.2) kit.box('stone', x - 0.2, 8.4, 3, x + 0.2, 9.2, 3.7, 0xd0c8b8, 'nt');   // a machicolated gallery over the arch
+          kit.box('stone', 0, 11.6, 3, l, 12, 3.2, 0xd0c8b8, 'n').poly('stone', [[0, 0, 3.7], [l / 2 - 6.4, 0, 3.7], [l / 2 - 6.4, 2.4, 3], [0, 2.4, 3]], 0xe0d8c8).poly('stone', [[l / 2 + 6.4, 0, 3.7], [l, 0, 3.7], [l, 2.4, 3], [l / 2 + 6.4, 2.4, 3]], 0xe0d8c8);
+          for (const s of [-1, 1]) { const tx = l / 2 + s * 4.5; kit.cyl('stone', tx, 3, 0, 13.6, 2.3, 2.15, 10, 0xf0ebe0).cyl('stone', tx, 3, -0.3, 2.4, 2.95, 2.3, 10, 0xe0d8c8).cyl('stone', tx, 3, 12.2, 12.6, 2.2, 2.5, 10, 0xd0c8b8).cyl('stone', tx, 3, 12.6, 13.7, 2.5, 2.5, 10, 0xf0ebe0).cyl('tile', tx, 3, 13.7, 17.6, 2.9, 0.05, 10); kit.poly('pane', [[tx - 0.07, 6, 5.27], [tx + 0.07, 6, 5.27], [tx + 0.07, 7.5, 5.26], [tx - 0.07, 7.5, 5.26]], 0x101214); kit.solid(tx - 2, 3, tx + 2, 5); }
+        } else {
+          kit.box('stone', 0, 0, 0, l, 8, 1.8, 0xf0ebe0, 'b'); kit.solid(0, 0, l, 1.8);
+          kit.poly('stone', [[0, 0, 2.6], [l, 0, 2.6], [l, 2.4, 1.8], [0, 2.4, 1.8]], 0xe0d8c8);   // the battered foot
+          kit.box('stone', 0, 7.5, 1.8, l, 7.85, 1.98, 0xd0c8b8, 'n').box('stone', 0, 8, -0.25, l, 8.25, 0.05, 0xd0c8b8, 's');   // string course under the parapet, and the wall-walk's inner kerb
+          for (let x = 3.5; x < l - 3; x += 6.9) kit.poly('pane', [[x - 0.07, 4.3, 1.82], [x + 0.07, 4.3, 1.82], [x + 0.07, 5.7, 1.82], [x - 0.07, 5.7, 1.82]], 0x101214);   // arrow loops
+        }
         if (!gate) for (let x = 0.6; x < l - 1; x += 2.3) kit.box('stone', x, 8, 1.3, x + 1.3, 9, 1.8, 0xe8e2d4, 'b');
       });
-      kit.cyl('stone', x0, z0, G, G + 12.5, 4.2, 4, 14, 0xf0ebe0); kit.cyl('tile', x0, z0, G + 12.5, G + 18, 4.8, 0.05, 14, 0xffffff);
+      kit.cyl('stone', x0, z0, G, G + 12.5, 4.2, 4, 14, 0xf0ebe0); kit.cyl('tile', x0, z0, G + 12.6, G + 18.4, 5.1, 0.05, 14, 0xffffff);
+      kit.cyl('stone', x0, z0, G - 0.4, G + 2.8, 5.1, 4.22, 14, 0xe0d8c8).cyl('stone', x0, z0, G + 6.9, G + 7.2, 4.18, 4.18, 14, 0xd0c8b8).cyl('stone', x0, z0, G + 10.4, G + 11.1, 4.03, 4.55, 14, 0xd0c8b8).cyl('stone', x0, z0, G + 11.1, G + 12.6, 4.55, 4.55, 14, 0xf0ebe0);   // batter, band, corbel table, parapet
+      { const out = Math.atan2(z0 - CZ, x0); for (const da of [-0.8, 0, 0.8]) { const a = out + da, px = x0 + Math.cos(a) * 4.17, pz = z0 + Math.sin(a) * 4.17, tx = -Math.sin(a) * 0.08, tz = Math.cos(a) * 0.08; kit.poly('pane', [[px - tx, G + 4.4, pz - tz], [px + tx, G + 4.4, pz + tz], [px + tx, G + 6, pz + tz], [px - tx, G + 6, pz - tz]], 0x101214); } }
       kit.at(x0, 0, z0, 0, () => kit.solid(-3.6, -3.6, 3.6, 3.6));
     }
   });
@@ -303,7 +353,7 @@ function build({ world, group }) {
   trees(['shrub'], 70, () => { const x = (r() * 2 - 1) * 600, z = (r() * 2 - 1) * 520; return !inField(x, z) && dry(x, z) && !inTown(x, z, 1.25) && Math.abs(z - CZ) > 6 ? [x, z] : null; }, INF, [0.8, 1.6]);
 
   // ---------- assemble ----------
-  kit.build(group, { clip: (m) => clipped(m, clipY) }); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });
+  kit.build(group, { clip: (m) => clipped(m, clipY) }); console.log("KITTRIS", kit.tris, kit.meshes.length); props.build(group, { clip: (m) => clipped(m, clipScaffold, true) });
   const people = actors(world, list, { seed: 7 }); group.add(...people.meshes);
   const mounts = new Walkers(world, group, [...oxen, ...rides.map((q) => ({ make: horse, path: q.path, speed: q.speed, phase: q.phase, u0: Y(q.from), load: q.load }))]);
   const fumes = smoke(hearths, { per: 5, rise: 1.6, wind: [0.9, 0.3], life: 9, grey: 0.5 }); group.add(fumes.mesh);
