@@ -157,6 +157,7 @@ const SURF = {
   flute: [13, 1, 0.68, 0], mudbrick: [14, 5, 0.95, 0], window: [15, 1, 0.9, 0], relief: [16, 1, 0.7, 0], door: [17, 1, 0.85, 0], bronzedoor: [17, 1, 0.42, 0.75], coffer: [18, 2, 0.75, 0], render: [19, 5, 0.93, 0], vouss: [20, 1, 0.85, 0],
 };
 let MATS;
+const NORMALS = !/[?&]flat=1/.test(location.search);   // ?flat=1 turns the stone relief off, to tell a lighting fault from a normal-map one
 function materials() {
   if (MATS) return MATS;
   const T = shared(), S = 256, ROWS = 8, c = document.createElement('canvas'), nc = document.createElement('canvas'); c.width = nc.width = S * 4; c.height = nc.height = S * ROWS; const g = c.getContext('2d'), ng = nc.getContext('2d');
@@ -181,9 +182,13 @@ function materials() {
           float mg = min(0.47, pow(2.0, ceil(max(lod, 0.0))) / ${S}.0);
           vec2 tuv = clamp(fract(vMapUv), mg, 1.0 - mg); float ti = floor(vSurf.x + 0.5);
           vec2 tsc = vec2(0.25, 1.0 / ${ROWS}.0), auv = (vec2(mod(ti, 4.0), floor(ti / 4.0)) + tuv) * tsc;
-          vec4 sampledDiffuseColor = textureGrad(map, auv, gx * tsc, gy * tsc);
+          float mip = clamp(lod, 0.0, 8.0);   // an explicit mip level: textureGrad with custom gradients is unreliable on some Mac GPUs
+          vec4 sampledDiffuseColor = textureLod(map, auv, mip);
           diffuseColor *= sampledDiffuseColor;`)
-        .replace('#include <normal_fragment_maps>', 'vec3 mapN = textureGrad(normalMap, auv, gx * tsc, gy * tsc).xyz * 2.0 - 1.0; mapN.xy *= normalScale; normal = normalize(tbn * mapN);')
+        .replace('#include <normal_fragment_maps>', NORMALS ? `vec3 mapN = textureLod(normalMap, auv, mip).xyz * 2.0 - 1.0; mapN.xy *= normalScale; mapN.z = max(mapN.z, 0.2);
+          vec3 bent = tbn * mapN; float bl = dot(bent, bent);
+          // where the UVs do not change across a face the derived tangent frame is degenerate: keep the face's own normal there
+          if (bl > 1e-6 && bl < 1e6 && !(bl != bl)) { bent *= inversesqrt(bl); if (dot(bent, normal) > 0.15) normal = bent; }` : '')
         .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = clamp(vSurf.y * (1.2 - 0.3 * dot(sampledDiffuseColor.rgb, vec3(0.333))), 0.05, 1.0);')
         .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vSurf.z;');
     };

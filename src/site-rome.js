@@ -356,7 +356,7 @@ export default {
   spawn: { x: -86, z: -2, yaw: -PI / 2 - 0.06 },
   env(year, e) {
     const late = smooth((year - 380) / 100);
-    e.hill = 1; e.sea = 0; e.ice = -60; e.grass = 0.22 * late; e.precip = 0; e.cloud = 0.22 + 0.3 * late; e.fogD = 0.0015; e.sunI = 2.0 - 0.4 * late; e.sunEl = 0.62; e.amb = 0.62; e.glow = 0; e.exposure = 0.84; e.bloom = 0.12;   // a lower, warmer sun and less fill, so marble faces read apart instead of burning white
+    e.hill = 1; e.sea = 0; e.ice = -60; e.grass = 0.22 * late; e.precip = 0; e.cloud = 0.22 + 0.3 * late; e.fogD = 0.0015; e.sunI = 2.1 - 0.4 * late; e.sunEl = 0.66; e.amb = 0.95; e.glow = 0; e.exposure = 0.95; e.bloom = 0.15;   // a lower, warmer sun and less fill, so marble faces read apart instead of burning white
     put(e.top, SKY); put(e.hor, mix3(HOR, DULL, late)); put(e.ground, mix3(GROUND, WEEDY, late)); put(e.water, WATER); put(e.far, FAR); put(e.lava, [0, 0, 0]); put(e.sun, [1.0, 0.9, 0.76]);
     for (const [y, w] of [[64.4, 1], [410.3, 0.9], [455.3, 0.7]]) { const k = 1 - Math.abs(year - y) / w; if (k > 0) { e.fogD += 0.0025 * k; e.sunI -= 0.9 * k; put(e.hor, [e.hor[0] - 0.25 * k, e.hor[1] - 0.4 * k, e.hor[2] - 0.5 * k]); } }   // smoke over the city
   },
