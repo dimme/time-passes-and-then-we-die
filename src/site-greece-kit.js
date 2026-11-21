@@ -69,6 +69,84 @@ const planks = (S, seed, n, lo, hi) => canvas(S, (g) => {
   for (let i = 0; i < n; i++) { const v = lo + r() * (hi - lo); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(i * w, 0, w, S); for (let k = 0; k < 26; k++) { g.fillStyle = `rgba(${r() < 0.5 ? 0 : 255},${r() < 0.5 ? 0 : 255},${r() < 0.5 ? 0 : 255},0.07)`; g.fillRect(i * w + r() * w, 0, 1 + r() * 1.5, S); } g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(i * w, 0, 1.5, S); }
 });
 
+/** The same tile as a normal map: its brightness read as height (dark joints lie deep), k times as steep. */
+function normalOf(src, S, k) {
+  const c = canvas(S, (g) => { g.fillStyle = '#fff'; g.fillRect(0, 0, S, S); if (src && k) g.drawImage(src, 0, 0, S, S); }), g = c.getContext('2d'), im = g.getImageData(0, 0, S, S), d = im.data, h = new Float32Array(S * S);
+  for (let i = 0; i < S * S; i++) h[i] = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.6 + d[i * 4 + 2] * 0.1) / 255;
+  const at = (x, y) => h[((y + S) % S) * S + ((x + S) % S)];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1)) * 0.25 * k;
+    const dy = (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1)) * 0.25 * k;
+    const l = 1 / Math.hypot(dx, dy, 1), i = (y * S + x) * 4; d[i] = (-dx * l * 0.5 + 0.5) * 255; d[i + 1] = (dy * l * 0.5 + 0.5) * 255; d[i + 2] = (l * 0.5 + 0.5) * 255; d[i + 3] = 255;
+  }
+  g.putImageData(im, 0, 0); return c;
+}
+/** A column's flutes, four across, meeting in sharp arrises; one faint joint between drums. */
+const fluteTile = (S) => canvas(S, (g) => {
+  const img = g.createImageData(S, S), d = img.data, n = tileNoise(S, 8, 3, 31);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const t = ((x / S) * 4) % 1, v = (252 - 62 * Math.sin(Math.PI * t) ** 0.8) * (0.96 + 0.06 * n[y * S + x]) * (y < 2 ? 0.8 : 1), i = (y * S + x) * 4; d[i] = v; d[i + 1] = v * 0.99; d[i + 2] = v * 0.97; d[i + 3] = 255; }
+  g.putImageData(img, 0, 0);
+});
+/** Plaster over brick: mottled, cracked, and fallen away in patches so the courses show. rowH: a course in pixels. */
+const patchy = (S, seed, rowH, n, brick) => canvas(S, (g) => {
+  const r = rng(seed); g.drawImage(mottled(S, seed + 1, 208, 250), 0, 0);
+  for (let k = 0; k < n; k++) {
+    const cx = S * (0.14 + r() * 0.72), cy = S * (0.14 + r() * 0.72), R = S * (0.04 + r() * 0.08), m = 9, ang = r() * 6.28;
+    g.save(); g.beginPath(); for (let i = 0; i < m; i++) { const a = ang + (i / m) * 6.283, rr = R * (0.6 + r() * 0.7); g.lineTo(cx + Math.cos(a) * rr * 1.4, cy + Math.sin(a) * rr); } g.closePath(); g.clip();
+    for (let y = Math.floor((cy - R * 1.4) / rowH) * rowH, j = 0; y < cy + R * 1.4; y += rowH, j++) for (let x = cx - R * 2 - (j % 2) * rowH * 2; x < cx + R * 2; x += rowH * 4) { const v = 0.8 + r() * 0.3; g.fillStyle = `rgb(${brick[0] * v},${brick[1] * v},${brick[2] * v})`; g.fillRect(x, y, rowH * 4, rowH); g.fillStyle = 'rgba(30,24,18,0.55)'; g.fillRect(x, y, 1, rowH); g.fillRect(x, y, rowH * 4, 1); }
+    g.restore(); g.strokeStyle = 'rgba(40,32,24,0.45)'; g.lineWidth = 1.5; g.stroke();
+  }
+  for (let k = 0; k < 7; k++) { let x = r() * S, y = S * (0.1 + r() * 0.5); g.strokeStyle = 'rgba(50,42,34,0.5)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); for (let i = 0; i < 9; i++) { x += (r() - 0.5) * 9; y += 3 + r() * 6; g.lineTo(x, y); } g.stroke(); }
+  for (let k = 0; k < 14; k++) { const x = r() * S, gr = g.createLinearGradient(0, 0, 0, S * (0.3 + r() * 0.4)); gr.addColorStop(0, 'rgba(60,50,40,0.16)'); gr.addColorStop(1, 'rgba(60,50,40,0)'); g.fillStyle = gr; g.fillRect(x, 0, 3 + r() * 10, S); }
+});
+/** Four windows on one tile (each a quarter): shut, half open, open behind a lattice, open with a cloth over the sill. */
+const windowTile = (S) => canvas(S, (g) => {
+  const r = rng(51), h = S / 2;
+  for (let q = 0; q < 4; q++) {
+    const x0 = (q % 2) * h, y0 = Math.floor(q / 2) * h, m = h * 0.13, iw = h - 2 * m, ih = h - 2 * m - 6;
+    g.fillStyle = '#e4dccb'; g.fillRect(x0, y0, h, h); g.fillStyle = '#b9ae98'; g.fillRect(x0 + m - 3, y0 + m - 3, iw + 6, ih + 6);
+    g.fillStyle = '#17130f'; g.fillRect(x0 + m, y0 + m, iw, ih);
+    const leaf = (lx, lw) => { for (let i = 0; i < 3; i++) { const v = 0.85 + r() * 0.3; g.fillStyle = `rgb(${132 * v},${98 * v},${62 * v})`; g.fillRect(lx + (i * lw) / 3, y0 + m, lw / 3 - 1, ih); } g.fillStyle = '#5a4026'; g.fillRect(lx, y0 + m + ih * 0.18, lw, 3); g.fillRect(lx, y0 + m + ih * 0.76, lw, 3); };
+    if (q === 0) { leaf(x0 + m, iw / 2 - 1); leaf(x0 + m + iw / 2 + 1, iw / 2 - 1); }
+    else if (q === 1) leaf(x0 + m, iw * 0.42);
+    else if (q === 2) { g.strokeStyle = '#6a5034'; g.lineWidth = 2; for (let i = 1; i < 5; i++) { g.beginPath(); g.moveTo(x0 + m + (i * iw) / 5, y0 + m); g.lineTo(x0 + m + (i * iw) / 5, y0 + m + ih); g.stroke(); } for (let i = 1; i < 4; i++) { g.beginPath(); g.moveTo(x0 + m, y0 + m + (i * ih) / 4); g.lineTo(x0 + m + iw, y0 + m + (i * ih) / 4); g.stroke(); } }
+    else { leaf(x0 + m + iw * 0.6, iw * 0.4); g.fillStyle = '#a8502e'; g.fillRect(x0 + m + 4, y0 + m + ih * 0.62, iw * 0.5, ih * 0.38 + 14); g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(x0 + m + 4, y0 + m + ih * 0.7, iw * 0.5, 2); }
+    g.fillStyle = '#f2ecdf'; g.fillRect(x0 + m - 7, y0 + m + ih + 1, iw + 14, 5); g.fillStyle = 'rgba(40,30,20,0.4)'; g.fillRect(x0 + m - 7, y0 + m + ih + 6, iw + 14, 3);
+    g.fillStyle = 'rgba(60,48,36,0.18)'; g.fillRect(x0 + m, y0 + m + ih + 9, iw, m);
+  }
+});
+/** Two doors side by side: planks with battens and nail heads; a pair of bronze leaves with panels and bosses. */
+const doorTile = (S) => canvas(S, (g) => {
+  const r = rng(53), w = S / 2;
+  for (let i = 0; i < 5; i++) { const v = 0.8 + r() * 0.35; g.fillStyle = `rgb(${128 * v},${92 * v},${58 * v})`; g.fillRect((i * w) / 5, 0, w / 5, S); g.fillStyle = 'rgba(20,14,8,0.6)'; g.fillRect((i * w) / 5, 0, 1.5, S); }
+  g.fillStyle = 'rgba(20,14,8,0.75)'; g.fillRect(w / 2 - 1, 0, 2.5, S);
+  for (const y of [0.14, 0.5, 0.86]) { g.fillStyle = '#6e4e2e'; g.fillRect(3, S * y - 7, w - 6, 14); g.fillStyle = 'rgba(255,240,210,0.25)'; g.fillRect(3, S * y - 7, w - 6, 2); for (let i = 0; i < 6; i++) { g.fillStyle = '#2c2a26'; g.beginPath(); g.arc(10 + (i * (w - 20)) / 5, S * y, 2.6, 0, 7); g.fill(); } }
+  g.fillStyle = '#3a2a1a'; g.fillRect(0, 0, 3, S); g.fillRect(w - 3, 0, 3, S); g.fillRect(0, 0, w, 4);
+  g.fillStyle = '#b89a62'; g.fillRect(w, 0, w, S); g.fillStyle = '#6a5632'; g.fillRect(w + w / 2 - 1.5, 0, 3, S);
+  for (const lx of [w + 5, w + w / 2 + 4]) for (let j = 0; j < 4; j++) { const py = 6 + j * (S - 8) / 4, ph = (S - 8) / 4 - 8, pw = w / 2 - 9; g.fillStyle = '#7c6840'; g.fillRect(lx, py, pw, ph); g.fillStyle = '#a88c58'; g.fillRect(lx + 4, py + 4, pw - 8, ph - 8); g.fillStyle = '#e6cc8a'; g.beginPath(); g.arc(lx + pw / 2, py + ph / 2, 5, 0, 7); g.fill(); g.fillStyle = '#5a4828'; g.beginPath(); g.arc(lx + pw / 2, py + ph / 2, 2, 0, 7); g.fill(); }
+});
+/** Figures in relief on a darker ground: one group in the middle of the tile (the triglyphs cover its edges). */
+const reliefTile = (S) => canvas(S, (g) => {
+  const r = rng(57); g.fillStyle = '#8f8b84'; g.fillRect(0, 0, S, S); speckle(g, S, r, 900, 110, 170, 0.12);
+  const fig = (x, lean, k) => { const hd = S * 0.075 * k, top = S * (0.16 + (1 - k) * 0.3); g.fillStyle = g.strokeStyle = '#f4f1ea'; g.lineCap = 'round';
+    g.beginPath(); g.arc(x + lean * 16, top, hd, 0, 7); g.fill();
+    g.lineWidth = S * 0.085 * k; g.beginPath(); g.moveTo(x + lean * 12, top + hd * 1.6); g.lineTo(x, S * 0.56); g.stroke();
+    g.lineWidth = S * 0.05 * k; g.beginPath(); g.moveTo(x, S * 0.56); g.lineTo(x - 9 - lean * 8, S * 0.9); g.moveTo(x, S * 0.56); g.lineTo(x + 10 - lean * 6, S * 0.9); g.stroke();
+    g.lineWidth = S * 0.035 * k; g.beginPath(); g.moveTo(x + lean * 12, top + hd * 2); g.lineTo(x + lean * 34, top + hd * 2.4 + r() * 20); g.stroke(); };
+  fig(S * 0.4, 1, 1); fig(S * 0.6, -1, 0.94); g.fillStyle = '#e9e5dc'; g.beginPath(); g.arc(S * 0.5, S * 0.47, S * 0.075, 0, 7); g.fill();
+  g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, S * 0.9, S, 3); g.fillStyle = '#d9d5cc'; g.fillRect(0, S * 0.915, S, S * 0.085); g.fillRect(0, 0, S, S * 0.04);
+});
+/** A coffered ceiling, two coffers each way: stepped frames round a blue panel with a gilded star. */
+const cofferTile = (S) => canvas(S, (g) => {
+  const h = S / 2; g.fillStyle = '#eee9de'; g.fillRect(0, 0, S, S);
+  for (let q = 0; q < 4; q++) { const x0 = (q % 2) * h, y0 = Math.floor(q / 2) * h; [['#bdb6a6', 0.14], ['#8d8676', 0.22], ['#2c4684', 0.3]].forEach(([c, m]) => { g.fillStyle = c; g.fillRect(x0 + h * m, y0 + h * m, h * (1 - 2 * m), h * (1 - 2 * m)); }); g.fillStyle = '#e2b84e'; g.beginPath(); for (let i = 0; i < 16; i++) { const a = (i / 16) * 6.283, rr = h * (i % 2 ? 0.045 : 0.12); g.lineTo(x0 + h / 2 + Math.cos(a) * rr, y0 + h / 2 + Math.sin(a) * rr); } g.fill(); }
+});
+/** The wedge stones of an arch, two to a tile, under a moulded outer edge. */
+const voussTile = (S) => canvas(S, (g) => {
+  const r = rng(59); for (let i = 0; i < 2; i++) { const v = 222 + r() * 26; g.fillStyle = `rgb(${v},${v * 0.985},${v * 0.96})`; g.fillRect((i * S) / 2, 0, S / 2, S); g.fillStyle = 'rgba(40,34,28,0.6)'; g.fillRect((i * S) / 2, 0, 3, S); g.fillStyle = 'rgba(255,255,255,0.3)'; g.fillRect((i * S) / 2 + 3, 0, 2, S); }
+  g.fillStyle = 'rgba(40,34,28,0.35)'; g.fillRect(0, S * 0.16, S, 4); g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(0, S * 0.16 + 4, S, 3); g.fillStyle = 'rgba(40,34,28,0.3)'; g.fillRect(0, S * 0.3, S, 3); speckle(g, S, r, 1500, 120, 255, 0.07);
+});
+
 /**
  * Every surface: name → [tile in the atlas, metres one repeat covers, roughness, metalness, laid flat on the ground?].
  * All of them share one texture atlas and one material (two, with the flat ones), so a whole place is a handful of draw calls.
@@ -76,21 +154,25 @@ const planks = (S, seed, n, lo, hi) => canvas(S, (g) => {
 const SURF = {
   marble: [0, 4, 0.62, 0], ashlar: [1, 4, 0.9, 0], cyclop: [2, 6, 0.95, 0], brick: [3, 2, 0.9, 0], plaster: [4, 5, 0.92, 0], tile: [5, 2, 0.8, 0], wood: [6, 1.6, 0.9, 0], thatch: [7, 2.5, 1, 0],
   rock: [8, 14, 0.95, 0], metal: [9, 1, 0.38, 0.85], slab: [10, 4, 0.85, 0, 1], flag: [11, 4.5, 0.85, 0, 1], earth: [12, 9, 1, 0, 1], plain: [9, 1, 0.9, 0], glow: [9, 1, 0.9, 0],
+  flute: [13, 1, 0.68, 0], mudbrick: [14, 5, 0.95, 0], window: [15, 1, 0.9, 0], relief: [16, 1, 0.7, 0], door: [17, 1, 0.85, 0], bronzedoor: [17, 1, 0.42, 0.75], coffer: [18, 2, 0.75, 0], render: [19, 5, 0.93, 0], vouss: [20, 1, 0.85, 0],
 };
 let MATS;
 function materials() {
   if (MATS) return MATS;
-  const T = shared(), S = 256, c = document.createElement('canvas'); c.width = c.height = S * 4; const g = c.getContext('2d');
+  const T = shared(), S = 256, ROWS = 8, c = document.createElement('canvas'), nc = document.createElement('canvas'); c.width = nc.width = S * 4; c.height = nc.height = S * ROWS; const g = c.getContext('2d'), ng = nc.getContext('2d');
   const tilesOf = [
     coursed(S, 3, 4, 2.2, { base: 238, vary: 9, joint: 0.16, jw: 1, rough: 2500 }), coursed(S, 5, 8, 3.2, { base: 220, vary: 26, joint: 0.42 }), fitted(S, 4, 22, { lo: 140, hi: 225, gap: 30, edge: 0.1 }),
     coursed(S, 9, 28, 7, { base: 212, vary: 30, joint: 0.3, jw: 1.5, rough: 3000 }), mottled(S, 11, 196, 250), tiles(S), planks(S, 13, 8, 150, 235), mottled(S, 15, 130, 250, 0.9),
     T.rockMap.image, null, coursed(S, 21, 6, 4, { base: 222, vary: 22, joint: 0.5, jw: 2 }), fitted(S, 8, 38, { lo: 120, hi: 200, gap: 45, edge: 0.07, tint: [0.96, 0.98, 1] }), T.groundMap.image,
+    fluteTile(S), patchy(S, 41, 5, 8, [150, 124, 92]), windowTile(S), reliefTile(S), doorTile(S), cofferTile(S), patchy(S, 43, 3, 7, [196, 140, 108]), voussTile(S),
   ];
-  g.fillStyle = '#fff'; g.fillRect(0, 0, S * 4, S * 4);
-  tilesOf.forEach((t, i) => { if (t) g.drawImage(t, (i % 4) * S, (3 - Math.floor(i / 4)) * S, S, S); });
+  const steep = [4, 6, 7, 5, 2.5, 6, 4, 4, 4, 0, 6, 6, 2.5, 36, 3.5, 3.5, 5, 3.5, 5, 3.5, 4.5];   // how deep each tile's relief is cut
+  g.fillStyle = '#fff'; g.fillRect(0, 0, S * 4, S * ROWS); ng.fillStyle = '#8080ff'; ng.fillRect(0, 0, S * 4, S * ROWS);
+  tilesOf.forEach((t, i) => { const px = (i % 4) * S, py = (ROWS - 1 - Math.floor(i / 4)) * S; if (t) g.drawImage(t, px, py, S, S); ng.drawImage(normalOf(t, S, steep[i]), px, py); });
   const map = canvasTex(c); map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
+  const normalMap = canvasTex(nc, false); normalMap.wrapS = normalMap.wrapT = THREE.ClampToEdgeWrapping;
   const mk = (o) => {
-    const m = new THREE.MeshStandardMaterial({ map, vertexColors: true, ...o });
+    const m = new THREE.MeshStandardMaterial({ map, normalMap, vertexColors: true, ...o });
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = 'attribute vec3 aSurf;\nvarying vec3 vSurf;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vSurf = aSurf;');
       sh.fragmentShader = 'varying vec3 vSurf;\n' + sh.fragmentShader
@@ -98,9 +180,11 @@ function materials() {
           vec2 gx = dFdx(vMapUv), gy = dFdy(vMapUv); float lod = log2(max(length(gx), length(gy)) * ${S}.0 + 1e-6);
           float mg = min(0.47, pow(2.0, ceil(max(lod, 0.0))) / ${S}.0);
           vec2 tuv = clamp(fract(vMapUv), mg, 1.0 - mg); float ti = floor(vSurf.x + 0.5);
-          vec4 sampledDiffuseColor = textureGrad(map, (vec2(mod(ti, 4.0), floor(ti / 4.0)) + tuv) * 0.25, gx * 0.25, gy * 0.25);
+          vec2 tsc = vec2(0.25, 1.0 / ${ROWS}.0), auv = (vec2(mod(ti, 4.0), floor(ti / 4.0)) + tuv) * tsc;
+          vec4 sampledDiffuseColor = textureGrad(map, auv, gx * tsc, gy * tsc);
           diffuseColor *= sampledDiffuseColor;`)
-        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vSurf.y;')
+        .replace('#include <normal_fragment_maps>', 'vec3 mapN = textureGrad(normalMap, auv, gx * tsc, gy * tsc).xyz * 2.0 - 1.0; mapN.xy *= normalScale; normal = normalize(tbn * mapN);')
+        .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = clamp(vSurf.y * (1.2 - 0.3 * dot(sampledDiffuseColor.rgb, vec3(0.333))), 0.05, 1.0);')
         .replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vSurf.z;');
     };
     return m;
@@ -115,8 +199,10 @@ class Buf {
   constructor() { this.a = new Float32Array(8192); this.n = 0; }
   room(k) { if (this.n + k > this.a.length) { const b = new Float32Array(Math.max(this.a.length * 2, this.n + k)); b.set(this.a); this.a = b; } }
 }
-const BOX = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), CYL = {}, cylOf = (seg) => CYL[seg] || (CYL[seg] = new THREE.CylinderGeometry(1, 1, 1, seg).translate(0, 0.5, 0));
-const CONE = {}, coneOf = (seg, k) => CONE[seg + ':' + k] || (CONE[seg + ':' + k] = new THREE.CylinderGeometry(k, 1, 1, seg).translate(0, 0.5, 0));
+const BOX = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), CYL = {}, cylOf = (seg, open = 0) => CYL[seg + ':' + open] || (CYL[seg + ':' + open] = new THREE.CylinderGeometry(1, 1, 1, seg, 1, !!open).translate(0, 0.5, 0));
+const CONE = {}, coneOf = (seg, k, open = 0) => CONE[seg + ':' + k + ':' + open] || (CONE[seg + ':' + k + ':' + open] = new THREE.CylinderGeometry(k, 1, 1, seg, 1, !!open).translate(0, 0.5, 0));
+/** A box without the face it stands on (never seen), and a single upright face looking along +z: both save triangles. */
+const BOX5 = (() => { const g = BOX.clone(), i = Array.from(BOX.index.array); i.splice(18, 6); g.setIndex(i); return g; })(), QUAD = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0), CEIL = new THREE.PlaneGeometry(1, 1).rotateX(Math.PI / 2);
 export class Batch {
   constructor() { this.mats = materials(); this.bins = new Map(); this.span = [-Infinity, Infinity]; this.T = new THREE.Matrix4(); this.stack = []; this.meshes = []; }
   /** What is added from now on stands from year y0 until year y1. */
@@ -141,7 +227,7 @@ export class Batch {
         p[o] = v.x; p[o + 1] = v.y; p[o + 2] = v.z; f[o] = F[0]; f[o + 1] = F[2]; f[o + 2] = F[3];
         _n.fromBufferAttribute(N, i).applyMatrix3(_n3).normalize(); n[o] = _n.x; n[o + 1] = _n.y; n[o + 2] = _n.z;
         cc[o] = c[0] * (C ? C.getX(i) : 1); cc[o + 1] = c[1] * (C ? C.getY(i) : 1); cc[o + 2] = c[2] * (C ? C.getZ(i) : 1);
-        if (uv) { u[ou] = U.getX(i) * uv[0] * sc; u[ou + 1] = U.getY(i) * uv[1] * sc; }
+        if (uv) { u[ou] = U.getX(i) * uv[0] * sc + (uv[2] || 0); u[ou + 1] = U.getY(i) * uv[1] * sc + (uv[3] || 0); }
         else if (top) { u[ou] = v.x * sc; u[ou + 1] = v.z * sc; } else if (side) { u[ou] = v.z * sc; u[ou + 1] = v.y * sc; } else { u[ou] = v.x * sc; u[ou + 1] = v.y * sc; }
         o += 3; ou += 2;
       }
@@ -154,8 +240,14 @@ export class Batch {
   }
   /** A box w × h × d standing on (x, y, z). */
   box(mat, col, w, h, d, x = 0, y = 0, z = 0, ry = 0, rx = 0, rz = 0) { return this.geo(mat, col, BOX, x, y, z, ry, rx, rz, w, h, d); }
-  /** A round (or tapering) drum standing on (x, y, z): radius rt at the top, rb at the foot. */
-  cyl(mat, col, rt, rb, h, x = 0, y = 0, z = 0, seg = 12, ry = 0) { return this.geo(mat, col, rt === rb ? cylOf(seg) : coneOf(seg, rt / rb), x, y, z, ry, 0, 0, rb, h, rb); }
+  /** A box that stands on something: no underside. */
+  slab(mat, col, w, h, d, x = 0, y = 0, z = 0, ry = 0) { return this.geo(mat, col, BOX5, x, y, z, ry, 0, 0, w, h, d); }
+  /** One upright face w × h standing on (x, y, z), looking along +z turned by ry; uv = [su, sv, ou, ov] picks the part of a picture tile. */
+  quad(mat, col, w, h, x, y, z, ry = 0, uv = [1, 1]) { return this.geo(mat, col, QUAD, x, y, z, ry, 0, 0, w, h, 1, uv); }
+  /** A ceiling w × d at height y, seen from below. */
+  ceil(mat, col, w, d, x, y, z) { return this.geo(mat, col, CEIL, x, y, z, 0, 0, 0, w, 1, d); }
+  /** A round (or tapering) drum standing on (x, y, z): radius rt at the top, rb at the foot; open: without its ends. */
+  cyl(mat, col, rt, rb, h, x = 0, y = 0, z = 0, seg = 12, ry = 0, open = 0) { return this.geo(mat, col, rt === rb ? cylOf(seg, open) : coneOf(seg, rt / rb, open), x, y, z, ry, 0, 0, rb, h, rb); }
   /** A bar of radius r from a to b. */
   rod(mat, col, a, b, r, seg = 6) {
     _a.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const l = _a.length();
@@ -201,12 +293,26 @@ export function archGeo(w, h, t, aw, spring, sill = 0) {
   return (ARCH[key] = new THREE.ExtrudeGeometry(s, { depth: t, bevelEnabled: false, curveSegments: 7 }).translate(0, 0, -t / 2));
 }
 
+const RING = {};
+/** The face of an arch's ring of wedge stones: `aw` across the opening, rw wide, lying in the plane z = zf and looking along +z (springing at y = 0). */
+export function ringGeo(aw, rw, zf) {
+  const key = [aw, rw, zf].map((v) => v.toFixed(2)).join(); if (RING[key]) return RING[key];
+  const n = 8, r0 = aw / 2, r1 = r0 + rw, per = Math.max(1, Math.round((Math.PI * (r0 + r1)) / 2 / (rw * 1.7))), p = [], nn = [], uv = [];
+  const v = (i, rr, vv) => { const a = Math.PI * (1 - i / n); p.push(Math.cos(a) * rr, Math.sin(a) * rr, zf); nn.push(0, 0, 1); uv.push((i / n) * per + 0.5, vv); };
+  for (let i = 0; i < n; i++) { v(i, r0, 0.02); v(i + 1, r0, 0.02); v(i, r1, 0.98); v(i + 1, r0, 0.02); v(i + 1, r1, 0.98); v(i, r1, 0.98); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nn, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); return (RING[key] = g);
+}
+/** Rings of wedge stones on the faces of an arch made with archGeo(…, t, aw, spring) standing at (x, y, z) turned ry. sides: 2 both faces, 1 the +z face only. */
+export function archRing(B, col, x, y, z, ry, t, aw, spring, rw = aw * 0.13, sides = 2) {
+  const g = ringGeo(aw, rw, t / 2 + 0.03); B.geo('vouss', col, g, x, y + spring, z, ry, 0, 0, 1, 1, 1, [1, 1]); if (sides > 1) B.geo('vouss', col, g, x, y + spring, z, ry + Math.PI, 0, 0, 1, 1, 1, [1, 1]);
+}
+
 // =====================================================================================
 // Columns
 // =====================================================================================
 const SHAFT = {};
-/** A shaft of height 1 and foot radius 1, narrowing with a slight swelling (entasis); fluted if `flutes`. */
-function shaftGeo(flutes, taper) {
+/** A pleated, narrowing drum of height 1 and foot radius 1 (a statue's robe). */
+function pleatGeo(flutes, taper) {
   const key = flutes + ':' + taper; if (SHAFT[key]) return SHAFT[key];
   const segs = flutes ? flutes * 2 : 12, rings = flutes ? 5 : 4, pos = [], idx = [];
   for (let j = 0; j <= rings; j++) {
@@ -216,6 +322,17 @@ function shaftGeo(flutes, taper) {
   for (let j = 0; j < rings; j++) for (let i = 0; i < segs; i++) { const a = j * segs + i, b = j * segs + ((i + 1) % segs), c = a + segs, d = b + segs; idx.push(a, c, b, b, c, d); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return (SHAFT[key] = g);
 }
+/** A shaft of height 1 and foot radius 1, narrowing with a slight swelling (entasis). Fluted shafts carry their flutes as a picture and a normal map (uv: four flutes to a tile). */
+function shaftGeo(flutes, taper) {
+  const key = 's' + flutes + ':' + taper; if (SHAFT[key]) return SHAFT[key];
+  const segs = flutes ? 16 : 12, rings = flutes ? 3 : 2, pos = [], nor = [], uv = [], idx = [];
+  for (let j = 0; j <= rings; j++) {
+    const t = j / rings, R = 1 - taper * t * (0.55 + 0.45 * t);
+    for (let i = 0; i <= segs; i++) { const a = (i / segs) * TAU; pos.push(Math.cos(a) * R, t, Math.sin(a) * R); nor.push(Math.cos(a), 0.02, Math.sin(a)); uv.push(((i / segs) * (flutes || 4)) / 4, t * 5); }
+  }
+  for (let j = 0; j < rings; j++) for (let i = 0; i < segs; i++) { const a = j * (segs + 1) + i, b = a + 1, c = a + segs + 1, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); return (SHAFT[key] = g);
+}
 const ORDER = { doric: { base: 0, cap: 0.42, flutes: 20, taper: 0.2 }, ionic: { base: 0.32, cap: 0.4, flutes: 24, taper: 0.14 }, corinthian: { base: 0.32, cap: 1.05, flutes: 24, taper: 0.13 }, tuscan: { base: 0.3, cap: 0.42, flutes: 0, taper: 0.17 } };
 /**
  * A column h high and d thick at the foot, standing on (x, y, z). order: doric | ionic | corinthian | tuscan.
@@ -223,20 +340,20 @@ const ORDER = { doric: { base: 0, cap: 0.42, flutes: 20, taper: 0.2 }, ionic: { 
  */
 export function column(B, mat, col, x, y, z, h, d, order = 'doric', o = {}) {
   const O = ORDER[order], r = d / 2, bh = O.base * d, ch = O.cap * d, sh = h - bh - ch, frac = o.frac ?? 1, rt = r * (1 - O.taper), cap = o.cap || col, ry = o.ry || 0;
-  if (bh) { B.cyl(mat, col, r * 1.3, r * 1.36, bh * 0.4, x, y, z, 16); B.cyl(mat, col, r * 1.1, r * 1.24, bh * 0.6, x, y + bh * 0.4, z, 16); }
-  B.geo(mat, col, shaftGeo(o.lo ? 0 : O.flutes, O.taper), x, y + bh, z, 0, 0, 0, r, sh * frac, r);
+  if (bh) { B.cyl(mat, col, r * 1.3, r * 1.36, bh * 0.4, x, y, z, 12); B.cyl(mat, col, r * 1.1, r * 1.24, bh * 0.6, x, y + bh * 0.4, z, 12); }
+  if (o.lo || !O.flutes) B.geo(mat, col, shaftGeo(0, O.taper), x, y + bh, z, 0, 0, 0, r, sh * frac, r); else B.geo('flute', col, shaftGeo(O.flutes, O.taper), x, y + bh, z, 0, 0, 0, r, sh * frac, r, [1, 1]);
   if (frac < 1) return;
   const yc = y + bh + sh;
   if (order === 'doric' || order === 'tuscan') {
-    if (o.band) B.cyl(mat, o.band, rt * 1.03, rt * 1.03, ch * 0.14, x, yc - ch * 0.16, z, 16);
-    B.cyl(mat, cap, rt * 1.42, rt, ch * 0.52, x, yc, z, 16); B.box(mat, cap, rt * 2.95, ch * 0.48, rt * 2.95, x, yc + ch * 0.52, z, ry);
+    if (o.band) B.cyl(mat, o.band, rt * 1.03, rt * 1.03, ch * 0.14, x, yc - ch * 0.16, z, 16, 0, 1);
+    B.cyl(mat, cap, rt * 1.42, rt, ch * 0.52, x, yc, z, 16, 0, 1); B.box(mat, cap, rt * 2.95, ch * 0.48, rt * 2.95, x, yc + ch * 0.52, z, ry);
   } else if (order === 'ionic') {
-    B.cyl(mat, cap, rt * 1.2, rt, ch * 0.4, x, yc, z, 16);
+    B.cyl(mat, cap, rt * 1.2, rt, ch * 0.4, x, yc, z, 16, 0, 1);
     const c = Math.cos(ry), s = Math.sin(ry), vr = ch * 0.36;
     for (const e of [1, -1]) { const ox = s * e * rt * 1.25, oz = c * e * rt * 1.25, fx = c * rt * 1.12, fz = -s * rt * 1.12; B.rod(mat, o.band || cap, [x + ox - fx, yc + ch * 0.36, z + oz - fz], [x + ox + fx, yc + ch * 0.36, z + oz + fz], vr, 10); }
     B.box(mat, cap, rt * 2.3, ch * 0.3, rt * 3.2, x, yc + ch * 0.42, z, ry); B.box(mat, cap, rt * 2.7, ch * 0.24, rt * 2.7, x, yc + ch * 0.74, z, ry);
   } else {
-    B.cyl(mat, cap, rt * 1.12, rt * 0.98, ch * 0.9, x, yc, z, 12); B.cyl(mat, cap, rt * 1.36, rt * 1.02, ch * 0.4, x, yc + ch * 0.04, z, 8); B.cyl(mat, cap, rt * 1.6, rt * 1.1, ch * 0.42, x, yc + ch * 0.44, z, 8, 0.39);
+    B.cyl(mat, cap, rt * 1.12, rt * 0.98, ch * 0.9, x, yc, z, 12, 0, 1); B.cyl(mat, cap, rt * 1.36, rt * 1.02, ch * 0.4, x, yc + ch * 0.04, z, 8, 0, 1); B.cyl(mat, cap, rt * 1.6, rt * 1.1, ch * 0.42, x, yc + ch * 0.44, z, 8, 0.39, 1);
     B.box(mat, cap, rt * 3, ch * 0.14, rt * 3, x, yc + ch * 0.86, z, ry);
   }
 }
@@ -289,7 +406,7 @@ export function temple(K, o) {
   const { B, world } = K, r = K.r, { x, z, ry = 0, w, l, nf, ns = 0, colH, d, order = 'doric', steps = 3, podium = 0, peripteral = !podium, porch = 2, mat = 'marble', col = C.marble, roofCol = C.tile, paint = 'greek', stage = 1, ruin = 0, burnt = 0 } = o;
   const y = o.y ?? world.heightAt(x, z), sH = o.sH || 0.42, tread = 0.5, greek = paint === 'greek', stone = burnt ? shade(col, 0.55) : col, dim = shade(stone, 0.86);
   B.push(x, y, z, ry);
-  B.box(mat, dim, l + 2 * tread * steps + 0.8, 4, w + 2 * tread * steps + 0.8, 0, -4, 0);
+  B.slab(mat, dim, l + 2 * tread * steps + 0.8, 4, w + 2 * tread * steps + 0.8, 0, -4, 0);
   let Y = 0;
   if (podium) {
     B.box(mat, dim, l + 0.5, 0.5, w + 0.5, 0, 0, 0); B.box(mat, stone, l, podium - 0.3, w, 0, 0, 0); B.box(mat, stone, l + 0.4, 0.3, w + 0.4, 0, podium - 0.3, 0); Y = podium;
@@ -297,7 +414,7 @@ export function temple(K, o) {
     for (let k = 0; k < n; k++) B.box(mat, stone, run, ((k + 1) * podium) / n, sw, l / 2 + (n - k - 0.5) * run, 0, 0);
     for (const e of [1, -1]) B.box(mat, stone, n * run, podium, (w - sw) / 2, l / 2 + (n * run) / 2, 0, e * (sw / 2 + (w - sw) / 4));
   }
-  for (let i = 0; i < steps; i++) { const e = 2 * tread * (steps - 1 - i); B.box(mat, i % 2 ? stone : dim, l + e, sH, w + e, 0, Y + i * sH, 0); }
+  for (let i = 0; i < steps; i++) { const e = 2 * tread * (steps - 1 - i); B.slab(mat, i % 2 ? stone : dim, l + e, sH, w + e, 0, Y + i * sH, 0); }
   Y += steps * sH;
   const m = d * 0.78, X = l / 2 - m, Z = w / 2 - m, sz = (2 * Z) / (nf - 1), sx = ns > 1 ? (2 * X) / (ns - 1) : sz, built = clamp(stage * 2, 0, 1);
   const band = greek ? C.blue : null, cols = [];
@@ -314,10 +431,10 @@ export function temple(K, o) {
   const xb = peripteral ? -X + sx * 1.5 : o.rear ? -X + sz : -l / 2 + 0.25, xf = peripteral ? X - sx * 1.5 : X - (porch - 1) * sz - sz * 0.55, cz = peripteral ? Z - sz * 0.95 : Z + (o.rear ? 0 : m - 0.3), wt = 0.8, ch = colH * (built < 1 ? 0.25 + 0.6 * built : 1);
   if (o.cella !== false) {
     const wall = burnt ? shade(stone, 0.8) : stone, dw = Math.min(cz * 0.8, 3.4), dh = Math.min(ch - 0.4, colH * 0.72);
-    B.box(mat, wall, wt, ch, 2 * cz, xb, Y, 0); B.box(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, cz - wt / 2); B.box(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, -cz + wt / 2);
-    for (const e of [1, -1]) B.box(mat, wall, wt, ch, cz - dw / 2, xf, Y, e * (cz + dw / 2) / 2);
+    B.slab(mat, wall, wt, ch, 2 * cz, xb, Y, 0); B.slab(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, cz - wt / 2); B.slab(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, -cz + wt / 2);
+    for (const e of [1, -1]) B.slab(mat, wall, wt, ch, cz - dw / 2, xf, Y, e * (cz + dw / 2) / 2);
     if (ch > dh + 0.2) B.box(mat, wall, wt, ch - dh, dw, xf, Y + dh, 0);
-    if (stage >= 1 && !ruin) B.box('wood', greek ? C.bronze : C.door, 0.14, dh, dw, xf - 0.1, Y, 0);
+    if (stage >= 1 && !ruin) B.geo('bronzedoor', greek ? 0xe8d8b0 : 0xd4c09a, BOX, xf - 0.1, Y, 0, 0, 0, 0, 0.14, dh, dw, [0.5, 1, 0.5, 0]);   // bronze leaves with panels and bosses
     if (greek && stage >= 1 && !burnt) frame(B, mat, C.blue, xb, xf, cz - wt / 2, Y + ch - d * 0.5, d * 0.4, wt + 0.06);
     if (o.engaged) for (let j = 0; j * sz <= xf - xb - 0.5; j++) for (const e of [1, -1]) column(B, mat, stone, xb + j * sz, Y, e * cz, colH, d, order, { lo: 1, ry: Math.PI / 2 });
   }
@@ -326,7 +443,13 @@ export function temple(K, o) {
   if (up) {
     frame(B, mat, stone, x0, x1, Z, yE, aH, d * 0.86);
     if (!burnt && paint !== 'plain') frame(B, mat, greek ? C.red : C.gold, x0, x1, Z, yE + aH - d * 0.07, d * 0.07, d * 0.92);
-    frame(B, mat, greek && order !== 'doric' && !burnt ? shade(C.blue, 1.2) : stone, x0, x1, Z, yE + aH, fH, d * 0.8);
+    if (greek && !burnt && stage >= 1) {   // sculpture: a metope between each pair of triglyphs, or a running frieze of figures
+      const dor = order === 'doric', bw = d * 0.8, fc = dor ? stone : 0xb4c0e0, lx = x1 - x0 - bw, nfl = Math.round((x1 - x0) / (sx / 2)), nz = dor ? ((2 * Z + bw) / sz) * 2 : Math.round((2 * Z) / (fH * 1.6)), nx = dor ? (lx / (x1 - x0)) * nfl : Math.round(lx / (fH * 1.6));
+      const off = (n, odd) => Math.ceil(n) - n / 2 + (odd ? 0.5 : 0);
+      for (const e of [x0, x1]) B.geo('relief', fc, BOX, e, yE + aH, 0, 0, 0, 0, bw, fH, 2 * Z + bw, [nz, 1, off(nz, 0), 0]);
+      for (const e of [1, -1]) B.geo('relief', fc, BOX, (x0 + x1) / 2, yE + aH, e * Z, 0, 0, 0, lx, fH, bw, [nx, 1, off(nx, dor && nfl % 2), 0]);
+    } else frame(B, mat, greek && order !== 'doric' && !burnt ? shade(C.blue, 1.2) : stone, x0, x1, Z, yE + aH, fH, d * 0.8);
+    if (stage >= 0.8 && !ruin) B.ceil('coffer', burnt ? C.soot : stone, x1 - x0, 2 * Z, (x0 + x1) / 2, yE + aH * 0.5, 0);   // the coffered ceiling of the porch and the colonnade
     if (order === 'doric' && paint !== 'plain') {
       const tri = burnt ? C.soot : greek ? C.blue : shade(stone, 0.8), tw = d * 0.42;
       for (let k = 0; k <= (nf - 1) * 2; k++) for (const e of [x0, x1]) B.box(mat, tri, d * 0.9, fH, tw, e, yE + aH, -Z + (k * sz) / 2);
@@ -359,7 +482,7 @@ export function temple(K, o) {
   return { top: y + Y, yE: y + Y + colH, X, Z };
 }
 const BALL = new THREE.SphereGeometry(1, 8, 6);
-export { BALL, BOX };
+export { BALL, BOX, QUAD };
 
 // =====================================================================================
 // A stoa: a long hall open through a colonnade on its +z side
@@ -369,12 +492,13 @@ export function stoa(K, o) {
   const { B, world } = K, { x, z, ry = 0, l, dp, colH = 5, d = 0.75, order = 'doric', mat = 'marble', col = C.marble, roofCol = C.tile, wall = C.limewash, steps = 2 } = o, y = o.y ?? world.heightAt(x, z);
   const n = o.n || Math.round(l / (d * 3.4)), sH = 0.3, Y = steps * sH, dim = shade(col, 0.85);
   B.push(x, y, z, ry);
-  B.box(mat, dim, l + 1.2, 3, dp + 1.2, 0, -3, 0);
-  for (let i = 0; i < steps; i++) B.box(mat, i % 2 ? col : dim, l + (steps - 1 - i) * 0.8, sH, dp + (steps - 1 - i) * 0.8, 0, i * sH, 0);
+  B.slab(mat, dim, l + 1.2, 3, dp + 1.2, 0, -3, 0);
+  for (let i = 0; i < steps; i++) B.slab(mat, i % 2 ? col : dim, l + (steps - 1 - i) * 0.8, sH, dp + (steps - 1 - i) * 0.8, 0, i * sH, 0);
   B.box('plaster', wall, l, colH, 0.6, 0, Y, -dp / 2 + 0.3); for (const e of [1, -1]) B.box('plaster', wall, 0.6, colH, dp * (o.open ? 0.5 : 1) - 0.6, e * (l / 2 - 0.3), Y, o.open ? -dp / 4 : 0);
   B.box('plaster', o.dado || shade(C.red, 0.9), l - 1.3, 1.1, 0.06, 0, Y, -dp / 2 + 0.62);
   if (o.panels) for (let k = 0; k < o.panels; k++) { const px = (k + 0.5 - o.panels / 2) * (l / o.panels); B.box('wood', C.wood, l / o.panels - 0.8, 2.3, 0.08, px, Y + 1.5, -dp / 2 + 0.63); B.box('plaster', [C.ochre, C.red, C.blue, C.green][k % 4], l / o.panels - 1.1, 2, 0.05, px, Y + 1.65, -dp / 2 + 0.68); B.box('plaster', C.stucco, (l / o.panels - 1.1) * 0.5, 1.1, 0.03, px + 0.4, Y + 1.9, -dp / 2 + 0.71); }
   const zf = dp / 2 - d * 0.7, xs = l / 2 - d * 0.7;
+  if (!o.panels) for (let k = 1; k < n - 1; k += 3) B.quad('door', 0xe0d2bc, 1.3, 2.3, -xs + (k * 2 * xs) / (n - 1), Y, -dp / 2 + 0.67, 0, [0.5, 1, 0, 0]);   // the doors of the rooms behind
   for (let i = 0; i < n; i++) column(B, mat, col, -xs + (i * 2 * xs) / (n - 1), Y, zf, colH, d, order, { ry: -Math.PI / 2, band: o.band });
   if (o.inner) for (let i = 1; i < n - 1; i += 2) column(B, mat, col, -xs + (i * 2 * xs) / (n - 1), Y, 0, colH * 1.25, d * 0.9, 'ionic', { ry: -Math.PI / 2, lo: 1 });
   const aH = d * 0.6, yE = Y + colH;
@@ -399,12 +523,18 @@ export function stoa(K, o) {
 // =====================================================================================
 /** A plain house: w along local x, dp deep, door on +z. o: h, roof 'tile' | 'flat' | 'thatch', wall (colour), wmat, roofCol, wing (a second block making an L), yard */
 export function house(K, o) {
-  const { B, world, r } = K, { x, z, ry = 0, w, dp, h = 3, roof = 'tile', wmat = 'plaster', wall = C.limewash, roofCol = C.tile } = o, y = o.y ?? world.heightAt(x, z);
+  const { B, world, r } = K, { x, z, ry = 0, w, dp, h = 3, roof = 'tile', wall = C.limewash, roofCol = C.tile } = o, y = o.y ?? world.heightAt(x, z), wmat = o.wmat || (roof === 'tile' ? 'mudbrick' : 'plaster');
+  // q: this house's own dice (the shared ones must fall as they always did, or the people would move)
+  const q = rng(Math.abs(Math.floor(x * 31.7 + z * 17.3)) + 7), big = wmat === 'ashlar', mud = wmat === 'mudbrick';
+  const win = (wx, wz, wr, s) => B.quad('window', tone(0xffffff, q, 0.1), s, s * 1.1, wx, h - 0.3 - s, wz, wr, [0.5, 0.5, q() < 0.5 ? 0 : 0.5, q() < 0.5 ? 0 : 0.5]);
   B.push(x, y, z, ry);
-  B.box('cyclop', shade(C.poros, 0.8), w + 0.16, 2.5, dp + 0.16, 0, -1.9, 0); B.box(wmat, wall, w, h, dp, 0, 0.5, 0);
-  B.box('wood', C.door, 1, 1.9, 0.1, (r() - 0.5) * w * 0.4, 0.5, dp / 2 + 0.02); B.box(wmat, shade(wall, 0.9), 1.3, 0.14, 0.2, 0, 2.42, dp / 2 + 0.04);
-  for (const e of [-1, 1]) if (r() < 0.7) B.box('wood', C.dark, 0.5, 0.5, 0.08, e * w * 0.33, h - 0.6, dp / 2 + 0.01);
-  if (r() < 0.6) B.box('wood', C.dark, 0.08, 0.5, 0.5, w / 2 + 0.01, h - 0.6, (r() - 0.5) * dp * 0.5);
+  B.slab('cyclop', shade(C.poros, 0.8), w + 0.26, 2.65, dp + 0.26, 0, -1.9, 0); B.slab(wmat, wall, w, h, dp, 0, 0.5, 0);   // walls of sun-dried brick under plaster, on a footing of rough stone
+  const dx = (r() - 0.5) * w * 0.4, dw = big ? 1.9 : 1, dh = big ? 3.1 : 1.9;
+  B.quad('door', tone(0xe8dccc, q, 0.14), dw, dh, dx, 0.3, dp / 2 + 0.14, 0, [0.5, 1, 0, 0]); B.box(mud ? 'wood' : wmat, mud ? C.oldWood : shade(wall, 0.9), dw + 0.5, 0.16, 0.3, dx, 0.3 + dh, dp / 2 + 0.04); B.slab('ashlar', shade(C.poros, 0.9), dw + 0.5, 0.3, 0.62, dx, 0, dp / 2 + 0.3);
+  for (const e of [-1, 1]) if (r() < 0.7) win(e * w * 0.33, dp / 2 + 0.012, 0, big ? 0.9 : 0.58);
+  if (r() < 0.6) win(w / 2 + 0.012, (r() - 0.5) * dp * 0.5, Math.PI / 2, big ? 0.9 : 0.58);
+  if (!big && q() < 0.5) B.cyl('plaster', tone(0xb06a40, q, 0.15), 0.3, 0.15, 0.8, dx + (q() < 0.5 ? 1.15 : -1.15), 0, dp / 2 + 0.5, 8);   // a storage jar by the door
+  if (!big && q() < 0.35) B.slab('ashlar', shade(C.poros, 0.85), 1.5, 0.42, 0.42, dx > 0 ? -w * 0.28 : w * 0.28, 0, dp / 2 + 0.36);          // a stone bench
   const top = 0.5 + h;
   if (roof === 'flat') { B.box(wmat, shade(wall, 0.92), w + 0.3, 0.3, dp + 0.3, 0, top, 0); for (let k = 0; k < 5; k++) B.rod('wood', C.oldWood, [-w / 2 + (k + 0.5) * (w / 5), top - 0.12, dp / 2], [-w / 2 + (k + 0.5) * (w / 5), top - 0.12, dp / 2 + 0.35], 0.07, 5); }
   else {
@@ -414,8 +544,8 @@ export function house(K, o) {
   }
   if (o.yard) {   // a walled court in front, with a gate
     const yd = o.yard, wc = shade(wall, 0.94);
-    for (const e of [1, -1]) B.box(wmat, wc, 0.4, 2.2, yd, e * (w / 2 - 0.2), 0, dp / 2 + yd / 2);
-    for (const e of [1, -1]) B.box(wmat, wc, w / 2 - 0.9, 2.2, 0.4, e * (w / 4 + 0.45), 0, dp / 2 + yd - 0.2);
+    for (const e of [1, -1]) B.slab(wmat, wc, 0.4, 2.2, yd, e * (w / 2 - 0.2), 0, dp / 2 + yd / 2);
+    for (const e of [1, -1]) B.slab(wmat, wc, w / 2 - 0.9, 2.2, 0.4, e * (w / 4 + 0.45), 0, dp / 2 + yd - 0.2);
     B.box('wood', C.door, 1.8, 0.25, 0.5, 0, 2.05, dp / 2 + yd - 0.2);
     if (o.shed) { B.box('tile', roofCol, w * 0.45, 0.12, yd * 0.7, -w * 0.26, 2.3, dp / 2 + yd * 0.4, 0, 0, 0.12); for (const q of [0.15, 0.6]) B.rod('wood', C.wood, [-w * 0.05, 0, dp / 2 + yd * q], [-w * 0.05, 2.3, dp / 2 + yd * q], 0.08, 5); }
   }
@@ -608,7 +738,7 @@ export function statue(K, x, y, z, ry, h, o = {}) {
   B.push(x, y, z, ry);
   if (b) { B.box('marble', o.baseCol || C.marble, 0.9 * k + 0.3, b, 0.9 * k + 0.3, 0, 0, 0); B.box('marble', o.baseCol || C.marble, 0.9 * k + 0.55, 0.14 * k + 0.05, 0.9 * k + 0.55, 0, b, 0); }
   const Y = b + (b ? 0.14 * k + 0.05 : 0);
-  B.geo(mat, o.robe || col, shaftGeo(9, 0.35), 0, Y, 0, 0, 0, 0, 0.21 * k, 1.0 * k, 0.17 * k);
+  B.geo(mat, o.robe || col, pleatGeo(9, 0.35), 0, Y, 0, 0, 0, 0, 0.21 * k, 1.0 * k, 0.17 * k);
   B.geo(mat, col, BALL, 0, Y + 1.2 * k, 0, 0, 0, 0, 0.2 * k, 0.3 * k, 0.15 * k); B.geo(mat, col, BALL, 0.01 * k, Y + 1.61 * k, 0, 0, 0, 0, 0.1 * k, 0.125 * k, 0.1 * k);
   B.rod(mat, col, [0, Y + 1.4 * k, 0.2 * k], [0.02 * k, Y + 0.85 * k, 0.26 * k], 0.045 * k, 5);
   if (o.spear) { B.rod(mat, col, [0, Y + 1.4 * k, -0.2 * k], [0.25 * k, Y + 1.5 * k, -0.34 * k], 0.045 * k, 5); B.rod(mat, col, [0.25 * k, Y, -0.36 * k], [0.25 * k, Y + 2.3 * k, -0.36 * k], 0.02 * k, 5); B.cyl(mat, col, 0.01, 0.07 * k, 0.2 * k, 0, Y + 1.72 * k, 0, 6); }
@@ -617,19 +747,20 @@ export function statue(K, x, y, z, ry, h, o = {}) {
   B.pop();
   if (b) K.C.rect(x, z, 0.5 * k + 0.3, 0.5 * k + 0.3, ry, ...B.span);
 }
-/** A strip `width` wide laid on the ground along a path. */
-export function road(B, world, mat, path, width, col, lift = 0.05) {
-  const tris = [], hw = width / 2;
+/** A strip `width` wide laid on the ground along a path. ruts: worn into it by cart wheels, 1.5 m apart. */
+export function road(B, world, mat, path, width, col, lift = 0.05, ruts = 0) {
+  const hw = width / 2, sec = ruts ? [[-hw, 0], [-0.94, 0], [-0.75, -0.04], [-0.56, 0], [0.56, 0], [0.75, -0.04], [0.94, 0], [hw, 0]] : [[-hw, 0], [hw, 0]], tris = [], worn = [];
   for (let i = 0; i < path.length - 1; i++) {
     const [ax, az] = path[i], [bx, bz] = path[i + 1], L = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / L, uz = (bz - az) / L, n = Math.max(1, Math.ceil((L + width) / 5));
     let prev = null;
     for (let k = 0; k <= n; k++) {
-      const t = -hw + ((L + width) * k) / n, cx = ax + ux * t, cz = az + uz * t, l = [cx + uz * hw, 0, cz - ux * hw], rr = [cx - uz * hw, 0, cz + ux * hw];
-      l[1] = world.heightAt(l[0], l[2]) + lift + i * 0.002; rr[1] = world.heightAt(rr[0], rr[2]) + lift + i * 0.002;
-      if (prev) tris.push([prev[0], prev[1], l], [prev[1], rr, l]); prev = [l, rr];
+      const t = -hw + ((L + width) * k) / n, cx = ax + ux * t, cz = az + uz * t;
+      const row = sec.map(([o, dy]) => { const px = cx - uz * o, pz = cz + ux * o; return [px, world.heightAt(px, pz) + lift + i * 0.002 + dy, pz]; });
+      if (prev) for (let j = 0; j < row.length - 1; j++) (ruts && (j === 1 || j === 2 || j === 4 || j === 5) ? worn : tris).push([prev[j], prev[j + 1], row[j]], [prev[j + 1], row[j + 1], row[j]]);
+      prev = row;
     }
   }
-  const T = B.T.clone(); B.T.identity(); B.add(mat, flatGeo(tris), col); B.T.copy(T);
+  const T = B.T.clone(); B.T.identity(); B.add(mat, flatGeo(tris), col); if (worn.length) B.add(mat, flatGeo(worn), shade(col, 0.66)); B.T.copy(T);
 }
 
 /** Warn (once, in the console) about actors standing inside something or in the water: for checking a place while building it. */
