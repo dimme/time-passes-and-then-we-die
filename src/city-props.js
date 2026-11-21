@@ -56,8 +56,10 @@ function wigwam(k, r, s = 1, long = 0) {
     for (const e of [1, -1]) k.geo(B, c, new THREE.SphereGeometry(R, 10, 6, 0, PI, 0, PI / 2), 0, 0, (e * long) / 2, 0, e > 0 ? 0 : PI, 0, 1, H / R, 1);
     for (let z = -long / 2; z <= long / 2 + 0.01; z += long / 6) k.geo(M.trim, sap, new THREE.TorusGeometry(R + 0.04, 0.05, 4, 10, PI), 0, 0, z, 0, 0, 0, 1, H / R, 1);
     for (const z of [-long / 3, 0, long / 3]) k.cyl(M.trim, 0x0c0806, 0.4, 0.45, 0.06, 0, H - 0.02, z, 8);
+    for (const a of [-1.15, -0.6, 0.6, 1.15]) k.rod(M.trim, sap, 0.07, [(R + 0.05) * Math.sin(a), (H + 0.05) * Math.cos(a), -long / 2], [(R + 0.05) * Math.sin(a), (H + 0.05) * Math.cos(a), long / 2], 5);      // poles lashed along the outside hold the bark down
   } else {
     k.geo(B, c, HEMI, 0, 0, 0, 0, r() * 6, 0, R, H, R); k.cyl(M.trim, 0x0c0806, 0.36, 0.42, 0.06, 0, H - 0.03, 0, 8);
+    for (let q = 0; q < 4; q++) k.geo(M.trim, sap, new THREE.TorusGeometry(R + 0.03, 0.035, 4, 10, PI), 0, 0, 0, 0, (q + 0.5) * PI / 4, 0, 1, H / R, 1);      // bent saplings over the bark
     for (const y of [0.9 * s, 1.75 * s]) k.geo(M.trim, sap, new THREE.TorusGeometry(R * Math.sqrt(1 - (y / H) ** 2) + 0.03, 0.04, 4, 16), 0, y, 0, PI / 2);
   }
   k.su = k.sv = 1;
