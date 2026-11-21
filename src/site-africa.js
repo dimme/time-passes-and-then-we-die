@@ -91,12 +91,21 @@ function surf(b, P, NI, NJ) { for (let i = 0; i < NI; i++) for (let j = 0; j < N
 function brushShelter(seed) {
   const r = rng(seed), th = new Builder(), wood = new Builder(), R = 1.75, H = 1.5, a0 = 1.0, a1 = TAU - 1.0, w = [r() * 6, r() * 6];
   const at = (a, e, k = 1) => { const q = 1 + 0.06 * sin(a * 3.1 + w[0]) + 0.05 * sin(e * 4 + a * 1.3 + w[1]), c = cos(e) * R * q * k; return [c * cos(a), sin(e) * H * q * k, c * sin(a)]; };
-  surf(th, (i, j) => { const a = a0 + (a1 - a0) * i / 14, e = (j / 6) * 1.5708; return [at(a, e), norm(cos(e) * cos(a), sin(e) * 1.1 + 0.1, cos(e) * sin(a)), i / 14 * 4, 1.3 - j / 6 * 1.3, [0.9 + 0.2 * r(), 0.9 + 0.15 * r(), 0.85]]; }, 14, 6);
-  for (let k = 0; k < 6; k++) { const a = a0 + (a1 - a0) * (k + 0.5 * (k % 2)) / 5.5, pts = []; for (let j = 0; j <= 5; j++) pts.push(at(a, j / 5 * 1.5, 1.035)); tube(wood, pts, () => 0.022, 4, 1); }
+  // grass laid on in courses from the ground up, each lapping over the one below with its ragged butts hanging free
+  const jit = (i, j) => 0.05 * sin(i * 12.9 + j * 7.3 + w[0]) + 0.04 * sin(i * 4.7 - j * 2.9 + w[1]);
+  for (let i = 0; i < 14; i++) for (let j = 0; j < 6; j++) {
+    const P = (ii, jj, k, drop, sh) => { const a = a0 + (a1 - a0) * ii / 14, e = (jj / 6) * 1.5708, p = at(a, e, k); p[1] = Math.max(0, p[1] - drop); return [p, norm(cos(e) * cos(a), sin(e) * 1.1 + 0.1, cos(e) * sin(a)), ii / 14 * 4, 1.3 - jj / 6 * 1.3, [sh * (0.9 + 0.2 * r()), sh * (0.9 + 0.15 * r()), sh * 0.85]]; };
+    th.quad(P(i + 1, j, 1.08 + jit(i + 1, j), j ? 0.12 : 0, 0.6), P(i, j, 1.08 + jit(i, j), j ? 0.12 : 0, 0.6), P(i, j + 1, 0.985, 0, 1.06), P(i + 1, j + 1, 0.985, 0, 1.06));
+  }
+  for (let k = 0; k < 6; k++) { const a = a0 + (a1 - a0) * (k + 0.5 * (k % 2)) / 5.5, pts = []; for (let j = 0; j <= 5; j++) pts.push(at(a, j / 5 * 1.5, 1.035)); pts.unshift([pts[0][0] * 1.04, -0.05, pts[0][2] * 1.04]); pts.push(at(a + 3.1416, 1.25, 0.32)); tube(wood, pts, () => 0.03, 4, 1); }   // saplings set in the ground, bent over and crossed at the crown
+  for (const a of [a0 - 0.06, a1 + 0.06]) { const b = at(a, 0, 1.07); tube(wood, [[b[0], -0.05, b[2]], at(a, 0.75, 1.08), at(a + (a < 3 ? 0.5 : -0.5), 1.25, 1.02)], () => 0.04, 5, 1); }   // stouter posts either side of the opening
+  { const b = at(a0 - 0.06, 1.0, 1.1), c = at(a1 + 0.06, 1.0, 1.1), m = [(b[0] + c[0]) / 2 + 0.25, Math.max(b[1], c[1]) + 0.12, 0]; tube(wood, [b, m, c], () => 0.028, 4, 1); }   // and a pole bent across it
+  for (let k = 0; k < 9; k++) { const a = a0 + 0.2 + r() * (a1 - a0 - 0.4), f = at(a, 0, 1.22 + r() * 0.12), t = at(a + (r() - 0.5) * 0.5, 0.9 + r() * 0.4, 1.1); tube(wood, [[f[0], 0, f[2]], t, [t[0] * 0.8, t[1] + 0.25 + r() * 0.2, t[2] * 0.8]], () => 0.014 + r() * 0.008, 3, 1); }   // leafy boughs leant on to hold the grass down
+  const stones = []; for (let k = 0; k < 11; k++) { const a = a0 + 0.1 + (k / 10) * (a1 - a0 - 0.2), f = at(a, 0, 1.16); stones.push(ball(0.13 + r() * 0.1, LAVA, f[0], 0.06, f[2], 1.25, 0.6 + r() * 0.2, 1, 1)); }   // lava cobbles weighting its foot
   for (const e of [0.5, 1.0]) { const pts = []; for (let i = 0; i <= 10; i++) pts.push(at(a0 + (a1 - a0) * i / 10, e, 1.04)); tube(wood, pts, () => 0.016, 3, 1); }
   // bedding of cut grass inside
   const bed = part(new THREE.SphereGeometry(1, 10, 5), 0xa89858, -0.35, 0.02, 0, 0, 0, 0, 1.1, 0.07, 0.95);
-  return { thatch: th.build(), wood: wood.build(), bed };
+  return { thatch: th.build(), wood: wood.build(), bed, stones };
 }
 /** A big carcass on its side: hide, opened flank, ribs, skull and tusks. */
 function carcass() {
@@ -193,7 +202,7 @@ function build({ world, group }) {
   block(CAMP[0], CAMP[1], 0.7, FIRE, S0);
   // our own camp: brush shelters in a ring, opening on the fires; red ochre where it is ground
   const SHELTER = [20, 75, 128, 205, 258, 312].map((d, i) => { const a = d * Math.PI / 180, x = CAMP[0] + cos(a) * 14.5, z = CAMP[1] + sin(a) * 14.5; return [x, z, facing(x, z, CAMP[0], CAMP[1]), i]; });
-  for (const [x, z, rot, i] of SHELTER) { const s = brushShelter(60 + i); stuff.add('thatch', [s.thatch, s.bed], x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('wood', s.wood, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); block(x, z, 1.5, S0); }
+  for (const [x, z, rot, i] of SHELTER) { const s = brushShelter(60 + i); stuff.add('thatch', [s.thatch, s.bed], x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('wood', s.wood, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); stuff.add('rock', s.stones, x, z, { rot, from: S0, s: 1 + 0.12 * sin(i * 2.1) }); block(x, z, 1.5, S0); }
   const OCH = [CAMP[0] + 2, CAMP[1] - 9.5];
   stuff.add('plain', [part(new THREE.CircleGeometry(0.9, 12), OCHRE, 0, 0.02, 0, -1.5708), ball(0.09, OCHRE, 0.5, 0.05, 0.4), ball(0.07, OCHRE, -0.4, 0.04, 0.5), ball(0.11, 0x9a3418, 0.2, 0.06, -0.6)], OCH[0] + 0.6, OCH[1], { from: S0 });
   stuff.build(); fires.build();

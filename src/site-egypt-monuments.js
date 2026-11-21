@@ -104,12 +104,17 @@ function door(P, mat, span, x, y, z, ry, w = 2.2, h = 4.2, c = C.granite) {
   P.add(mat, span, put(put(block(w + 2.2, 0.9, 1), 0, h, 0), x, y, z, ry), c);
 }
 /** A temple: battered outer walls round an open court of square pillars, with a roofed sanctuary at the back (west). */
-function temple(P, span, x0, x1, z0, z1, h, { mat = 'fine', c = C.tura, pillar = C.granite, floor = C.lime, doors = [0], t = 5, rows = 2 } = {}) {
+function temple(P, span, x0, x1, z0, z1, h, { mat = 'fine', c = C.tura, pillar = C.granite, floor = C.lime, doors = [0], t = 5, rows = 2, sanct = 1.2 } = {}) {
   const y = Math.min(ground(x0, z0), ground(x1, z1), ground(x0, z1), ground(x1, z0)) - 0.6, H = h + 0.6, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, L = x1 - x0, W = z1 - z0;
   P.add(mat, span, put(block(L, 0.9, W), cx, y, cz), floor);
   P.add(mat, span, put(block(L, H, t, 0.05, 0), cx, y, z0 + t / 2), c).add(mat, span, put(block(L, H, t, 0.05, 0), cx, y, z1 - t / 2), c);
   P.add(mat, span, put(block(t, H, W, 0, 0.05), x1 - t / 2, y, cz), c);
-  P.add(mat, span, put(block(L * 0.36, H + 1.2, W, 0.04), x0 + L * 0.18, y, cz), c);   // the sanctuary block
+  P.add(mat, span, put(block(L * 0.36, H + sanct, W, 0.04), x0 + L * 0.18, y, cz), c);   // the sanctuary block
+  if (sanct) P.add(mat, span, put(block(L * 0.36 - 0.08 * (H + sanct) + 0.5, 0.55, W - 0.08 * (H + sanct) + 0.5), x0 + L * 0.18, y + H + sanct, cz), shade(c, 1.06));
+  // a plinth course at the foot of each wall and a coping stone along its top
+  for (const zc of [z0 + t / 2, z1 - t / 2]) P.add(mat, span, put(block(L + 0.7, 1.3, t + 0.7, 0, 0.2), cx, y, zc), shade(c, 0.86)).add(mat, span, put(block(L - 0.1 * H + 0.3, 0.5, t + 0.45), cx, y + H, zc), shade(c, 1.06));
+  P.add(mat, span, put(block(t + 0.7, 1.3, W + 0.7, 0.2, 0), x1 - t / 2, y, cz), shade(c, 0.86));
+  for (let k = 0; k < 4; k++) for (const s of [-1, 1]) P.add(mat, span, put(block(0.5, 0.35, 1.5), x0 + L * (0.45 + k * 0.13), y + H - 0.9, cz + s * (W / 2 + 0.6)), shade(c, 0.9));   // spouts to shed the rain from the roof
   P.add(mat, span, put(block(0.8, 0.5, W), x1 - 0.4, y + H, cz), c);
   const n = Math.max(2, Math.floor((L * 0.6 - 2 * t) / 5.5));
   for (let i = 0; i < n; i++) for (let k = 0; k < rows; k++) for (const s of [-1, 1]) {
@@ -123,11 +128,19 @@ function temple(P, span, x0, x1, z0, z1, h, { mat = 'fine', c = C.tura, pillar =
 function mastaba(P, span, r, x, z, w, l, h, mud = false) {
   const y = Math.min(ground(x - w / 2, z - l / 2), ground(x + w / 2, z + l / 2), ground(x - w / 2, z + l / 2), ground(x + w / 2, z - l / 2)) - 0.4, mat = mud ? 'brick' : 'fine', c = shade(mud ? C.mud : C.tura, 0.9 + r() * 0.12);
   P.add(mat, span, put(block(w, h + 0.4, l, 0.14), x, y, z), c);
+  P.add(mat, span, put(block(w - 0.28 * (h + 0.4) + 0.36, 0.32, l - 0.28 * (h + 0.4) + 0.36), x, y + h + 0.4, z), shade(c, 1.07));   // a coping course round the top
+  P.add(mat, span, put(block(w + 0.5, 0.5, l + 0.5, 0.25), x, y, z), shade(c, 0.84));   // and a foot course
+  const chapel = !mud && w > 10 && (Math.round(x * 0.5 + z) & 1);
+  if (chapel) {   // an offering chapel built against the southern false door
+    const cx = x + w / 2 + 0.3, cz = z - l * 0.3;
+    P.add(mat, span, put(block(2.4, h * 0.66, 4.6, 0.05), cx, y, cz), shade(c, 0.97)).add(mat, span, put(block(2.7, 0.3, 4.9), cx, y + h * 0.66, cz), shade(c, 1.06));
+    P.add(mat, span, put(block(0.3, h * 0.42, 1), cx + 1.1, y + 0.4, cz), C.dark).add(mat, span, put(block(0.4, 0.3, 1.8), cx + 1.12, y + 0.4 + h * 0.42, cz), shade(c, 1.1));
+  }
   const e = x + w / 2 - 0.14 * h * 0.5;
   for (const dz of [-l * 0.3, l * 0.28]) { P.add(mat, span, put(block(0.5, h * 0.6, 1.1), e + 0.02, y + 0.4, z + dz, 0, 0, 0.14), C.dark); P.add(mat, span, put(block(0.7, 0.35, 2), e + 0.05, y + 0.4 + h * 0.6, z + dz, 0, 0, 0.14), c); }
   if (mud) for (let k = -l / 2 + 1.2; k < l / 2 - 1; k += 2.2) P.add(mat, span, put(block(0.5, h * 0.8, 1.1), x - w / 2 + 0.14 * h * 0.4 - 0.1, y + 0.3, z + k, 0, 0, -0.14), shade(c, 0.9));   // palace-façade niches
-  for (let k = 0; k < 2; k++) P.add(mat, span, put(block(1.5, 0.1, 1.5), x - w * 0.12 + r() * w * 0.2, y + h + 0.36, z + (k ? 1 : -1) * l * 0.25), C.dark);
-  return [x - w / 2, x + w / 2, z - l / 2, z + l / 2];
+  for (let k = 0; k < 2; k++) P.add(mat, span, put(block(1.5, 0.1, 1.5), x - w * 0.12 + r() * w * 0.2, y + h + 0.66, z + (k ? 1 : -1) * l * 0.25), C.dark);
+  return [x - w / 2, x + w / 2 + (chapel ? 1.6 : 0), z - l / 2, z + l / 2];
 }
 
 /** The Great Sphinx, facing east: a lion couchant with a king's head in the striped nemes headcloth, carved from the living rock. */
@@ -217,9 +230,16 @@ export function buildMonuments({ P, group, mats }) {
     const y = ground(372, 228) - 0.5;   // valley temple: a great square block cased in red granite, two doors to the quay
     P.add('fine', 'k2done', put(block(46, 13.5, 46, 0.075), 372, y, 228), C.granite); P.add('fine', 'k2done', put(block(40, 0.6, 40), 372, y + 13.5, 228), shade(C.granite, 0.9));
     for (const dz of [-13, 13]) door(P, 'fine', 'k2done', 372 + 23 - 0.075 * 3, y + 0.6, 228 + dz, Math.PI / 2, 2.6, 6, shade(C.granite, 0.8));
+    for (const [lx, lz, bw, bd] of [[0, 21.2, 44, 1.6], [0, -21.2, 44, 1.6], [21.2, 0, 1.6, 44], [-21.2, 0, 1.6, 44]]) P.add('fine', 'k2done', put(block(bw, 1.5, bd), 372 + lx, y + 13.5, 228 + lz), shade(C.granite, 0.94));   // the parapet round its roof
+    P.add('fine', 'k2done', put(block(47, 1.3, 47, 0.3), 372, y, 228), shade(C.granite, 0.82));   // plinth
+    P.add('fine', 'k2done', put(block(3.4, 5.6, 5.4, 0.04), 396.6, y + 0.4, 228), shade(C.granite, 0.9)).add('fine', 'k2done', put(block(4, 0.5, 6.2), 396.6, y + 6, 228), shade(C.granite, 1.05)).add('fine', 'k2done', put(block(0.4, 3.6, 2.2), 398.2, y + 1.2, 228), C.dark);   // a shrine between them
+    for (const dz of [-13, 13]) for (const s of [-1, 1]) {   // a pair of sphinxes couched by each door
+      const sx = 402, sz = 228 + dz + s * 5.4; P.add('fine', 'k2done', put(block(8.6, 1, 2.8), sx, y + 0.8, sz), shade(C.granite, 0.85)).add('fine', 'k2done', put(block(7.4, 1.7, 2, 0.12, 0.2), sx - 0.3, y + 1.8, sz), C.tura)
+        .add('fine', 'k2done', put(block(1.5, 2.3, 1.9, 0.12), sx + 2.6, y + 2.6, sz), C.tura).add('fine', 'k2done', put(block(3, 0.7, 2.2, 0.05), sx + 3, y + 1.8, sz), shade(C.tura, 0.96));
+    }
     P.add('blocks', 'k2done', put(block(42, 1.3, 58), 418, y - 0.2, 222), shade(C.lime, 1.05), 6); ob([349, 395, 205, 251], K2.y1);
     // the Sphinx temple in front of the paws
-    ob(temple(P, 'k2done', 345, 391, SPHINX.z - 24, SPHINX.z + 22, 8.5, { c: shade(C.lime, 1.1), doors: [-14, 14], rows: 2, t: 6 }), K2.y1);
+    ob(temple(P, 'k2done', 345, 391, SPHINX.z - 24, SPHINX.z + 22, 5.2, { sanct: 0, c: shade(C.lime, 1.1), doors: [-14, 14], rows: 2, t: 6 }), K2.y1);
   }
   ob(sphinx(P, 'sphinx'), -2545);
   {   // before the Sphinx: the knoll of harder rock the quarrymen left standing; and round the Sphinx the faces they cut it from

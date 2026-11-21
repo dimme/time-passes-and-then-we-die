@@ -45,7 +45,20 @@ function house(P, span, r, x, z, w, d, h, ry) {
   const y = ground(x, z) - 0.3, c = shade(r() < 0.6 ? C.plaster : C.mud, 0.85 + r() * 0.2), T = (g, lx, ly, lz, rr = 0) => put(put(g, lx, ly, lz, rr), x, y, z, ry);
   P.add('brick', span, T(block(w, h + 0.3, d, 0.035), 0, 0, 0), c);
   for (const [lx, lz, ww, dd] of [[0, d / 2 - 0.36, w - 0.5, 0.3], [0, -d / 2 + 0.36, w - 0.5, 0.3], [w / 2 - 0.36, 0, 0.3, d - 0.5], [-w / 2 + 0.36, 0, 0.3, d - 0.5]]) P.add('brick', span, T(block(ww, 0.45, dd), lx, h + 0.3, lz), shade(c, 0.95));
-  P.add('plain', span, T(block(0.9, 1.7, 0.3), w * (r() * 0.4 - 0.2), 0.3, d / 2 - 0.1), C.dark).add('plain', span, T(block(1.4, 0.16, 0.4), 0, 2.0, d / 2 - 0.08), C.wood);
+  const dx = w * (r() * 0.4 - 0.2), q = rng(((Math.abs(x) * 13.7 + Math.abs(z) * 7.3) | 0) + 77), fz = (t) => d / 2 - 0.035 * t;   // q: dice for the details; fz: the front face at height t
+  P.add('plain', span, T(block(0.9, 1.7, 0.3), dx, 0.3, d / 2 - 0.1), C.dark).add('plain', span, T(block(1.5, 0.16, 0.4), dx, 2.0, d / 2 - 0.08), C.wood);
+  for (const s of [-1, 1]) P.add('brick', span, T(block(0.2, 1.72, 0.3), dx + s * 0.55, 0.3, d / 2 - 0.02), shade(c, 1.08));   // jambs, whitewashed
+  P.add('plain', span, T(block(1.4, 0.14, 0.6), dx, 0.22, d / 2 + 0.12), shade(C.lime, 0.5));   // threshold
+  P.add('brick', span, T(block(w + 0.16, 0.5 + q() * 0.3, d + 0.16, 0.1), 0, 0, 0), shade(c, 0.72));   // the foot of the wall, dark with damp
+  P.add('brick', span, T(block(w - 0.07 * h + 0.18, 0.14, d - 0.07 * h + 0.18), 0, h - 0.02, 0), shade(c, 0.8));   // the edge of the roof: palm logs, matting and mud
+  for (let a = -w / 2 + 0.6; a < w / 2 - 0.4; a += 0.85 + q() * 0.2) P.add('plain', span, T(bar([a, h - 0.2, fz(h) - 0.3], [a, h - 0.22, fz(h) + 0.2 + q() * 0.08], 0.075, 0.065, 5), 0, 0, 0), C.wood);   // the ends of the roof logs
+  for (let i = 0; i < 2; i++) P.add('brick', span, T(block(0.4, 0.07, 0.3), (i ? 1 : -1) * w * 0.3, h - 0.76, fz(h) + 0.02), shade(c, 1.1));   // sills
+  if (q() < 0.55) {   // a shelter of matting on the roof, to sleep under
+    const sx = (q() - 0.5) * (w - 3.4), sz = -d * 0.12, sh = 1.5 + q() * 0.3;
+    for (const [a, b] of [[-1.1, -0.8], [1.1, -0.8], [-1.1, 0.8], [1.1, 0.8]]) P.add('plain', span, T(bar([sx + a, h + 0.3, sz + b], [sx + a, h + 0.3 + sh + (b < 0 ? 0.25 : 0), sz + b], 0.04, 0.04, 4), 0, 0, 0), C.wood);
+    P.add('reed', span, T(put(block(2.5, 0.05, 1.9), sx, h + 0.3 + sh + 0.12, sz, 0, 0.15), 0, 0, 0), shade(C.reed, 0.8 + q() * 0.3), 1.5);
+  }
+  if (q() < 0.4) P.add('brick', span, T(lathe([[0.5, 0], [0.55, 0.5], [0.4, 0.95], [0.12, 1.15], [0.001, 1.16]], 8), w * 0.3, h + 0.3, d * 0.22), shade(C.plaster, 0.9));   // a grain bin on the roof
   for (let i = 0; i < 2; i++) P.add('plain', span, T(block(0.16, 0.5, 0.3), (i ? 1 : -1) * w * 0.3, h - 0.7, d / 2 - 0.1 - 0.035 * h), C.dark);
   P.add('plain', span, T(block(0.3, 0.5, 0.16), w / 2 - 0.1 - 0.035 * h, h - 0.7, 0), C.dark);
   if (r() < 0.5) {   // a reed awning on poles before the door
@@ -149,6 +162,7 @@ export function buildPlain({ P, group, mats, world }) {
     for (let b = 0; b < 3; b++) for (let i = 0; i < 9; i++) {
       const gx = TOWN.x0 + 10 + i * 5.6, gz = TOWN.z0 + 22 + b * 44, gy = ground(gx, gz) - 0.3, c = shade(C.mud, 0.9 + r() * 0.2);
       P.add('brick', 'town', put(block(5, 3.1, 36, 0.03), gx, gy, gz), c).add('brick', 'town', put(vault(4.4, 35.5, 1.25), gx, gy + 3.05, gz), shade(c, 1.05));
+      for (const s of [-1, 1]) P.add('brick', 'town', put(block(5.2, 4.6, 0.42), gx, gy, gz + s * 17.72), shade(c, 0.95));   // end walls standing above the vault
       P.add('plain', 'town', put(block(1, 1.8, 0.3), gx, gy + 0.3, gz - 18), C.dark);
       for (const s of [-1, 1]) P.add('plain', 'town', put(bar([s * 1.9, 0, 0], [s * 1.9, 2.2, 0], 0.07), gx, gy + 0.3, gz - 20.6), C.wood);
       P.add('reed', 'town', put(block(5.4, 0.07, 3), gx, gy + 2.45, gz - 19.4), C.reed, 1.5);
@@ -184,7 +198,7 @@ export function buildPlain({ P, group, mats, world }) {
   const free = (x, z) => !obstacles.some((o) => x > o.r[0] - 2 && x < o.r[1] + 2 && z > o.r[2] - 2 && z < o.r[3] + 2) && !BASINS.some((b) => x > b[0] - 12 && x < b[1] + 12 && z > b[2] - 12 && z < b[3] + 12) && ground(x, z) > 1;
   const item = (x, z, s0, s1) => ({ x, z, s: s0 + r() * (s1 - s0), rot: r() * 6.28, g: r(), t: [0.85 + r() * 0.25, 0.75 + r() * 0.2] });
   const palms = [[], []], figs = [], scrub = [];
-  const tryPalm = (x, z) => { if (Math.hypot(x - 536, z - 356) > 16 && free(x, z) && !special.some(([f]) => x > f[0] - 1 && x < f[1] + 1 && z > f[2] - 1 && z < f[3] + 1)) palms[r() < 0.6 ? 0 : 1].push(item(x, z, 0.75, 1.25)); };
+  const tryPalm = (x, z) => { if (Math.hypot(x - 536, z - 356) > 16 && free(x, z) && !special.some(([f]) => x > f[0] - 1 && x < f[1] + 1 && z > f[2] - 1 && z < f[3] + 1)) { const k = r() < 0.6 ? 0 : 1, it = item(x, z, 0.75, 1.25); if (!(x > 392 && x < 540 && z > 148 && z < 200)) palms[k].push(it); } };   // none where they would hide the Sphinx from the river
   for (let z = -1130; z < 1130; z += 9 + r() * 22) { tryPalm(plainEdge(z) + 2 + r() * 12, z); if (r() < 0.7) tryPalm(764 + r() * 8, z + r() * 8); if (r() < 0.25) for (let k = 0; k < 5; k++) tryPalm(plainEdge(z) - 2 + r() * 20, z + r() * 14); }
   for (let i = 0; i < 26; i++) tryPalm(V.x0 + r() * (V.x1 - V.x0 + 24), V.z0 - 6 + r() * (V.z1 - V.z0 + 12));
   for (let i = 0; i < 40; i++) tryPalm(530 + r() * 12, 250 + r() * 135);

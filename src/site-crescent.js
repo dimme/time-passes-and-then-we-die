@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { rng, smooth } from './util.js';
 import { yearToU, uToYear } from './timeline.js';
 import { actors } from './people-actors.js';
-import { Shape, field, sheaf, heap, pot, ladder, house, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js';
+import { bundle, hearth, rack, onFace, Shape, field, sheaf, heap, pot, ladder, house, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js';
 import { livestock, standing, drove } from './site-crescent-animals.js';
 
 const FLAT = 3, SEA = 2.1;
@@ -54,14 +54,24 @@ function build({ world, group }) {
     }
   }
   // the threshing floor: trodden earth and plaster, ringed with stones
-  S.lathe('plaster', FLOOR[0], FLAT, FLOOR[1], [[7, 0], [6.9, 0.06]], 28, { col: lin(0xcdbf9f), cap: 'plaster' });
+  const q2 = rng(4411);   // dice for the details, so that they do not disturb where everything else stands
+  { const E0 = lin(0x8e7a5a), FX = FLOOR[0], FZ = FLOOR[1];   // beaten earth, paler and dustier towards the middle where the flails fall
+    for (let k = 0; k < 8; k++) { const a0 = (k / 8) * 6.2832, a1 = a0 + 6.2832 / 8, v = 0.97 + q2() * 0.06;
+      S.lathe('plaster', FX, FLAT, FZ, [[7.5, 0], [7.0, 0.06]], 4, { a0, a1, col: shade(E0, 0.84 * v) });
+      S.lathe('plaster', FX, FLAT + 0.06, FZ, [[7.0, 0], [4.6, 0.012]], 4, { a0, a1, col: shade(E0, 0.98 * v) });
+      S.lathe('plaster', FX, FLAT + 0.072, FZ, [[4.6, 0], [2.2, 0.006]], 4, { a0, a1, col: shade(lin(0xa48e66), v) });
+      S.lathe('plaster', FX, FLAT + 0.078, FZ, [[2.2, 0], [0.01, 0.004]], 3, { a0, a1, col: shade(lin(0xb09a70), v) }); }
+    for (let k = 0; k < 26; k++) { const a = q2() * 6.283, d = 0.6 + q2() * 5.6; bundle(S, FX + Math.cos(a) * d, FLAT + 0.07, FZ + Math.sin(a) * d, q2() * 6.283, shade(STRAW, 0.75 + q2() * 0.4), 0.7 + q2() * 0.4); }   // sheaves opened and thrown down
+    for (let k = 0; k < 10; k++) bundle(S, FX - 9.6 - (k % 2) * 0.35, FLAT + (k > 5 ? 0.2 : 0), FZ + 1.2 + (k % 6) * 0.3, 0.1 + (q2() - 0.5) * 0.3, shade(STRAW, 0.8 + q2() * 0.3), 1.05);   // and a stack waiting
+  }
   for (let k = 0; k < 40; k++) { const a = (k / 40) * 6.283; S.lathe('stone', FLOOR[0] + Math.cos(a) * 7.1, FLAT - 0.1, FLOOR[1] + Math.sin(a) * 7.1, [[0.3, 0], [0.27, 0.22], [0.1, 0.33]], 5, { col: shade(STONE, 0.8 + r() * 0.3) }); }
-  for (let k = 0; k < 16; k++) { const a = r() * 6.283, d = 1 + r() * 4; S.lathe('reed', FLOOR[0] + Math.cos(a) * d, FLAT + 0.05, FLOOR[1] + Math.sin(a) * d, [[0.8, 0], [0.6, 0.1], [0.05, 0.16]], 7, { col: shade(STRAW, 0.8 + r() * 0.3), sx: 1.5, rot: r() * 3 }); }   // corn spread to be beaten
+  for (let k = 0; k < 16; k++) { const a = r() * 6.283, d = 1 + r() * 4, c = shade(STRAW, 0.8 + r() * 0.3), rot = r() * 3;   // corn spread to be beaten: a loose litter of straw and chaff
+    S.lathe('reed', FLOOR[0] + Math.cos(a) * d, FLAT + 0.07, FLOOR[1] + Math.sin(a) * d, [[1.15, 0], [0.75, 0.045], [0.05, 0.07]], 7, { col: shade(c, 0.9), sx: 1.4, rot }); }
   heap(S, FLOOR[0] + 8.5, FLAT, FLOOR[1] - 3, 1.5, 0.9, STRAW); heap(S, FLOOR[0] + 9, FLAT, FLOOR[1] + 2, 1.1, 0.6, lin(0xe0d0a0));
   for (let k = 0; k < 9; k++) sheaf(S, FLOOR[0] - 8.5 - (k % 3) * 0.7, FLAT, FLOOR[1] - 2 + ((k / 3) | 0) * 0.8, r, 1.1);
   solids.circle(FLOOR[0] + 8.5, FLOOR[1] - 3, 1.2);
   // round bins of mud and straw for the grain, on stone footings
-  const bin = (Sx, x, z, s = 1) => { Sx.lathe('stone', x, FLAT - 0.1, z, [[0.75 * s, 0], [0.72 * s, 0.3]], 9, { col: STONE }); Sx.lathe('plaster', x, FLAT + 0.2, z, [[0.68 * s, 0], [0.8 * s, 0.6 * s], [0.7 * s, 1.2 * s], [0.42 * s, 1.5 * s], [0.02, 1.62 * s]], 10, { col: shade(MUD, 0.9 + r() * 0.2) }); solids.circle(x, z, 0.7 * s); };
+  const bin = (Sx, x, z, s = 1) => { Sx.lathe('stone', x, FLAT - 0.1, z, [[0.75 * s, 0], [0.72 * s, 0.3]], 9, { col: STONE }); Sx.lathe(Sx === S ? 'plaster' : 'adobe', x, FLAT + 0.2, z, [[0.68 * s, 0], [0.8 * s, 0.6 * s], [0.7 * s, 1.2 * s], [0.42 * s, 1.5 * s], [0.02, 1.62 * s]], 10, { col: shade(MUD, 0.9 + r() * 0.2) }); solids.circle(x, z, 0.7 * s); };
   for (let k = 0; k < 4; k++) bin(S, FLOOR[0] - 3 + k * 2.1, FLOOR[1] - 10.5, 1 + (k % 2) * 0.15);
 
   // ---------- the fields ----------
@@ -120,10 +130,12 @@ function build({ world, group }) {
 
   // ---------- the wall and the tower ----------
   const g0 = GATE + 3.2 / VR, g1 = GATE - 3.2 / VR + Math.PI * 2;
-  SW.lathe('stone', V[0], FLAT - 0.4, V[1], [[VR + 1.0, 0], [VR + 0.75, 4], [VR - 0.75, 4], [VR - 0.9, 0]], 120, { a0: g0, a1: g1, col: STONE });
+  SW.lathe('stone', V[0], FLAT - 0.4, V[1], [[VR + 1.0, 0], [VR + 0.93, 1.3], [VR + 0.85, 1.3], [VR + 0.79, 2.7], [VR + 0.72, 2.7], [VR + 0.68, 3.8], [VR + 0.8, 3.86], [VR + 0.78, 4.08], [VR - 0.78, 4.08], [VR - 0.8, 3.86], [VR - 0.9, 0]], 120, { a0: g0, a1: g1, col: STONE });
   for (const [a, flip] of [[g0, 0], [g1, 1]]) { const c = Math.cos(a), s = Math.sin(a), p = (rr, h) => [V[0] + c * rr, FLAT - 0.4 + h, V[1] + s * rr], q = [p(VR + 1, 0), p(VR - 0.9, 0), p(VR - 0.75, 4), p(VR + 0.75, 4)]; flip ? SW.quad('stone', q[0], q[1], q[2], q[3], STONE) : SW.quad('stone', q[1], q[0], q[3], q[2], STONE); }
   const TW = [V[0] - VR + 6.5, V[1]];
-  SW.lathe('stone', TW[0], FLAT - 0.4, TW[1], [[4.6, 0], [4.35, 3], [3.9, 6.5], [3.5, 8.9]], 28, { col: shade(STONE, 0.95), cap: 'stone' });
+  { const prof = []; for (let k = 0; k < 10; k++) prof.push([4.6 - 0.11 * k, k * 0.89], [4.6 - 0.11 * (k + 1) + 0.065, (k + 1) * 0.89]);   // each lift of stones set back a little from the one below
+    SW.lathe('stone', TW[0], FLAT - 0.4, TW[1], prof, 28, { col: shade(STONE, 0.95), cap: 'stone' });
+    for (let k = 0; k < 26; k++) { const a = q2() * 6.283, hh = 0.5 + q2() * 8, rr = 4.6 - 0.118 * hh; SW.lathe('stone', TW[0] + Math.cos(a) * rr, FLAT - 0.4 + hh, TW[1] + Math.sin(a) * rr, [[0.26 + q2() * 0.14, -0.12], [0.3, 0], [0.2, 0.14]], 5, { col: shade(STONE, 0.8 + q2() * 0.3), sx: 1.5, rot: -a + 1.5708 }); } }   // stones standing proud of the face
   SW.lathe('plain', TW[0], FLAT + 8.52, TW[1], [[0.55, 0], [0.01, 0.0]], 8, { col: lin(0x14100c) });   // the head of the stair inside
   { const p = (dz, h) => [TW[0] + 4.56 - h * 0.085, FLAT + h, TW[1] + dz]; SW.quad('plain', p(0.4, 0), p(-0.4, 0), p(-0.4, 1.5), p(0.4, 1.5), lin(0x14100c)); SW.beam('stone', p(0.7, 1.62), p(-0.7, 1.62), 0.16, 0.16, 5, shade(STONE, 0.8)); }   // the low door at its foot
   solids.circle(TW[0], TW[1], 4.6, Y(-8500));
@@ -151,11 +163,22 @@ function build({ world, group }) {
     const R = 2.0 + r() * 0.9, it = place(round, R + 0.5); if (!it) continue;
     const { x, z } = it, door = Math.atan2(V[1] - z, V[0] - x) + (r() - 0.5) * 1.6, gap = 0.5 / R, a0 = door + gap, a1 = door - gap + Math.PI * 2, c = shade(MUD, 0.85 + r() * 0.3);
     SA.lathe('stone', x, FLAT - 0.2, z, [[R + 0.14, 0], [R + 0.1, 0.6]], 14, { a0, a1, col: shade(STONE, 0.9) });
-    SA.lathe('plaster', x, FLAT + 0.4, z, [[R + 0.06, 0], [R - 0.02, 1.5]], 14, { a0, a1, col: c });
-    SA.lathe('plaster', x, FLAT + 1.55, z, [[R + 0.02, 0], [R - 0.02, 0.35]], 4, { a0: door - gap, a1: door + gap, col: c });
+    SA.lathe('adobe', x, FLAT + 0.4, z, [[R + 0.06, 0], [R - 0.02, 1.5]], 14, { a0, a1, col: c });
+    SA.lathe('adobe', x, FLAT + 0.4, z, [[R + 0.12, 0], [R + 0.045, 0.34 + q2() * 0.2]], 14, { a0, a1, col: shade(c, 0.72) });   // the foot of the wall, dark with damp
+    SA.lathe('adobe', x, FLAT + 1.55, z, [[R + 0.02, 0], [R - 0.02, 0.35]], 4, { a0: door - gap, a1: door + gap, col: shade(c, 0.62) });
     SA.lathe('plain', x, FLAT, z, [[R - 0.3, 0], [R - 0.3, 1.6]], 3, { a0: door - gap * 1.3, a1: door + gap * 1.3, col: lin(0x16110c) });
     { const p = (a, h) => [x + Math.cos(a) * (R + 0.08), FLAT + h, z + Math.sin(a) * (R + 0.08)]; SA.beam('wood', p(door - gap * 1.4, 1.6), p(door + gap * 1.4, 1.6), 0.07, 0.07, 5, TIMBER); }
-    SA.lathe('reed', x, FLAT + 1.72, z, [[R + 0.5, 0], [R + 0.2, 0.22], [R * 0.72, 0.62], [R * 0.36, 0.9], [0.02, 1.0]], 14, { col: shade(lin(0xb09a68), 0.8 + r() * 0.3) });
+    { const rc = shade(lin(0xb09a68), 0.8 + r() * 0.3), P = (a, rr, h) => [x + Math.cos(a) * rr, FLAT + h, z + Math.sin(a) * rr];
+      SA.lathe('reed', x, FLAT + 1.72, z, [[R + 0.55, 0], [R + 0.55, 0.08], [R * 0.78, 0.5], [R * 0.78, 0.58], [R * 0.42, 0.86], [R * 0.42, 0.93], [0.18, 1.04]], 14, { col: rc });   // thatch in three courses, the butts of each showing
+      SA.lathe('adobe', x, FLAT + 2.72, z, [[0.3, 0], [0.24, 0.12], [0.02, 0.16]], 7, { col: shade(c, 0.8) });   // a cap of mud over the crown
+      for (let k = 0; k < 7; k++) { const a = door + 0.45 + (k / 7) * 6.283; SA.beam('wood', P(a, R - 0.2, 1.74), P(a, R + 0.72 + q2() * 0.12, 1.7), 0.045, 0.035, 4, TIMBER); }   // rafter poles under the eaves
+      for (const s of [-1, 1]) SA.beam('wood', P(door + s * gap * 1.25, R + 0.08, 0), P(door + s * gap * 1.25, R + 0.06, 1.62), 0.06, 0.05, 5, TIMBER, false);   // door posts
+      { const p = P(door, R + 0.2, 0); SA.box('stone', p[0], FLAT - 0.02, p[2], 0.55, 0.13, 1.1, -door, { col: shade(STONE, 0.85) }); }   // threshold
+      const pk = q2();
+      if (pk < 0.3) { const p = P(door + 0.95, R + 0.62, 0); hearth(SA, p[0], FLAT, p[2], q2); }
+      else if (pk < 0.55) { const a = door + 2.2 + q2() * 1.6, p = P(a, R + 0.42, 0); rack(SA, p[0], FLAT, p[2], -(a + 1.5708), q2, 1.5 + q2() * 0.5, 1.35 + q2() * 0.3); }
+      else if (pk < 0.7) { const a = door + 2 + q2() * 2; for (let k = 0; k < 5; k++) { const p = P(a + (k % 3) * 0.1, R + 0.3 + ((k / 3) | 0) * 0.12, 0); SA.beam('wood', [p[0], FLAT + 0.08 + ((k / 3) | 0) * 0.14, p[2]], P(a + (k % 3) * 0.1 + 0.6, R + 0.36, 0.08 + ((k / 3) | 0) * 0.14), 0.075, 0.06, 5, shade(TIMBER, 0.8 + q2() * 0.4)); } }   // firewood
+    }
     solids.circle(x, z, R + 0.1, -Infinity, Y(-7600)); it.r = R + 0.5;
   }
   for (let k = 0; k < 12; k++) { const it = place(round, 1.0); if (it) { bin(SA, it.x, it.z, 0.9 + r() * 0.3); solids.list.pop(); solids.circle(it.x, it.z, 0.7, -Infinity, Y(-7600)); } }
@@ -164,10 +187,18 @@ function build({ world, group }) {
   for (let k = 0; k < 38; k++) {
     const w = 5 + r() * 2.6, d = 3.8 + r() * 1.6, h = 2.4 + r() * 0.6, it = place(square, Math.hypot(w, d) / 2 + 0.3); if (!it) continue;
     const rot = ((r() * 2) | 0) * Math.PI / 2 + (r() - 0.5) * 0.25 + 0.3, c = shade(r() < 0.25 ? LIME : MUD, 0.85 + r() * 0.25);
-    house(SB, r, it.x, FLAT, it.z, w, d, h, rot, { col: c, door: (r() * 4) | 0 }); it.h = h; it.w = w; it.d = d; it.rot = rot;
+    const hs = house(SB, r, it.x, FLAT, it.z, w, d, h, rot, { m: 'adobe', roofM: 'adobe', col: c, door: (r() * 4) | 0 }); it.h = h; it.w = w; it.d = d; it.rot = rot;
     solids.box(it.x, it.z, w, d, rot, Y(-7600));
+    { const pf = hs.door === 0 ? 2 : 0, at = (a, out) => onFace(it.x, it.z, w, d, rot, pf, a, out), pk = q2(), sd = q2() < 0.5 ? -1 : 1;
+      if (pk < 0.45) { const p = at(sd * w * 0.22, 0.5); rack(SB, p[0], FLAT, p[1], rot, q2, 1.5 + q2() * 0.6, 1.4 + q2() * 0.3); }
+      if (pk > 0.3 && pk < 0.75) { const p = at(-sd * w * 0.25, 0.7); hearth(SB, p[0], FLAT, p[1], q2); }
+      if (q2() < 0.6) { const p = local(it.x, it.z, rot, (q2() - 0.5) * (w - 2.6), (q2() - 0.5) * (d - 2.4)), Yr = FLAT + h + 0.02, R4 = [[-0.35, -0.35], [0.35, -0.35], [0.35, 0.35], [-0.35, 0.35]].map(([a, b]) => local(p[0], p[1], rot, a, b));   // the way down through the roof, a ladder's poles standing out of it
+        SB.quad('plain', [R4[3][0], Yr, R4[3][1]], [R4[2][0], Yr, R4[2][1]], [R4[1][0], Yr, R4[1][1]], [R4[0][0], Yr, R4[0][1]], lin(0x16110c), null, [0, 1, 0]);
+        for (const s of [-1, 1]) { const b = local(p[0], p[1], rot, 0.3, s * 0.22), t = local(p[0], p[1], rot, 0.42, s * 0.2); SB.beam('wood', [b[0], Yr, b[1]], [t[0], Yr + 0.85, t[1]], 0.035, 0.03, 5, TIMBER); }
+        const b = local(p[0], p[1], rot, 0.36, -0.22), t = local(p[0], p[1], rot, 0.36, 0.22); for (const hh of [0.25, 0.58]) SB.beam('wood', [b[0], Yr + hh, b[1]], [t[0], Yr + hh, t[1]], 0.022, 0.022, 4, TIMBER, false); }
+    }
     if (r() < 0.4) { const q = local(it.x, it.z, rot, w / 2 + 1.0, (r() - 0.5) * d * 0.5); ladder(SB, q[0], FLAT, q[1], h + 0.3, rot + Math.PI); }
-    if (r() < 0.5) for (let j = 0; j < 3; j++) { const q = local(it.x, it.z, rot, (r() - 0.5) * (w - 1.6), (r() - 0.5) * (d - 1.6)); r() < 0.5 ? heap(SB, q[0], FLAT + h, q[1], 0.45, 0.25, STRAW) : pot(SP, q[0], FLAT + h, q[1], 'jar', shade(CLAY, 0.8 + r() * 0.4), 0.8); }
+    if (r() < 0.5) for (let j = 0; j < 3; j++) { const q = local(it.x, it.z, rot, (r() - 0.5) * (w - 1.6), (r() - 0.5) * (d - 1.6)); r() < 0.5 ? heap(SB, q[0], FLAT + h, q[1], 0.45, 0.25, STRAW, 'wood') : pot(SP, q[0], FLAT + h, q[1], 'jar', shade(CLAY, 0.8 + r() * 0.4), 0.8); }
   }
   for (let k = 0; k < 8; k++) { const it = place(square, 1.0); if (it) { bin(SB, it.x, it.z, 1 + r() * 0.3); solids.list.pop(); solids.circle(it.x, it.z, 0.75, Y(-7600)); } }
 

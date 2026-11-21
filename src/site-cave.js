@@ -86,6 +86,8 @@ function cliffGeo(world) {
       // pale limestone in beds, rust-warm in places, with black streaks where water runs down and shade in the hollows
       const bed = 0.9 + 0.1 * sin(y * 2.3 + 2 * sin(z * 0.013)) + 0.06 * sin(y * 7.1 + z * 0.05), hol = hollow(z) * exp(-(((y - 1.6) / 2.6) ** 2)) / 5.5;
       let c = 0.5 * bed * (1 - 0.28 * streak * smooth(y / 8)) * (1 - 0.5 * hol) * (y < 0.3 ? 0.8 : 1);
+      { let soot = 0; for (const [zc, wd, s] of [[-70, 6.5, 1], [-55, 4.5, 0.8], [58, 6, 0.95], [CAVE_Z, 3.4, 0.65]]) soot = Math.max(soot, s * exp(-(((z - zc) / wd) ** 2)));   // smoke of the hearths on the roof of each shelter, and of torches over the cave mouth
+        c *= 1 - 0.66 * soot * smooth((y - 1.0) / 2.2) * exp(-((Math.max(0, y - 4.5) / 4.2) ** 2)); }
       if (top) { const f = smooth((BACKS[j - ROWS.length] - 6) / 30); col.set([c * (0.86 - 0.36 * f), c * (0.84 - 0.3 * f), c * (0.74 - 0.38 * f)], k * 3); }   // turf creeping over the top
       else col.set([c * (0.86 + 0.06 * warm), c * (0.82 + 0.02 * warm), c * (0.74 - 0.05 * warm)], k * 3);
     }
@@ -222,9 +224,15 @@ function tent(seed, R = 2.3, H = 3.1) {
   for (let i = 0; i < 36; i++) for (let j = 0; j < 6; j++) {
     const a0 = i / 36 * TAU, a1 = (i + 1) / 36 * TAU, t0 = j / 6, t1 = (j + 1) / 6, mid = ((a0 + a1) / 2 + Math.PI) % TAU - Math.PI;
     if (Math.abs(mid) < door * (1 - t0 * 1.6) && j < 3) continue;   // the doorway
-    const P = (a, t) => [at(a, t), norm(cos(a) * H, R, sin(a) * H), a / TAU * 5, t * 1.6, [0.92 + 0.1 * sin(i * 1.7 + seed), 0.9, 0.86]];
-    hide.quad(P(a1, t0), P(a0, t0), P(a0, t1), P(a1, t1));
+    // whole hides sewn edge to edge in three rows, each row lapping over the one below; dark along the seams and the skirt, sooted round the smoke hole
+    const pan = (ii) => { const band = j >> 1, n = [7, 6, 4][band]; return Math.floor((((ii + 36) % 36) / 36 * n + [0.3, 2.1, 1.2][band] + seed) % n) + band * 10; };
+    const me = pan(i), tn = 0.8 + 0.3 * Math.abs(sin(me * 12.9898 + seed * 3.1)), sL = pan(i - 1) !== me ? 0.5 : 1, sR = pan(i + 1) !== me ? 0.5 : 1, lap = j % 2 === 0, k0 = lap && j ? 1.04 : 1;
+    const P = (a, t, k, dark) => { const p = at(a, t); p[0] *= k; p[2] *= k; const c = tn * dark * (1 - 0.5 * smooth((t - 0.68) / 0.3)); return [p, norm(cos(a) * H, R, sin(a) * H), a / TAU * 5, t * 1.6, [c * 0.95, c * 0.9, c * 0.84]]; };
+    hide.quad(P(a1, t0, k0, lap ? 0.5 : sR), P(a0, t0, k0, lap ? 0.5 : sL), P(a0, t1, 1, sL), P(a1, t1, 1, sR));
   }
+  { const V = (a, t, k, c) => { const p = at(a, t); return [[p[0] * k, p[1], p[2] * k], norm(cos(a) * H, R, sin(a) * H), a / TAU * 5, t * 1.6, [c, c * 0.95, c * 0.88]]; };   // the door flap, thrown back and pegged
+    hide.quad(V(door + 0.5, 0, 1.13, 0.6), V(door + 0.05, 0, 1.03, 0.75), V(door * 0.75, 0.44, 1.03, 0.85), V(door + 0.36, 0.4, 1.09, 0.7)); }
+  for (const [t, k, rad] of [[0.47, 1.045, 0.012], [0.87, 1.25, 0.02]]) { const pts = []; for (let i = 0; i <= 18; i++) { const p = at(i / 18 * TAU, t); pts.push([p[0] * k, p[1], p[2] * k]); } tube(wood, pts, () => rad, 3, 1); }   // thongs round the cover and round the crossing of the poles
   for (let k = 0; k < NP; k++) { const a = (k + 0.5) / NP * TAU, b = at(a, 0), top = [-(b[0]) * 0.16, H * 1.17, -(b[2]) * 0.16]; tube(wood, [[b[0] * 1.02, 0, b[2] * 1.02], [b[0] * 0.06, H * 0.96, b[2] * 0.06], top], () => 0.035, 5, 1); }
   for (let k = 0; k < 14; k++) {
     const a = door + 0.2 + (k / 13) * (TAU - 2 * door - 0.4), x = cos(a) * (R + 0.12), z = sin(a) * (R + 0.12);

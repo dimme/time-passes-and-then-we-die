@@ -47,7 +47,7 @@ export default {
   },
   build({ world, group }) {
     const T = shared(), std = (o) => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, ...o });
-    const blocks = masonry({ course: 64, len: [90, 170], joint: 0.5, jw: 3, vary: 0.22, seed: 4, bump: 4 }), fine = masonry({ course: 128, len: [180, 300], joint: 0.82, jw: 1.6, vary: 0.07, grain: 0.07, seed: 9, bump: 1.2 });
+    const blocks = masonry({ course: 64, len: [90, 170], joint: 0.42, jw: 3, vary: 0.24, seed: 4, bump: 5.5 }), fine = masonry({ course: 128, len: [180, 300], joint: 0.6, jw: 2.2, vary: 0.1, grain: 0.08, seed: 9, bump: 2.8 });
     const brick = masonry({ course: 16, len: [34, 40], joint: 0.8, jw: 1.5, vary: 0.2, grain: 0.3, seed: 6, bump: 2, stagger: 1 });
     const mats = {
       blocks: std({ map: blocks.map, normalMap: blocks.normalMap }), fine: std({ map: fine.map, normalMap: fine.normalMap, roughness: 0.7 }), brick: std({ map: brick.map, normalMap: brick.normalMap, normalScale: new THREE.Vector2(0.25, 0.25), roughness: 1 }),

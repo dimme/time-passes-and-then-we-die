@@ -36,7 +36,10 @@ function niched(S, m, a, b, y0, y1, o = {}) {
   for (let i = 0; i < n; i++) { const t = i * (bw + nw) + bw; prof.push([t, 0], [t, -dep], [t + nw / 3, -dep], [t + nw / 3, -1.7 * dep], [t + (2 * nw) / 3, -1.7 * dep], [t + (2 * nw) / 3, -dep], [t + nw, -dep], [t + nw, 0]); }
   prof.push([L, 0]);
   const W = (t, off) => [a[0] + tx * t + nx * off, a[1] + tz * t + nz * off], pts = prof.map(([t, off]) => W(t, off));
-  S.prism(m, pts, y0, y1, { open: true, col: o.col });
+  for (let i = 0, u = 0; i < prof.length - 1; i++) {   // the backs of the niches lie in shadow: darker the deeper they are
+    const d0 = Math.min(prof[i][1], prof[i + 1][1]), side = prof[i][1] !== prof[i + 1][1];
+    S.prism(m, [pts[i], pts[i + 1]], y0, y1, { open: true, u0: u, col: shade(o.col, side ? 0.7 : d0 < -1.2 * dep ? 0.58 : d0 < 0 ? 0.8 : 1) }); u += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+  }
   for (let i = 0; i < prof.length - 1; i++) if (prof[i + 1][0] - prof[i][0] > 1e-3) S.cap(m, [pts[i], pts[i + 1], W(prof[i + 1][0], -2 * dep), W(prof[i][0], -2 * dep)], y1, o.col);
 }
 /** A building whose four walls are niched and buttressed, with a flat roof. */
@@ -44,6 +47,11 @@ function nichedBlock(S, m, x, z, w, d, rot, y0, h, o = {}) {
   const C = rect(x, z, w, d, rot).reverse(), dep = o.depth || 0.35;
   for (let k = 0; k < 4; k++) niched(S, m, C[k], C[(k + 1) % 4], y0, y0 + h, o);
   S.cap('plaster', rect(x, z, w - dep * 3.9, d - dep * 3.9, rot), y0 + h - 0.02, o.roofCol || shade(o.col, 0.95));
+  // the niches stop short of the top: a plain band of wall closes them and stands a finger proud as a coping; a darker course at the foot
+  const bh = o.band ?? Math.min(1, h * 0.13), e = 0.04;
+  for (const [lx, lz, bw, bd] of [[0, d / 2 - dep + e, w + 2 * e, 2 * dep], [0, -(d / 2 - dep + e), w + 2 * e, 2 * dep], [w / 2 - dep + e, 0, 2 * dep, d + 2 * e], [-(w / 2 - dep + e), 0, 2 * dep, d + 2 * e]]) {
+    const p = local(x, z, rot, lx, lz); S.box(m, p[0], y0 + h - bh, p[1], bw, bh + 0.05, bd, rot, { col: shade(o.col, 0.97) });
+  }
 }
 /** A boat of bundled reeds, bow and stern drawn up to points: centred on (x, z), heading along rot, afloat at y. */
 function reedBoat(S, x, y, z, rot, len = 7, beam = 1.5) {
@@ -102,6 +110,10 @@ function build({ world, group }) {
   // the White Temple: 17.5 × 22.3 m, washed with gypsum, niches all round
   ST1.box('plaster', TC[0], 0, TC[1], 19.5, 0.5, 24.3, 0, { col: shade(WHITE, 0.9) });
   nichedBlock(ST1, 'plaster', TC[0], TC[1], 17.5, 22.3, 0, 0.5, 7, { col: WHITE, depth: 0.32 });
+  ST1.box('plaster', TC[0], 7.45, TC[1], 6.4, 2.0, 19.6, 0, { col: shade(WHITE, 0.98), batter: 0.08 });   // the long middle hall stands higher than the rooms on either side, lit from under its roof
+  ST1.box('plaster', TC[0], 9.42, TC[1], 6.7, 0.16, 19.9, 0, { col: shade(WHITE, 0.9) });
+  for (let k = -3; k <= 3; k++) for (const s of [-1, 1]) { const X = TC[0] + s * 3.21, z = TC[1] + k * 2.6;
+    ST1.quad('plain', [X, 8.35, z + s * 0.4], [X, 8.35, z - s * 0.4], [X, 9.0, z - s * 0.4], [X, 9.0, z + s * 0.4], DARK); }
   for (const [f, a] of [[1, 0], [2, 3]]) opening(ST1, TC[0], 0.5, TC[1], 17.5, 22.3, 0, f, a, 1.3, 3.4, 0, null, { out: 0.03 });
   for (let k = 0; k < 4; k++) pot(ST1, TC[0] + 12, 0, TC[1] - 4.5 + k * 3, 'pithos', shade(CLAY, 0.9), 1);
   ST1.box('plaster', TC[0] + 14, 0, TC[1], 1.6, 1.0, 1.2, 0, { col: shade(WHITE, 0.95) });   // an offering table
@@ -137,7 +149,7 @@ function build({ world, group }) {
     if (blocked(x, z, Math.max(w, d) / 2) || z > -16 || r() < 0.07) continue;
     const dist = Math.hypot(x - ROAD, z + 90), Sx = dist < 135 ? S : dist < 215 ? S2 : S3, from = dist < 135 ? -Infinity : dist < 215 ? Y(-3700) : Y(-3150), rot = (r() - 0.5) * 0.12;
     const nearRoad = Math.abs(x - ROAD) < 45 || dist < 70;
-    house(Sx, r, x, FLAT, z, w, d, h, rot, { m: r() < 0.75 ? 'brick' : 'plaster', col: shade(r() < 0.12 ? BUFF : MUD, 0.82 + r() * 0.3), footing: false, parapet: 0.45, beams: nearRoad, door: (r() * 4) | 0, windows: nearRoad ? 2 : 1, batter: 0.14 });
+    house(Sx, r, x, FLAT, z, w, d, h, rot, { m: r() < 0.75 ? 'brick' : 'plaster', col: shade(r() < 0.12 ? BUFF : MUD, 0.82 + r() * 0.3), footing: false, parapet: 0.45, beams: nearRoad, door: (r() * 4) | 0, windows: nearRoad ? 2 : 1, batter: 0.14, spouts: true, mat: true });
     solids.box(x, z, w, d, rot, from); homes.push({ x, z, w, d, h, rot, from, nearRoad });
     if (nearRoad && r() < 0.3) { const q = local(x, z, rot, w / 2 + 1, (r() - 0.5) * d * 0.4); ladder(Sx, q[0], FLAT, q[1], h + 0.5, rot + Math.PI); }
   }
@@ -153,6 +165,12 @@ function build({ world, group }) {
   const wallRun = (x0, z0, x1, z1) => {
     const horiz = z0 === z1, len = Math.hypot(x1 - x0, z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
     SW.box('brick', cx, -0.3, cz, horiz ? len : 5, WH + 0.3, horiz ? 5 : len, 0, { col: MUD, batter: 0.35, cap: 'plaster', capCol: shade(MUD, 1.05) });
+    SW.box('brick', cx, -0.3, cz, horiz ? len : 5.6, 1.7, horiz ? 5.6 : len, 0, { col: shade(MUD, 0.76) });   // the foot of the wall, dark and eaten back
+    for (let t = 5.5; t < len - 3; t += 5.5) {   // flat buttresses between the towers, their heads standing above the parapet
+      if ((t - 11) % 22 === 0) continue;
+      const x = horiz ? Math.min(x0, x1) + t : x0 + Math.sign(x0) * 2.75, z = horiz ? z0 + 2.75 : Math.min(z0, z1) + t;
+      SW.box('brick', x, -0.3, z, horiz ? 1.8 : 0.9, WH + 1.75, horiz ? 0.9 : 1.8, 0, { col: shade(MUD, 0.93 + ((t * 7) % 5) * 0.02), batter: 0.1 });
+    }
     SW.prism('brick', rect(cx, cz, horiz ? len - 0.5 : 4.2, horiz ? 4.2 : len - 0.5), WH, WH + 0.01, { col: MUD, cap: false });
     for (const side of [-1, 1]) SW.box('brick', horiz ? cx : cx + side * 2.0, WH, horiz ? cz + side * 2.0 : cz, horiz ? len - 0.6 : 0.6, 1.0, horiz ? 0.6 : len - 0.6, 0, { col: shade(MUD, 0.95) });
     solids.box(cx, cz, horiz ? len : 5, horiz ? 5 : len, 0, Y(-2950));
@@ -275,8 +293,23 @@ function build({ world, group }) {
   const CARTWAY = [[ROAD - 1.6, 112], [ROAD - 1.6, -62], [ROAD + 1.6, -66], [ROAD + 1.6, 112], [ROAD - 1.6, 112]], cartLp = loopOf(CARTWAY), carts = [];
   for (const phase of [0.1, 0.62]) {
     const g = new THREE.Group(), C = new Shape(); wheels.add(g);
-    C.box('wood', -0.2, 0.62, 0, 2.5, 0.12, 1.25, 0, { col: TIMBER }); for (const s of [-1, 1]) { C.beam('wood', [-0.2, 0.52, s * 0.72], [-0.2, 0.52, s * 0.8], 0.52, 0.52, 14, shade(TIMBER, 0.9)); C.box('wood', -0.2, 0.74, s * 0.6, 2.5, 0.42, 0.06, 0, { col: shade(TIMBER, 1.1) }); }
-    C.beam('wood', [-0.2, 0.52, -0.85], [-0.2, 0.52, 0.85], 0.06, 0.06, 5, TIMBER); C.beam('wood', [1.0, 0.6, 0], [3.9, 1.12, 0], 0.05, 0.05, 5, TIMBER); C.beam('wood', [3.85, 1.14, -0.75], [3.85, 1.14, 0.75], 0.05, 0.05, 5, TIMBER);
+    // a bed of planks on two long timbers, stake sides, wheels of three boards pegged together with battens, a pole and a yoke
+    const T2 = shade(TIMBER, 0.8), T3 = shade(TIMBER, 1.25);
+    for (let k = 0; k < 5; k++) C.box('wood', -0.2, 0.66, -0.5 + k * 0.25, 2.5, 0.07, 0.235, 0, { col: shade(TIMBER, 0.95 + (k % 2) * 0.2) });
+    for (const s of [-1, 1]) {
+      C.box('wood', -0.2, 0.56, s * 0.45, 2.7, 0.1, 0.1, 0, { col: T2 });
+      C.beam('wood', [-0.2, 0.52, s * 0.72], [-0.2, 0.52, s * 0.8], 0.52, 0.52, 16, shade(TIMBER, 0.9));   // the wheel
+      C.beam('wood', [-0.2, 0.52, s * 0.69], [-0.2, 0.52, s * 0.83], 0.53, 0.53, 16, shade(TIMBER, 0.6), false);   // its tyre of rawhide
+      C.beam('wood', [-0.2, 0.52, s * 0.66], [-0.2, 0.52, s * 0.93], 0.13, 0.1, 8, T2);   // the nave
+      C.beam('wood', [-0.2, 0.44, s * 0.9], [-0.2, 0.62, s * 0.9], 0.02, 0.02, 4, T3);   // the linchpin
+      for (const dx of [-0.24, 0.24]) C.box('wood', -0.2 + dx, 0.14, s * 0.815, 0.07, 0.76, 0.035, 0, { col: T3 });   // battens across the three boards
+      for (const dx of [-0.17, 0.17]) C.box('wood', -0.2 + dx, 0.03, s * 0.8, 0.012, 0.98, 0.012, 0, { col: shade(TIMBER, 0.35) });   // the joints between them
+      for (let k = 0; k < 5; k++) C.beam('wood', [-1.35 + k * 0.575, 0.7, s * 0.6], [-1.35 + k * 0.575, 1.22, s * 0.64], 0.028, 0.024, 4, TIMBER, false);   // stakes
+      C.beam('wood', [-1.42, 1.18, s * 0.64], [1.02, 1.18, s * 0.64], 0.027, 0.027, 4, T3); C.beam('wood', [-1.42, 0.95, s * 0.62], [1.02, 0.95, s * 0.62], 0.022, 0.022, 4, TIMBER, false);
+    }
+    C.box('wood', 1.02, 0.7, 0, 0.05, 0.55, 1.26, 0, { col: shade(TIMBER, 1.1) }); C.box('wood', -1.42, 0.7, 0, 0.05, 0.3, 1.26, 0, { col: TIMBER });   // head and tail boards
+    C.beam('wood', [-0.2, 0.52, -0.9], [-0.2, 0.52, 0.9], 0.06, 0.06, 6, T2); C.beam('wood', [-1.3, 0.56, 0], [1.6, 0.6, 0], 0.055, 0.055, 5, T2); C.beam('wood', [1.6, 0.6, 0], [3.9, 1.12, 0], 0.055, 0.045, 5, TIMBER);
+    C.beam('wood', [3.85, 1.14, -0.8], [3.85, 1.14, 0.8], 0.055, 0.055, 6, T3); for (const s of [-1, 1]) for (const dz of [0.42, 0.78]) C.beam('wood', [3.85, 1.14, s * dz], [3.87, 0.86, s * dz], 0.02, 0.02, 4, T2, false);   // the yoke and its pegs
     for (let k = 0; k < 6; k++) pot(C, -1 + (k % 3) * 0.75, 0.74, -0.3 + ((k / 3) | 0) * 0.6, 'jar', shade(CLAY, 0.8 + r() * 0.4), 0.8);
     C.mesh(g);
     const at = walkers.length; for (const side of [-1, 1]) walkers.push({ make: L.ox, lp: cartLp, speed: 0.8, phase, ahead: 0, side: side * 0.6, s: 0.92, u0: Y(-3200) });
