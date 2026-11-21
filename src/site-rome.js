@@ -17,13 +17,17 @@ function base(x, z) {
   let h = F + 22 * smooth((95 - capD(x, z)) / 50) + 24 * smooth((125 - palD(x, z)) / 50) + 12 * smooth((-z - 110) / 200);
   h += 3 * Math.sin(x * 0.019 + 1) * Math.cos(z * 0.016) * smooth((x - 660) / 120) + 130 * smooth((x - 800) / 260) * (0.6 + 0.4 * Math.sin(z * 0.005)) + 90 * smooth((Math.abs(z) - 760) / 300);
   h -= 4 * smooth((170 - d) / 100) * (d > 0 ? 1 : 0) + (d <= 0 ? 4 : 0); h += 55 * smooth((-d - 170) / 260);   // the low ground by the river; the Janiculum beyond it
-  const f = smooth((62 - Math.abs(d)) / 27); return h * (1 - f) - 5 * f;
+  const f = smooth((62 - Math.abs(d)) / 27); h = h * (1 - f) - 5 * f;
+  const ad = Math.abs(d), t = (x - T0[0]) * TU[0] + (z - T0[1]) * TU[1] - 520;
+  if (ad > 62.5 && ad < 100 && Math.abs(t) < 16) { const k = smooth((Math.abs(t) - 6) / 9), e = DECK - Math.max(0, ad - 67) * 0.08; h = Math.max(h, e * (1 - k) + h * k); }
+  return h;
 }
+const DECK = F - 2;   // the top of the bridge deck
 const hash = (i, j) => { const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return v - Math.floor(v); };
 const tint = (x, z) => (x > 480 && x < 780 ? 0.86 + 0.3 * hash(Math.floor(x / 44), Math.floor(z / 30)) : 1);
 const hex = (h) => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255], put = (o, c) => { o[0] = c[0]; o[1] = c[1]; o[2] = c[2]; }, mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const SKY = hex(0x3a84d6), HOR = hex(0xd6e0e4), GROUND = hex(0x80704e), WATER = hex(0x5a6a4a), FAR = hex(0x7a8060), DULL = hex(0xb8bcb8), WEEDY = hex(0x6f7446);
-const COL = { cx: 300, cz: 30, a: 94, b: 78 };
+const COL = { cx: 300, cz: 30, a: 94, b: 78 }, GATE = new Set([39, 40, 79, 0]);   // the ring segments either side of the passages on the long axis
 
 const events = [
   { y: -150, t: 'The Republic', h: 'A city of brick, timber and brown tufa, some 300,000 people. The Forum is market, law court and parliament at once; the senators meet in the Curia at its corner.', w: 'In 146 BCE Rome destroys Carthage and Corinth in the same year. Polybius, a Greek hostage, is explaining to his countrymen how it happened.' },
@@ -69,22 +73,36 @@ function insula(K, o) {
 /** A basilica: a long hall behind `storeys` of arcades on its +z side, a raised nave lit from above. */
 function basilica(K, o) {
   const { B, r } = K, { x, z, ry = 0, l, dp, storeys = 2, mat = 'marble', col = C.marble, ruin = 0 } = o, y = K.world.heightAt(x, z), n = Math.round(l / 5.2), bw = l / n, sh = 7.4, stone = ruin ? shade(col, 0.5) : col;
-  B.push(x, y, z, ry); B.slab(mat, shade(stone, 0.85), l + 2.4, 3.6, dp + 2.4, 0, -3, 0); B.slab(mat, stone, l + 1.2, 0.5, dp + 1.2, 0, 0.6, 0);
-  const st = ruin ? 1 : storeys, H = 1.1 + st * sh;
+  B.push(x, y, z, ry); B.slab(mat, shade(stone, 0.85), l + 2.4, 3.6, dp + 2.4, 0, -3, 0); B.slab(mat, stone, l + 1.2, 0.5, dp + 1.2, 0, 0.6, 0); B.box(mat, shade(stone, 0.85), l + 2.4, 0.3, 0.6, 0, 0, dp / 2 + 1.5);
+  const st = ruin ? 1 : storeys, H = 1.1 + st * sh, bays = [];
   for (let s = 0; s < st; s++) for (let i = 0; i < n; i++) {
-    if (ruin && r() < 0.3) continue; const bx = -l / 2 + (i + 0.5) * bw, yy = 1.1 + s * sh;
+    if (ruin && r() < 0.3) continue; const bx = -l / 2 + (i + 0.5) * bw, yy = 1.1 + s * sh; if (s === 0) bays.push(bx);
     B.geo(mat, stone, archGeo(bw, sh - 1, 1.3, bw * 0.62, (sh - 1) * 0.5), bx, yy, dp / 2 - 0.65); B.box(mat, stone, bw + 0.05, 1, 1.7, bx, yy + sh - 1, dp / 2 - 0.65);
     archRing(B, stone, bx, yy, dp / 2 - 0.65, 0, 1.3, bw * 0.62, (sh - 1) * 0.5, 0.42, 1); B.box(mat, stone, bw * 0.38 + 0.2, 0.3, 1.52, bx - bw / 2, yy + (sh - 1) * 0.5 - 0.3, dp / 2 - 0.65);   // wedge stones round the arch, an impost under its springing
     column(B, mat, stone, bx - bw / 2, yy, dp / 2 + 0.1, sh - 1, 0.8, s ? 'ionic' : 'tuscan', { lo: 1, ry: -PI / 2 });
   }
   const w0 = ruin ? shade(stone, 0.8) : C.stucco;
-  B.box('plaster', w0, l, H - 1.1, 0.8, 0, 1.1, -dp / 2 + 0.4); for (const e of [1, -1]) B.box('plaster', w0, 0.8, H - 1.1, dp, e * (l / 2 - 0.4), 1.1, 0); B.box('plaster', ruin ? C.soot : 0x6a5c4c, l - 2, H - 1.1, 0.5, 0, 1.1, dp / 2 - 5);
+  B.box('plaster', w0, l, H - 1.1, 0.8, 0, 1.1, -dp / 2 + 0.4); for (const e of [1, -1]) B.box('plaster', w0, 0.8, H - 1.1, dp, e * (l / 2 - 0.4), 1.1, 0); const q = rng(Math.round(x * 7 + z * 13) & 0xffff), inner = [dp / 2 - 5, -dp / 2 + 5], cd = st > 1 ? 1.1 : 0.9;
+  for (const iz of inner) { for (let i = 1; i < n; i++) column(B, mat, stone, -l / 2 + i * bw, 1.1, iz, H - 1.9, cd, ruin ? 'ionic' : st > 1 ? 'corinthian' : 'tuscan', { ry: PI / 2, frac: ruin ? 0.2 + q() * 0.6 : 1 }); if (!ruin) B.box(mat, stone, l - 1.6, 0.8, cd + 0.1, 0, H - 0.8, iz); }
+  const tx = -l / 2 + 0.8 + 3;   // the tribunal, where the magistrate sat
+  B.box(mat, shade(stone, 0.92), 6, 0.9, dp - 12, tx, 1.1, 0); for (const [j, hh] of [[0, 0.6], [1, 0.3]]) B.box(mat, stone, 0.6, hh, dp - 12, tx + 3.3 + j * 0.6, 1.1, 0);
+  if (!ruin) { B.box('wood', C.wood, 1.4, 1.1, 1.2, tx - 1.5, 2, 0); B.box('wood', C.door, 1.6, 0.1, 1.4, tx - 1.5, 2.6, 0); for (let k = 0; k < 6; k++) B.box('wood', C.oldWood, 4, 0.45, 0.5, -l / 2 + 14 + (k % 3) * (l - 24) / 2, 1.1, (k < 3 ? 1 : -1) * 3); B.ceil('coffer', C.stucco, l - 1.6, dp - 1.6, 0, H - 0.02, 0); }
   if (!ruin) {
     B.box('tile', C.tile, l + 0.6, 0.2, dp + 0.6, 0, H, 0); const nh = 5, nd = dp * 0.42; B.box('plaster', C.stucco, l - 8, nh, nd, 0, H + 0.2, 0);
     for (let i = 1; i < n - 1; i++) for (const e of [1, -1]) B.quad('window', 0xffffff, 1.9, 2.5, -l / 2 + (i + 0.5) * bw, H + 1.6, e * (nd / 2 + 0.02), e > 0 ? 0 : PI, [0.5, 0.5, 0, 0]);
     const p = 0.34, S = nd / 2 + 0.6, rh = S * Math.tan(p), sl = S / Math.cos(p) + 0.1; for (const e of [1, -1]) { B.geo('tile', C.tile, BOX, 0, H + 0.2 + nh + rh / 2 - 0.05, (e * S) / 2, 0, e * p, 0, l - 7, 0.16, sl, [l - 7, sl]); B.geo('plaster', C.stucco, gableGeo(nd, rh, 0.4), e * (l / 2 - 4.2), H + 0.2 + nh, 0); }
   } else for (let k = 0; k < 10; k++) B.box(mat, C.soot, 1 + r() * 3, 0.4 + r(), 0.6 + r(), (r() - 0.5) * l * 0.9, 1.1, (r() - 0.5) * dp * 0.7, r() * 3);
-  B.pop(); K.C.rect(x, z, l / 2 + 1.2, dp / 2 + 1.2, ry, ...B.span);
+  B.pop();
+  {   // collision: steps and floor, the piers of the arcade, the walls, the inner columns, the tribunal and the benches
+    const c = Math.cos(ry), s = Math.sin(ry), [y0, y1] = B.span, at = (lx, lz) => [x + c * lx + s * lz, z - s * lx + c * lz];
+    const rect = (lx, lz, hx, hz, top) => { const [px, pz] = at(lx, lz); if (top === undefined) K.C.rect(px, pz, hx, hz, ry, y0, y1); else K.C.platform(px, pz, hx, hz, y + top, y0, y1, ry); };
+    rect(0, 0, l / 2 + 1.2, dp / 2 + 1.2, 0.6); rect(0, 0, l / 2 + 0.6, dp / 2 + 0.6, 1.1); rect(0, dp / 2 + 1.5, l / 2 + 1.2, 0.3, 0.3);
+    const pw = bw * 0.19; for (const bx of bays) for (const e of [1, -1]) rect(bx + e * (bw / 2 - pw / 2), dp / 2 - 0.4, pw / 2 + 0.05, 0.95);
+    rect(0, -dp / 2 + 0.4, l / 2, 0.4); for (const e of [1, -1]) rect(e * (l / 2 - 0.4), 0, 0.4, dp / 2);
+    for (const iz of inner) for (let i = 1; i < n; i++) { const [px, pz] = at(-l / 2 + i * bw, iz); K.C.circle(px, pz, cd * 0.45, y0, y1); }
+    rect(tx, 0, 3, dp / 2 - 6, 2); rect(tx + 3.3, 0, 0.3, dp / 2 - 6, 1.7); rect(tx + 3.9, 0, 0.3, dp / 2 - 6, 1.4);
+    if (!ruin) { rect(tx - 1.5, 0, 0.7, 0.6); for (let k = 0; k < 6; k++) rect(-l / 2 + 14 + (k % 3) * (l - 24) / 2, (k < 3 ? 1 : -1) * 3, 2, 0.25); }
+  }
 }
 /** A triumphal arch across local x (people pass along z): one opening or three, columns on pedestals, an attic with gilded letters, a chariot on top. */
 function arch(K, o) {
@@ -111,7 +129,7 @@ function colosseum(K, tiers, done) {
       const p = pt(i), q = pt(i + 1), mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, w = Math.round(Math.hypot(q[0] - p[0], q[1] - p[1]) * 5) / 5 + 0.1, ry = toward(p[0], p[1], q[0], q[1]);
       if (k < 3) { B.geo('marble', tr, archGeo(w, h - 1.7, 2.6, 4.2, k ? 4.4 : 4.9, k ? 1.1 : 0), mx, y0, mz, ry); B.box('marble', shade(tr, 0.93), w + 0.1, 1.7, 3, mx, y0 + h - 1.7, mz, ry); column(B, 'marble', shade(tr, 1.08), p[0] + (p[0] - cx) * 0.012, y0, p[1] + (p[1] - cz) * 0.012, h - 1.7, 0.95, ORD[k], { lo: 1, ry: ry + PI / 2 }); archRing(B, shade(tr, 0.84), mx, y0, mz, ry + PI, 2.6, 4.2, k ? 4.4 : 4.9, 0.55, 1); B.box('marble', shade(tr, 0.9), 2.75, 0.35, 2.9, p[0], y0 + (k ? 4.4 : 4.9) - 0.35, p[1], ry); }
       else { B.box('marble', tr, w + 0.1, h, 2.2, mx, y0, mz, ry); B.box('marble', shade(tr, 0.9), 0.9, h - 1, 2.6, p[0], y0, p[1], ry); if (i % 2) B.box('wood', C.dark, 1.5, 1.7, 2.3, mx, y0 + 5, mz, ry); else B.geo('metal', C.bronze, BALL, mx + (mx - cx) * 0.012, y0 + 5.6, mz + (mz - cz) * 0.012, ry, 0, 0, 1.1, 1.1, 0.12); B.box('marble', tr, w + 0.3, 0.9, 3, mx, y0 + h - 0.9, mz, ry); for (const f of [0.3, 0.7]) { const X = p[0] + (q[0] - p[0]) * f, Zz = p[1] + (q[1] - p[1]) * f; B.box('marble', tr, 0.5, 0.7, 0.7, X + (X - cx) * 0.016, y0 + h - 3.7, Zz + (Zz - cz) * 0.016, ry); } if (done && i % 2 === 0) B.rod('wood', C.oldWood, [p[0], y0 + h - 3, p[1]], [p[0], y0 + h + 5, p[1]], 0.12, 5); }
-      const pi = pt(i, 0.9), qi = pt(i + 1, 0.9); B.slab('marble', shade(tr, 0.45), Math.hypot(qi[0] - pi[0], qi[1] - pi[1]) + 0.2, h, 1.2, (pi[0] + qi[0]) / 2, y0, (pi[1] + qi[1]) / 2, ry);
+      const pi = pt(i, 0.9), qi = pt(i + 1, 0.9), gate = k === 0 && GATE.has(i); B.slab('marble', shade(tr, 0.45), Math.hypot(qi[0] - pi[0], qi[1] - pi[1]) + 0.2, gate ? h - 3.6 : h, 1.2, (pi[0] + qi[0]) / 2, y0 + (gate ? 3.6 : 0), (pi[1] + qi[1]) / 2, ry);
     }
     y0 += h;
   }
@@ -119,10 +137,19 @@ function colosseum(K, tiers, done) {
   const top = Math.min(y0 - 3, 40), prof = [[0.47, 3.6], [0.58, 10], [0.58, 12], [0.72, 23], [0.72, 26], [0.88, 39]].filter(([, h]) => h <= top + 0.1), tris = [];
   if (prof.length) prof.push([0.9, prof[prof.length - 1][1]]);
   for (let i = 0; i < N; i++) for (let k = 0; k < prof.length - 1; k++) { const [s0, h0] = prof[k], [s1, h1] = prof[k + 1], A = pt(i, s0), Bq = pt(i + 1, s0), Cq = pt(i, s1), D = pt(i + 1, s1); tris.push([[A[0], h0, A[1]], [Cq[0], h1, Cq[1]], [Bq[0], h0, Bq[1]]], [[Bq[0], h0, Bq[1]], [Cq[0], h1, Cq[1]], [D[0], h1, D[1]]]); }
-  for (let i = 0; i < N; i++) { const A = pt(i, 0.47), Bq = pt(i + 1, 0.47); tris.push([[cx, 0.3, cz], [A[0], 0.3, A[1]], [Bq[0], 0.3, Bq[1]]], [[A[0], 0.3, A[1]], [A[0], 3.6, A[1]], [Bq[0], 0.3, Bq[1]]], [[Bq[0], 0.3, Bq[1]], [A[0], 3.6, A[1]], [Bq[0], 3.6, Bq[1]]]); }
+  for (let i = 0; i < N; i++) { const A = pt(i, 0.47), Bq = pt(i + 1, 0.47); tris.push([[cx, 0.3, cz], [A[0], 0.3, A[1]], [Bq[0], 0.3, Bq[1]]]); if (!GATE.has(i)) tris.push([[A[0], 0.3, A[1]], [A[0], 3.6, A[1]], [Bq[0], 0.3, Bq[1]]], [[Bq[0], 0.3, Bq[1]], [A[0], 3.6, A[1]], [Bq[0], 3.6, Bq[1]]]); }
   const g = new THREE.BufferGeometry(), P = [], Nn = [], Cc = [], sand = [0.6, 0.48, 0.3], seat = [0.62, 0.58, 0.5];
   for (const t of tris) { const u = new THREE.Vector3(t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]), v = new THREE.Vector3(t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]), nn = u.cross(v).normalize(); if (nn.y < 0) { nn.negate(); const s = t[1]; t[1] = t[2]; t[2] = s; } for (const q of t) { P.push(...q); Nn.push(nn.x, nn.y, nn.z); Cc.push(...(q[1] < 0.5 ? sand : seat)); } }
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(Nn, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(Cc, 3)); B.add('ashlar', g);
+  {   // the vault over the ring corridor of the ground storey, and the two passages on the long axis: walls, a vault, a paved floor
+    const V = [], h0 = TH[0] - 1.7;
+    for (let i = 0; i < N; i++) { const A = pt(i, 0.9), Bq = pt(i + 1, 0.9), Cq = pt(i, 1), D = pt(i + 1, 1); V.push([A, Cq, Bq], [Bq, Cq, D]); }
+    const gv = new THREE.BufferGeometry(), PV = [];
+    for (const t of V) { const [a, b2, c2] = t, ny = (b2[0] - a[0]) * (c2[1] - a[1]) - (b2[1] - a[1]) * (c2[0] - a[0]); for (const q of ny > 0 ? [a, b2, c2] : [a, c2, b2]) PV.push(q[0], h0, q[1]); }
+    gv.setAttribute('position', new THREE.Float32BufferAttribute(PV, 3)); gv.computeVertexNormals(); if (gv.attributes.normal.getY(0) > 0) { const p = gv.attributes.position.array; for (let k = 0; k < p.length; k += 9) for (let c = 0; c < 3; c++) { const t = p[k + 3 + c]; p[k + 3 + c] = p[k + 6 + c]; p[k + 6 + c] = t; } gv.computeVertexNormals(); }
+    B.add('ashlar', gv, shade(tr, 0.8));
+    for (const e of [1, -1]) { const xm = cx + e * a * 0.685, L = a * 0.43 + 1.2; for (const f of [1, -1]) B.box('marble', shade(tr, 0.7), L, 3.6, 0.6, xm, 0, cz + f * 2.6); B.box('marble', shade(tr, 0.75), L, 0.3, 5.8, xm, 3.3, cz); B.box('ashlar', C.basalt, L, 0.05, 4.6, xm, 0.27, cz); }
+  }
   B.pop();
   if (!done) {   // scaffolding round the newest storey, cranes on the rim
     for (let i = 0; i < N; i += 2) { const p = pt(i, 1.03), q = pt(i + 1, 1.03); scaffold(K, [q[0], q[1]], [p[0], p[1]], Math.min(y0, 12), y + Math.max(0, y0 - 12), 1.2); }
@@ -199,7 +226,9 @@ function build({ world, group }) {
   B.when(315, Infinity); arch(K, { x: 196, z: 84, ry: 0.5, w: 25.7, h: 21, t: 7.4, triple: 1, shaft: C.ochre });   // Constantine
   // Venus and Roma, the largest temple in the city
   B.when(121, 135); B.box('ashlar', C.travertine, 66, 3, 40, 150, F - 1, -58); scaffold(K, [118, -77], [182, -77], 8, F + 2); for (let k = 0; k < 8; k++) column(B, 'marble', C.marble, 122 + k * 8, F + 2, -74, 13, 1.5, 'corinthian', { frac: 0.3 + r() * 0.5 }); CB.rect(150, -58, 33, 20, 0, 121, 135);
-  B.when(135, Infinity); B.box('ashlar', C.travertine, 66, 2.4, 40, 150, F - 0.6, -58); temple(K, { x: 150, z: -58, w: 27, l: 54, nf: 8, ns: 16, colH: 13, d: 1.45, order: 'corinthian', col: C.marble, roofCol: C.gold, paint: 'roman', steps: 3, y: F + 1.8 });
+  B.when(135, Infinity); B.box('ashlar', C.travertine, 66, 2.4, 40, 150, F - 0.6, -58); CB.platform(150, -58, 33, 20, F + 1.8, 135);
+  for (let k = 0; k < 6; k++) { B.box('ashlar', C.travertine, 0.6, 2.4 - 0.3 * (k + 1), 24, 116.7 - k * 0.6, F - 0.6, -58); CB.platform(116.7 - k * 0.6, -58, 0.3, 12, F + 1.8 - 0.3 * (k + 1), 135); }
+  temple(K, { x: 150, z: -58, w: 27, l: 54, nf: 8, ns: 16, colH: 13, d: 1.45, order: 'corinthian', col: C.marble, roofCol: C.gold, paint: 'roman', steps: 3, y: F + 1.8 });
   // the Basilica of Maxentius: three vaults, each as high as a ten-storey house
   const yard = [64, -70];
   B.when(306, 312); B.box('brick', C.brick, 80, 9, 3, 75, F, -93); scaffold(K, [115, -91], [35, -91], 12, F); crane(K, 60, F, -75, 0.4, 13, 3);
@@ -215,7 +244,14 @@ function build({ world, group }) {
 
   // ------------------------------------------------------------------ the Colosseum, the Colossus beside it
   for (const [y0, y1, tiers] of [[72, 75, 1], [75, 78, 2], [78, 80, 3], [80, Infinity, 4]]) { B.when(y0, y1); colosseum(K, tiers, tiers === 4); }
-  for (const dx of [-16, 0, 16]) CB.circle(COL.cx + dx, COL.cz, 79.5, 72);
+  {   // the piers of the outer arcade, the wall round the corridor, the passages, and the podium wall round the arena
+    const { cx, cz, a, b } = COL, N = 80, pt = (i, s) => { const th = (i / N) * 6.2832; return [cx + Math.cos(th) * a * s, cz + Math.sin(th) * b * s]; };
+    for (let i = 0; i < N; i++) {
+      const p = pt(i, 1); CB.circle(p[0], p[1], 1.35, 72);
+      for (const [sc, th] of [[0.9, 0.6], [0.47, 0.4]]) { if (GATE.has(i)) continue; const u = pt(i, sc), v = pt(i + 1, sc); CB.rect((u[0] + v[0]) / 2, (u[1] + v[1]) / 2, Math.hypot(v[0] - u[0], v[1] - u[1]) / 2 + 0.15, th, toward(u[0], u[1], v[0], v[1]), 72); }
+    }
+    for (const e of [1, -1]) for (const f of [1, -1]) CB.rect(cx + e * a * 0.685, cz + f * 2.6, a * 0.215 + 0.6, 0.3, 0, 72);
+  }
   B.when(72, 80); for (let i = 0; i < 24; i++) B.box('marble', C.travertine, 1.4 + r(), 0.8, 1 + r() * 0.5, 176 + r() * 24, F, -22 + r() * 60, r() * 3);
   crew(188, 6, 72, 80, 12, 14); walkers(['roman'], 'carry', [[176, -20], [196, 30], [200, 60]], 4, 72, 80); for (let i = 0; i < 6; i++) add('roman', 'haul', 0, 0, 0, 72, 80, { path: [[150, 6 + (i % 2) * 1.1], [196, 12 + (i % 2) * 1.1]], phase: 0.2 + Math.floor(i / 2) * 0.013, speed: 0.6 });
   add('toga', 'point', 172, 30, 0.2, 72, 80); add('toga', 'talk', 173.5, 31.4, 3.4, 72, 80);
@@ -257,7 +293,7 @@ function build({ world, group }) {
   for (let x = 200; x <= 440; x += 33) lot(x, -88, 24, 18, 0);
   for (let x = 110; x <= 440; x += 33) for (const z of [186, 220, 254, 288]) lot(x + (r() - 0.5) * 3, z, 23 + r() * 3, 20, r() < 0.5 ? 0 : PI);
   for (let x = 366; x <= 440; x += 33) for (const z of [-20, 14, 48, 82, 116]) lot(x, z, 24, 20, PI / 2);
-  for (let t = 150; t <= 700; t += 36) for (const d of [-96, -130, -164]) { const [x, z] = bank(t, d); blocks.a.push({ x, z, ry: Math.atan2(TU[0], TU[1]) + PI / 2, w: 22, dp: 18, floors: 2, col: tone(C.ochre, r, 0.1), roofCol: C.tileOld, yr: 1 }); }
+  for (let t = 150; t <= 700; t += 36) for (const d of [-96, -130, -164]) { const [x, z] = bank(t, d), col = tone(C.ochre, r, 0.1); if (t === 510 && d === -96) continue; blocks.a.push({ x, z, ry: Math.atan2(TU[0], TU[1]) + PI / 2, w: 22, dp: 18, floors: 2, col, roofCol: C.tileOld, yr: 1 }); }   // (one block left out: the road from the bridge runs there)
   for (const [list, y0, y1, ruin] of [[blocks.a, -150, 64], [blocks.b, 64, 410], [blocks.c, 64, 455], [blocks.d, 64, Infinity], [blocks.b, 410, Infinity, 1], [blocks.c, 455, Infinity, 1]]) { B.when(y0, y1); for (const o of list) insula(K, { ...o, ruin }); }
   B.when(64, Infinity); for (const o of blocks.a) if (o.yr) insula(K, { ...o, floors: 3, col: C.brick });
   // the Argiletum: shops on both sides, a street fountain, the bakers' yard behind
@@ -288,7 +324,14 @@ function build({ world, group }) {
   // ------------------------------------------------------------------ the Tiber: the stone bridge, the wharf, the round temple
   const bry = Math.atan2(TU[0], TU[1]),   // the deck runs across the stream, bank to bank
   [bx, bz] = bank(520, 0), deck = F - 2.5;
-  B.when(-150, -142); B.push(bx, 0, bz, bry); for (let k = -2; k <= 2; k++) B.box('ashlar', C.tufa, 6, deck + 6, 9, k * 22, -7, 0); B.box('wood', C.oldWood, 124, 0.5, 7, 0, deck - 0.5, 0); for (const e of [1, -1]) B.box('wood', C.wood, 124, 1, 0.2, 0, deck, e * 3.4); B.pop();
+  B.when(-150, -142); B.push(bx, 0, bz, bry); for (let k = -2; k <= 2; k++) B.box('ashlar', C.tufa, 6, deck + 6.5, 9, k * 22, -7, 0); B.box('wood', C.oldWood, 134, 1, 7, 0, deck - 0.5, 0); for (const e of [1, -1]) B.box('wood', C.wood, 134, 1, 0.2, 0, deck + 0.5, e * 3.4); for (const e of [1, -1]) B.box('ashlar', C.tufa, 6.4, deck + 6, 10, e * 66, -7, 0); B.pop();
+  const bridgeLoop = [];   // a cart goes over and back (its horse is added with the other beasts below)
+  { const c = Math.cos(bry), sn = Math.sin(bry), at = (lx, lz) => [bx + c * lx + sn * lz, bz - sn * lx + c * lz];
+    for (const [y0, y1, hz, rz] of [[-150, -142, 3.3, 3.4], [-142, Infinity, 4.25, 4.5]]) { CB.platform(bx, bz, 67, hz, DECK, y0, y1, bry, true); for (const e of [1, -1]) { const [px, pz] = at(0, e * rz); CB.rect(px, pz, 67, 0.25, bry, y0, y1); } }
+    B.when(); road(B, world, 'flag', [bank(520, -66), bank(520, -104)], 7, C.basalt, 0.05, 1);   // the road on the far bank, up the embankment to the deck
+    const lane = (o, d0, d1) => [bank(520 + o, d0), bank(520 + o, d1)];
+    walkers(['roman', 'roman-f', 'toga'], 'walk', [...lane(-1.6, -100, 104), ...lane(1.6, 104, -100), bank(518.4, -100)], 7);
+    bridgeLoop.push(...lane(-2, -98, 104), ...lane(2, 104, -98), bank(518, -98)); add('roman', 'herd', 0, 0, 0, undefined, undefined, { path: bridgeLoop, phase: 0.3 + 5.4 / loopOf(bridgeLoop).L, speed: 1.1 }); }
   B.when(-142, Infinity); B.push(bx, 0, bz, bry); for (let k = -2.5; k <= 2.5; k++) { B.geo('ashlar', C.tufa, archGeo(22, deck + 1, 8.5, 16, 0.4), k * 22, -1, 0); archRing(B, C.travertine, k * 22, -1, 0, 0, 8.5, 16, 0.4, 1.2); } for (let k = -3; k <= 3; k++) B.box('ashlar', C.travertine, 6.4, deck + 6, 10, k * 22, -7, 0); B.box('ashlar', C.travertine, 134, 0.5, 9.5, 0, deck, 0); for (const e of [1, -1]) B.box('ashlar', C.travertine, 134, 1.1, 0.5, 0, deck + 0.5, e * 4.5); B.pop();
   B.when(); const wharf = bank(455, 60), wa = Math.atan2(-TU[1], TU[0]);
   B.push(wharf[0], 0, wharf[1], wa); B.box('ashlar', C.tufa, 80, 9.6, 5, 0, -8, 0); for (let k = -3; k <= 3; k++) B.box('ashlar', C.travertine, 0.8, 0.9, 0.8, k * 11, 1.6, 1.5);
@@ -310,7 +353,8 @@ function build({ world, group }) {
   const FARM = [574, 62]; house2(K, FARM[0], FARM[1]);
   function house2(Kk, x, z) { const y = H(x, z); B.push(x, y, z, 0); B.box('ashlar', C.tufa, 20.4, 3, 12.4, 0, -2.5, 0); B.box('plaster', C.stucco, 20, 4.2, 12, 0, 0.5, 0); const p = 0.32, S = 6.6, rh = S * Math.tan(p), sl = S / Math.cos(p); for (const e of [1, -1]) { B.geo('tile', C.tile, BOX, 0, 4.7 + rh / 2, (e * S) / 2, 0, e * p, 0, 21, 0.15, sl, [21, sl]); B.geo('plaster', C.stucco, gableGeo(12, rh, 0.4), e * 9.8, 4.7, 0); } B.box('wood', C.door, 1.4, 2.4, 0.1, -3, 0.5, 6.02); for (const k of [3, 7]) B.box('wood', C.dark, 0.7, 0.7, 0.08, k, 2.6, 6.02); B.box('plaster', C.stucco, 14, 2, 0.5, 17, 0, 6); B.box('plaster', C.stucco, 0.5, 2, 14, 24, 0, -1); for (let k = 0; k < 4; k++) B.box('plaster', 0xc8a850, 2.2, 1.6 - (k % 2) * 0.4, 2.2, 13 + (k % 2) * 3, 0, -3 - Math.floor(k / 2) * 3); B.pop(); Kk.C.rect(x, z, 10.3, 6.3); }
   B.when(); drape(B, world, 'earth', 500, 16, 640, 132, 6, (x, z) => (x > 560 && x < 600 && z > 46 && z < 80 ? null : [0.05, Math.floor((z - 16) / 14.5) % 2 ? shade(0x7a6040, 0.9 + 0.2 * hash(Math.floor(x / 3), 3)) : 0xb8a058]));
-  const beasts = new Beasts(world, group);
+  const ground = Object.create(world); ground.heightAt = (x, z) => Math.max(world.heightAt(x, z), CB.floorAt(x, z, true));   // the ground people and beasts stand on: the bridge decks too
+  const beasts = new Beasts(ground, group); beasts.trail(M.horse, bridgeLoop, 1.1, 0.3, -Infinity, Infinity, { scale: 0.84, tow: cart('jars', 9) });
   for (const [z, ph] of [[22, 0], [34, 0.5]]) { const loop = [[506, z], [634, z], [634, z + 3], [506, z + 3], [506, z]]; add('roman', 'plough', 0, 0, 0, undefined, undefined, { path: loop, phase: ph, speed: 0.85 }); beasts.trail(M.horse, loop, 0.85, ph, -Infinity, Infinity, { lead: 3.4, scale: 0.8 }); }
   for (let i = 0; i < 4; i++) add('roman', 'hoe', 512 + i * 9 + r() * 3, 92 + (i % 2) * 2.4, r() * 0.6);
   add('roman', 'sow', 0, 0, 0, undefined, undefined, { path: [[508, 108], [632, 108], [632, 111], [508, 111], [508, 108]] });
@@ -346,9 +390,9 @@ function build({ world, group }) {
   beasts.circle(M.horse, 2, -Infinity, Infinity, { cx: 600, cz: -110, spread: 30, R: [8, 20], speed: 0.9, scale: [0.8, 0.92] });
 
   B.when().build(group);
-  const folk = actors(world, A, { seed: 9 }); group.add(...folk.meshes);
+  const folk = actors(ground, A, { seed: 9 }); group.add(...folk.meshes);
   if (typeof location !== 'undefined' && location.search.includes('audit')) { audit('rome', A.filter((a) => !a.ok).map((a) => ({ yr: 200, ...a })), CB, world, 0, uToYear); console.warn('[audit rome] triangles ' + B.triangles); }
-  return { update(u, t, env, camera, view) { const year = uToYear(u); CB.year = year; B.update(year); grove.update(year); beasts.update(year, t); folk.update(u, t, view); }, collide: (pos) => CB.collide(pos) };
+  return { update(u, t, env, camera, view) { const year = uToYear(u); CB.year = year; B.update(year); grove.update(year); beasts.update(year, t); folk.update(u, t, view); }, collide: (pos) => CB.collide(pos), floorAt: (x, z) => CB.floorAt(x, z) };
 }
 
 export default {

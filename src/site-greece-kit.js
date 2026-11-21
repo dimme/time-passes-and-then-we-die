@@ -369,18 +369,23 @@ export class Blocks {
   constructor() { this.list = []; this.year = 0; }
   rect(x, z, hx, hz, ry = 0, y0 = -Infinity, y1 = Infinity) { const b = { x, z, hx, hz, c: Math.cos(ry), s: Math.sin(ry), y0, y1, R: Math.hypot(hx, hz) + 1 }; this.list.push(b); return b; }
   /** A block with a walkable top at height `top`: it stops you from below, and once you are up on it you walk on it. */
-  platform(x, z, hx, hz, top, y0 = -Infinity, y1 = Infinity) { this.rect(x, z, hx, hz, 0, y0, y1).top = top; }
-  /** The highest walkable top under (x, z) this year, or −Infinity. */
-  floorAt(x, z) {
+  platform(x, z, hx, hz, top, y0 = -Infinity, y1 = Infinity, ry = 0, folk = false) { const b = this.rect(x, z, hx, hz, ry, y0, y1); b.top = top; if (folk) (this.folk || (this.folk = [])).push(b); return b; }
+  /** A walkable surface of any shape: fn(x, z) gives its height or −Infinity, within R of (x, z); stop(pos, feet) may push the visitor back off an edge too high to step onto. */
+  surface(x, z, R, fn, y0 = -Infinity, y1 = Infinity, stop = null) { this.list.push({ x, z, r: 0, hx: R, hz: R, c: 1, s: 0, R, fn, stop, y0, y1, top: -Infinity }); }
+  /** The highest walkable top under (x, z) this year, or −Infinity. folk: only the decks people walk on (bridges). */
+  floorAt(x, z, folk = false) {
     let h = -Infinity;
-    for (const b of this.list) if (b.top !== undefined && this.year >= b.y0 && this.year < b.y1 && Math.abs(x - b.x) < b.hx && Math.abs(z - b.z) < b.hz && b.top > h) h = b.top;
+    for (const b of folk ? this.folk || [] : this.list) {
+      if (b.top === undefined || this.year < b.y0 || this.year >= b.y1) continue; const dx = x - b.x, dz = z - b.z; if (Math.abs(dx) > b.R || Math.abs(dz) > b.R) continue;
+      if (b.fn) { const t = b.fn(x, z); if (t > h) h = t; } else if (b.top > h && Math.abs(dx * b.c - dz * b.s) < b.hx && Math.abs(dx * b.s + dz * b.c) < b.hz) h = b.top;
+    }
     return h;
   }
   circle(x, z, r, y0 = -Infinity, y1 = Infinity) { this.list.push({ x, z, r, y0, y1, R: r + 1 }); }
   /** Is (x, z) inside something standing in `year`? (pad widens every footprint.) */
   inside(x, z, year, pad = 0) {
     for (const b of this.list) {
-      if (year < b.y0 || year >= b.y1) continue; const dx = x - b.x, dz = z - b.z; if (Math.abs(dx) > b.R + pad || Math.abs(dz) > b.R + pad) continue;
+      if (year < b.y0 || year >= b.y1 || b.fn) continue; const dx = x - b.x, dz = z - b.z; if (Math.abs(dx) > b.R + pad || Math.abs(dz) > b.R + pad) continue;
       if (b.r) { if (dx * dx + dz * dz < (b.r + pad) ** 2) return b; } else if (Math.abs(dx * b.c - dz * b.s) < b.hx + pad && Math.abs(dx * b.s + dz * b.c) < b.hz + pad) return b;
     }
     return null;
@@ -388,6 +393,7 @@ export class Blocks {
   collide(pos, r0 = 0.6) {
     for (const b of this.list) {
       if (this.year < b.y0 || this.year >= b.y1) continue;
+      if (b.fn) { if (b.stop && Math.abs(pos.x - b.x) < b.R && Math.abs(pos.z - b.z) < b.R && b.fn(pos.x, pos.z) > pos.y - 1.7 + 0.6) b.stop(pos); continue; }
       if (b.top !== undefined && pos.y - 1.7 > b.top - 0.6) continue;   // already up on it, or a step low enough to climb
       const rad = b.top !== undefined ? 0.1 : r0, dx = pos.x - b.x, dz = pos.z - b.z; if (Math.abs(dx) > b.R || Math.abs(dz) > b.R) continue;
       if (b.r) { const d = Math.hypot(dx, dz), R = b.r + rad; if (d < R && d > 1e-4) { pos.x = b.x + (dx / d) * R; pos.z = b.z + (dz / d) * R; } continue; }
@@ -448,7 +454,13 @@ export function temple(K, o) {
     B.slab(mat, wall, wt, ch, 2 * cz, xb, Y, 0); B.slab(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, cz - wt / 2); B.slab(mat, wall, xf - xb, ch, wt, (xf + xb) / 2, Y, -cz + wt / 2);
     for (const e of [1, -1]) B.slab(mat, wall, wt, ch, cz - dw / 2, xf, Y, e * (cz + dw / 2) / 2);
     if (ch > dh + 0.2) B.box(mat, wall, wt, ch - dh, dw, xf, Y + dh, 0);
-    if (stage >= 1 && !ruin) B.geo('bronzedoor', greek ? 0xe8d8b0 : 0xd4c09a, BOX, xf - 0.1, Y, 0, 0, 0, 0, 0.14, dh, dw, [0.5, 1, 0.5, 0]);   // bronze leaves with panels and bosses
+    if (stage >= 1 && !ruin && o.shut) B.geo('bronzedoor', greek ? 0xe8d8b0 : 0xd4c09a, BOX, xf - 0.1, Y, 0, 0, 0, 0, 0.14, dh, dw, [0.5, 1, 0.5, 0]);   // bronze leaves with panels and bosses
+    else if (stage >= 1 && !ruin) {   // the leaves stand open, folded back inside against the jambs; the room beyond: a table for offerings, two bronze lampstands, a darker floor
+      for (const e of [1, -1]) B.geo('bronzedoor', greek ? 0xe8d8b0 : 0xd4c09a, BOX, xf - wt / 2 - dw / 4, Y, e * (dw / 2 - 0.1), Math.PI / 2, 0, 0, 0.14, dh, dw / 2, [0.25, 1, 0.25, 0]);
+      const L = xf - xb - wt; if (L > 4) { const tx = xb + wt / 2 + L * 0.62; B.box(mat, shade(stone, 0.9), 1.3, 0.9, 0.8, tx, Y, 0); B.box('metal', C.gold, 0.5, 0.08, 0.3, tx, Y + 0.9, 0);
+        for (const e of [1, -1]) { B.rod('metal', C.bronze, [tx + 0.6, Y, e * Math.min(cz - 1.4, 2.2)], [tx + 0.6, Y + 1.9, e * Math.min(cz - 1.4, 2.2)], 0.05, 5); B.cyl('metal', C.bronze, 0.28, 0.12, 0.18, tx + 0.6, Y + 1.9, e * Math.min(cz - 1.4, 2.2), 8); B.geo('glow', 0xffd080, BALL, tx + 0.6, Y + 2.14, e * Math.min(cz - 1.4, 2.2), 0, 0, 0, 0.1, 0.16, 0.1); } }
+      B.box(mat, shade(stone, 0.8), xf - xb - wt, 0.02, 2 * cz - 2 * wt, (xf + xb) / 2, Y, 0);
+    }
     if (greek && stage >= 1 && !burnt) frame(B, mat, C.blue, xb, xf, cz - wt / 2, Y + ch - d * 0.5, d * 0.4, wt + 0.06);
     if (o.engaged) for (let j = 0; j * sz <= xf - xb - 0.5; j++) for (const e of [1, -1]) column(B, mat, stone, xb + j * sz, Y, e * cz, colH, d, order, { lo: 1, ry: Math.PI / 2 });
   }
@@ -490,9 +502,34 @@ export function temple(K, o) {
     B.rod('tile', shade(roofCol, 0.85), [xc - L / 2, yR + rh + 0.2, 0], [xc + L / 2, yR + rh + 0.2, 0], 0.16, 6);
   } else if (ruin && up) for (let k = 0; k < 6; k++) B.box(mat, shade(stone, 0.7), 1 + r() * 2, 0.5 + r() * 0.6, 0.8 + r(), (r() - 0.5) * l * 0.8, Y, (r() - 0.5) * w * 0.7, r() * 3);
   B.pop();
-  const ext = tread * steps + 0.3 + (podium ? 0.2 : 0);
-  if (!o.pass) K.C.rect(x, z, l / 2 + ext, w / 2 + ext, ry, ...B.span);
-  if (podium) { const n = Math.ceil(podium / 0.24) * 0.36; K.C.rect(x + Math.cos(ry) * (l / 2 + n / 2), z - Math.sin(ry) * (l / 2 + n / 2), n / 2, w / 2, ry, ...B.span); }
+  if (o.solid) {   // the old way: one block, nobody goes up
+    const ext = tread * steps + 0.3 + (podium ? 0.2 : 0); K.C.rect(x, z, l / 2 + ext, w / 2 + ext, ry, ...B.span);
+    if (podium) { const n = Math.ceil(podium / 0.24) * 0.36; K.C.rect(x + Math.cos(ry) * (l / 2 + n / 2), z - Math.sin(ry) * (l / 2 + n / 2), n / 2, w / 2, ry, ...B.span); }
+  } else if (!o.pass) {   // the visitor climbs the podium stair or the steps, walks between the columns and in through the door of the cella
+    const c = Math.cos(ry), s = Math.sin(ry), [y0, y1] = B.span, at = (lx, lz) => [x + c * lx + s * lz, z - s * lx + c * lz];
+    const plat = (lx, lz, hx, hz, top) => { const [px, pz] = at(lx, lz); K.C.platform(px, pz, hx, hz, y + top, y0, y1, ry); };
+    const wall = (lx, lz, hx, hz) => { const [px, pz] = at(lx, lz); K.C.rect(px, pz, hx, hz, ry, y0, y1); };
+    let Y0 = 0;
+    if (podium) {
+      const n = Math.ceil(podium / 0.24), run = 0.36, sw = w * (o.stairW || 0.72); Y0 = podium; plat(0, 0, l / 2 + 0.2, w / 2 + 0.2, podium);
+      for (let k = 0; k < n; k++) plat(l / 2 + (n - k - 0.5) * run, 0, run / 2, sw / 2, ((k + 1) * podium) / n);
+      for (const e of [1, -1]) plat(l / 2 + (n * run) / 2, e * (sw / 2 + (w - sw) / 4), (n * run) / 2, (w - sw) / 4, podium);
+    }
+    for (let i = 0; i < steps; i++) { const e = 2 * tread * (steps - 1 - i); plat(0, 0, (l + e) / 2, (w + e) / 2, Y0 + (i + 1) * sH); }
+    for (const [cx, cz] of cols) { const [px, pz] = at(cx, cz); K.C.circle(px, pz, d * 0.42, y0, y1); }
+    if (o.cella !== false) {
+      const wt = 0.8, dw = Math.min(cz * 0.8, 3.4), shut = o.shut && stage >= 1 && !ruin;
+      wall(xb, 0, wt / 2, cz); for (const e of [1, -1]) wall((xf + xb) / 2, e * (cz - wt / 2), (xf - xb) / 2, wt / 2);
+      if (shut) wall(xf, 0, wt / 2, cz);
+      else for (const e of [1, -1]) { wall(xf, (e * (cz + dw / 2)) / 2, wt / 2, (cz - dw / 2) / 2); if (stage >= 1 && !ruin) wall(xf - wt / 2 - dw / 4, e * (dw / 2 - 0.1), dw / 4, 0.1); }
+      const L = xf - xb - wt;
+      if (!shut && stage >= 1 && !ruin && L > 4) {
+        const tx = xb + wt / 2 + L * 0.62; wall(tx, 0, 0.7, 0.45);
+        const ih = o.idol?.h ?? Math.min(ch * 0.42, cz * 1.1, 4.2), k = ih / 1.75, half = 0.5 * k + 0.3, sx = xb + wt / 2 + half + 0.6;
+        if (half < cz - wt - 0.5 && sx + half < tx - 1.6) { const [px, pz] = at(sx, 0); statue(K, px, y + Y, pz, ry, ih, { base: o.idol?.base ?? Math.max(0.6, ih * 0.22), col: o.idol?.col ?? (burnt ? C.soot : greek ? C.gold : C.bronze), robe: o.idol?.robe, spear: 1, shield: greek ? 1 : 0, baseCol: shade(stone, 0.85) }); }
+      }
+    }
+  }
   return { top: y + Y, yE: y + Y + colH, X, Z };
 }
 const BALL = new THREE.SphereGeometry(1, 8, 6);
@@ -529,7 +566,15 @@ export function stoa(K, o) {
   const p = 0.3, S = dp / 2 + 0.5, rh = S * Math.tan(p), sl = S / Math.cos(p) + 0.2;
   for (const e of [1, -1]) { B.geo('tile', roofCol, BOX, 0, yR + rh / 2, (e * S) / 2, 0, e * p, 0, l + 1, 0.18, sl, [l + 1, sl]); B.geo('plaster', wall, gableGeo(dp, rh, 0.6), e * (l / 2 - 0.3), yR, 0); }
   B.box('wood', C.oldWood, l, 0.25, dp - 1, 0, yR - 0.25, 0);
-  B.pop(); K.C.rect(x, z, l / 2 + 0.6, dp / 2 + 0.6, ry, ...B.span);
+  B.pop();
+  {   // walk up the steps and in between the columns: the back wall and the end walls hold you in
+    const c = Math.cos(ry), s = Math.sin(ry), [y0, y1] = B.span, at = (lx, lz) => [x + c * lx + s * lz, z - s * lx + c * lz];
+    const rect = (lx, lz, hx, hz, top) => { const [px, pz] = at(lx, lz); if (top === undefined) K.C.rect(px, pz, hx, hz, ry, y0, y1); else K.C.platform(px, pz, hx, hz, y + top, y0, y1, ry); };
+    for (let i = 0; i < steps; i++) rect(0, 0, (l + (steps - 1 - i) * 0.8) / 2, (dp + (steps - 1 - i) * 0.8) / 2, (i + 1) * sH);
+    rect(0, -dp / 2 + 0.3, l / 2, 0.3); for (const e of [1, -1]) rect(e * (l / 2 - 0.3), o.open ? -dp / 4 : 0, 0.3, (dp * (o.open ? 0.5 : 1) - 0.6) / 2);
+    for (let i = 0; i < n; i++) { const [px, pz] = at(-xs + (i * 2 * xs) / (n - 1), zf); K.C.circle(px, pz, d * 0.42, y0, y1); }
+    if (o.inner) for (let i = 1; i < n - 1; i += 2) { const [px, pz] = at(-xs + (i * 2 * xs) / (n - 1), 0); K.C.circle(px, pz, d * 0.4, y0, y1); }
+  }
 }
 
 // =====================================================================================
