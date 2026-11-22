@@ -3,6 +3,7 @@
 // "events" (birds, roars, bells, horns …) each have a loudness curve over the timeline.
 import { yearToU, START } from './timeline.js';
 import { smooth } from './util.js';
+import { placeSounds } from './audio-places.js';
 
 const Y = yearToU, FADE = 0.006;
 /** [fromYear, toYear, level] spans → function of slider position returning 0..1 */
@@ -13,7 +14,9 @@ function curve(...spans) {
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 export class Sound {
-  constructor() { this.ctx = null; this.muted = false; this.beds = []; this.events = []; this.t = 0; }
+  constructor() { this.ctx = null; this.muted = false; this.beds = []; this.events = []; this.t = 0; this.place = 'home'; this.own = new Set(); this.tag = null; }
+  /** Which place is on screen: one with a soundscape of its own replaces the timeline's general sounds. */
+  setPlace(id) { this.place = id; }
 
   /** Must be called from a user gesture. */
   start() {
@@ -36,7 +39,7 @@ export class Sound {
       const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
       const g = ctx.createGain(); g.gain.value = 0;
       src.connect(f); f.connect(g); g.connect(this.master); src.start();
-      this.beds.push({ g, f, freq, level, max, wobble });
+      this.beds.push({ g, f, freq, level, max, wobble, place: this.tag });
       return g;
     };
     const toneBed = (freqs, type, lp, level, max) => {
@@ -79,7 +82,7 @@ export class Sound {
     toneBed([220, 277.2, 329.6, 440, 659.3], 'sine', 2000, curve([2965, 9400, 1], [9400, 20000, 0.25]), 0.07);
 
     // ---- one-shot events: [loudness curve, events per second at full level, play function] ----
-    const E = (level, rate, play) => this.events.push({ level, rate, play });
+    const E = (level, rate, play) => this.events.push({ level, rate, play, place: this.tag });
     const forest = [[-60e6, -1.2e6, 0.8], [-131e3, -100e3, 0.8], [-9500, 1700, 1], [1700, 1840, 0.6], [1840, 2165, 0.18], [2960, 120e6, 1], [280e6, 520e6, 0.2]];
     E(curve(...forest), 1.3, (v) => this.bird(v));
     E(curve([-210e6, -66.03e6]), 0.07, (v) => this.screech(v));
@@ -119,6 +122,8 @@ export class Sound {
     E(curve([1958, 2110]), 0.035, (v) => this.jet(v));
     E(curve([1950, 2110]), 0.028, (v) => this.chopper(v));
     E(curve([2016, 2160]), 0.07, (v) => this.buzz(v * 0.5, rnd(190, 260), 2.6));              // delivery drones
+
+    this.own = placeSounds(this, { bed: noiseBed, E, curve, rnd });
   }
 
   setMuted(m) { this.muted = m; this._level(); }
@@ -129,13 +134,14 @@ export class Sound {
   update(u, dt) {
     const ctx = this.ctx; if (!ctx || ctx.state !== 'running') return;
     this.t += dt; const now = ctx.currentTime;
+    const own = this.own.has(this.place), gate = (x) => (x.place ? (x.place === this.place ? 1 : 0) : own ? 0.3 : 1);
     for (const b of this.beds) {
-      let v = b.level(u) * b.max;
+      let v = b.level(u) * b.max * gate(b);
       if (b.wobble) { v *= 1 + b.wobble * Math.sin(this.t * 0.37 + b.max * 40) * Math.sin(this.t * 0.13 + 1); b.f.frequency.setTargetAtTime(b.freq * (1 + 0.35 * Math.sin(this.t * 0.21 + b.freq)), now, 0.3); }
       b.g.gain.setTargetAtTime(v, now, 0.18);
     }
     if (this.muted) return;
-    for (const e of this.events) { const l = e.level(u); if (l > 0.02 && Math.random() < e.rate * l * dt) e.play(l); }
+    for (const e of this.events) { const l = e.level(u) * (e.place ? (e.place === this.place ? 1 : 0) : own ? 0 : 1); if (l > 0.02 && Math.random() < e.rate * l * dt) e.play(l); }
   }
 
   // ---------- one-shot voices ----------

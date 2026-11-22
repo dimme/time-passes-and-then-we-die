@@ -204,7 +204,7 @@ async function boot() {
     try {
       simulate(dt, time);
       ui.update(u, env.glow, travel.eventAt(uToYear(u)), travel.site.place);
-      sound.update(u, dt);
+      sound.setPlace(travel.atHome ? 'home' : travel.id); sound.update(u, dt);
       draw();
     } catch (err) {
       if (post) { console.warn('Post-processing failed; falling back to direct rendering.', err); composer = null; post = false; return; }
