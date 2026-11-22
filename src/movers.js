@@ -1,7 +1,7 @@
 // Instanced things that travel along the street grid (people, carts, cars) or through the air and rivers.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js?v=ef07112a';
-import { LAND, ISLAND } from './world.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=fea1c89f';
+import { LAND, ISLAND } from './world.js?v=fea1c89f';
 
 const H = Math.PI / 2;
 /** Streets that cross the island stop this far from its centre line. */
@@ -66,13 +66,14 @@ export class Movers {
   update(u, t, view) {
     const on = !(u < this.minU || u > this.maxU);
     for (const m of this.meshes) m.visible = on;
-    if (!on) return;
+    this.np = 0; if (!on) return;
     const w = this.world, first = this.meshes[0], flooded = this.ground && w.sea > this.floodAt;   // nothing drives or walks through a flooded street
-    let k = 0;
+    let k = 0; const rec = this.sound && (this.pts || (this.pts = new Float32Array(this.items.length * 3))); this.np = 0;
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
       if (flooded || u < it.u0 || u >= it.u1) continue;
       const at = this.where(it, t), x = at.x, y = at.y, z = at.z;
+      if (rec) { rec[this.np * 3] = x; rec[this.np * 3 + 1] = y + 1.2; rec[this.np * 3 + 2] = z; this.np++; }   // where its sounds come from
       _p.set(x, y, z);
       if (view) {
         _sphere.center.set(x, y + this.reach * 0.5, z); _sphere.radius = this.reach * 1.3 + 1;

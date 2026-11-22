@@ -2,12 +2,12 @@
 // merges everything of one material and one span of years into one mesh, columns of the orders, temples, stoas,
 // houses, arcades, scaffolding, boats, trees, beasts and the footprints the visitor cannot walk through.
 import * as THREE from 'three';
-import { rng, clamp, box as ubox, cyl as ucyl, merge, vcMat } from './util.js?v=ef07112a';
-import { canvasTex, shared, tileNoise } from './textures.js?v=ef07112a';
-import { animTime } from './organic.js?v=ef07112a';
-import { pose } from './animals.js?v=ef07112a';
-import { Builder, grow, foliage, norm } from './flora-geo.js?v=ef07112a';
-import { leafMat, floraTextures } from './flora-tex.js?v=ef07112a';
+import { rng, clamp, box as ubox, cyl as ucyl, merge, vcMat } from './util.js?v=fea1c89f';
+import { canvasTex, shared, tileNoise } from './textures.js?v=fea1c89f';
+import { animTime } from './organic.js?v=fea1c89f';
+import { pose } from './animals.js?v=fea1c89f';
+import { Builder, grow, foliage, norm } from './flora-geo.js?v=fea1c89f';
+import { leafMat, floraTextures } from './flora-tex.js?v=fea1c89f';
 
 const TAU = Math.PI * 2;
 const _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _n3 = new THREE.Matrix3(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3();

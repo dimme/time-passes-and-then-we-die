@@ -1,12 +1,12 @@
 // Vehicles: carts, cars, pods, flying traffic, ships and (from vehicles-air.js) aircraft.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js?v=ef07112a';
-import { species, pose } from './animals.js?v=ef07112a';
-import { Movers, traffic, CROSS_SPAN } from './movers.js?v=ef07112a';
-import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=ef07112a';
-import { carParts } from './vehicles-cars.js?v=ef07112a';
-import { shipParts } from './vehicles-ships.js?v=ef07112a';
-import { buildAircraft } from './vehicles-air.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=fea1c89f';
+import { species, pose } from './animals.js?v=fea1c89f';
+import { Movers, traffic, CROSS_SPAN } from './movers.js?v=fea1c89f';
+import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=fea1c89f';
+import { carParts } from './vehicles-cars.js?v=fea1c89f';
+import { shipParts } from './vehicles-ships.js?v=fea1c89f';
+import { buildAircraft } from './vehicles-air.js?v=fea1c89f';
 
 export { carParts, shipParts };
 
@@ -157,10 +157,10 @@ export function buildVehicles(world, scene, r) {
   const { lanes, cloth } = traffic(r), Y = yearToU, movers = [];
   const mk = (parts, items, opts = {}) => { const m = new Movers(world, parts, items, { crossSpan: opts.ground === false ? 0 : CROSS_SPAN, ...opts }); movers.push(m); scene.add(...m.meshes); return m; };
   // wheels
-  const carts = mk(cartParts(species(), { horse: false }), lanes(26, 1640, 1905, { jf: 200, jt: 22, v: [2, 3.5], off: (ax) => (ax === 'z' ? 3 : 1.8) }));
+  const carts = mk(cartParts(species(), { horse: false }), lanes(26, 1640, 1905, { jf: 200, jt: 22, v: [2, 3.5], off: (ax) => (ax === 'z' ? 3 : 1.8) })); carts.sound = 'horse';
   movers.push(new Teams(world, scene, carts));
   const lane = (ax) => (ax === 'z' ? 1.8 + Math.floor(r() * 2) * 3 : 1.8);
-  const cars = (style, n, from, to, jf, jt, v, pal) => mk(carParts(style), lanes(n, from, to, { jf, jt, v, off: lane, alt: 0.02, tint: cloth(pal) }));
+  const cars = (style, n, from, to, jf, jt, v, pal) => { const m = mk(carParts(style), lanes(n, from, to, { jf, jt, v, off: lane, alt: 0.02, tint: cloth(pal) })); m.sound = 'car'; return m; };
   cars('old', 40, 1903, 1944, 25, 10, [6, 10], [0x101010, 0x141414, 0x1a1210, 0x10141c, 0x3a1410, 0x1c2a20]);
   cars('fifties', 60, 1936, 1968, 14, 12, [8, 13], [0x18181a, 0x5e1418, 0x24463a, 0x86b0a4, 0xd6d0b8, 0x26385a, 0x74848e, 0x8a2a20, 0xc8b070]);
   cars('cab', 26, 1962, 2030, 10, 14, [9, 15], [0xf2c018]);
@@ -168,8 +168,8 @@ export function buildVehicles(world, scene, r) {
   cars('suv', 60, 1998, 2060, 20, 40, [9, 15], [0xf0f0f0, 0x16181c, 0x9aa0a8, 0x50565e, 0x1e3a66, 0x8a1a1a, 0xf0f0f0, 0x2a3a34]);
   cars('pod', 60, 2035, 2170, 40, 30, [10, 14], [0xffffff, 0xe0f0ff, 0xd0d8e0]);
   // the sky fills up
-  mk(flyerParts(false), lanes(170, 2140, 2850, { jf: 120, jt: 130, v: [25, 50], off: () => r() * 16 - 8, alt: () => 25 + Math.floor(r() * 7) * 28 + r() * 4, cross: 0.45 }), { ground: false });
-  mk(flyerParts(true), lanes(40, 2960, 9200, { jf: 40, jt: 600, v: [30, 60], off: () => r() * 80 - 40, alt: () => 60 + r() * 250, cross: 0.5 }), { ground: false });
+  mk(flyerParts(false), lanes(170, 2140, 2850, { jf: 120, jt: 130, v: [25, 50], off: () => r() * 16 - 8, alt: () => 25 + Math.floor(r() * 7) * 28 + r() * 4, cross: 0.45 }), { ground: false }).sound = 'flyer';
+  mk(flyerParts(true), lanes(40, 2960, 9200, { jf: 40, jt: 600, v: [30, 60], off: () => r() * 80 - 40, alt: () => 60 + r() * 250, cross: 0.5 }), { ground: false }).sound = 'flyer';
   // ships on both rivers
   const river = (n, from, to, v = 3, jt = 30) => Array.from({ length: n }, (_, i) => {
     const dir = i % 2 ? 1 : -1;
@@ -181,6 +181,7 @@ export function buildVehicles(world, scene, r) {
     mk(shipParts('steam'), river(6, 1838, 1960, 6), shipOpts),
     mk(shipParts('cargo'), river(5, 1955, 2150, 5), shipOpts),
   ];
+  for (const f of fleets) f.sound = 'ship';
   movers.push(...buildAircraft(world, scene));
 
   return { movers, fleets };

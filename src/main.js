@@ -1,20 +1,21 @@
 import * as THREE from 'three';
-import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=ef07112a';
-import { World } from './world.js?v=ef07112a';
-import { buildFlora } from './flora.js?v=ef07112a';
-import { buildFauna, viewOf } from './fauna.js?v=ef07112a';
-import { Travel } from './sites.js?v=ef07112a';
-import { Space, LIFT } from './space.js?v=ef07112a';
-import { buildCity } from './city.js?v=ef07112a';
-import { Player } from './controls.js?v=ef07112a';
-import { UI } from './ui.js?v=ef07112a';
-import { Sound } from './audio.js?v=ef07112a';
-import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=ef07112a';
-import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=ef07112a';
-import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=ef07112a';
-import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=ef07112a';
-import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=ef07112a';
-import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=ef07112a';
+import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=fea1c89f';
+import { World } from './world.js?v=fea1c89f';
+import { buildFlora } from './flora.js?v=fea1c89f';
+import { buildFauna, viewOf } from './fauna.js?v=fea1c89f';
+import { Travel } from './sites.js?v=fea1c89f';
+import { Space, LIFT } from './space.js?v=fea1c89f';
+import { buildCity } from './city.js?v=fea1c89f';
+import { Player } from './controls.js?v=fea1c89f';
+import { UI } from './ui.js?v=fea1c89f';
+import { Sound } from './audio.js?v=fea1c89f';
+import { LIVE as ACTORS } from './people-actors.js?v=fea1c89f';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=fea1c89f';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=fea1c89f';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=fea1c89f';
+import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=fea1c89f';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=fea1c89f';
+import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=fea1c89f';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view'), beginBtn = $('begin'), statusEl = $('loadstatus');
@@ -113,6 +114,7 @@ async function boot() {
   $('quality').addEventListener('click', () => { const order = ['low', 'medium', 'high']; autoTune = false; applyQuality(order[(order.indexOf(quality) + 1) % 3], true); });
 
   let uTarget = yearToU(NOW), u = uTarget, playing = false;
+  const PLAY_SECONDS = 720;   // "Let time pass" crosses the whole timeline in twelve minutes
   const setU = (v) => { uTarget = Math.max(0, Math.min(1, v)); };
   const ui = new UI({
     onScrub: (v) => { setU(v); stop(); },
@@ -131,6 +133,20 @@ async function boot() {
   });
 
   const sound = new Sound();
+  // where a sound of each kind comes from: a person, vehicle, aircraft or animal near the listener (none in range: no sound)
+  const REACH = { people: 70, car: 160, horse: 120, flyer: 400, ship: 900, aircraft: 4000, animal: 220 };
+  sound.locate = (kind) => {
+    const e = sound.ear, R = REACH[kind] || 150, best = []; let total = 0;
+    const take = (x, y, z) => { const d = Math.hypot(x - e[0], y - e[1], z - e[2]); if (d < R) { const w = 1 / (d + 8); best.push([x, y, z, w]); total += w; } };
+    if (travel.atHome) {
+      if (kind === 'animal') { for (const a of fauna.herd.list) if (a.in && a.obj) take(a.obj.position.x, a.obj.position.y + 1, a.obj.position.z); }
+      else for (const m of fauna.movers) if (m.sound === kind && m.np) for (let i = 0; i < m.np; i++) take(m.pts[i * 3], m.pts[i * 3 + 1], m.pts[i * 3 + 2]);
+    } else if (kind === 'people') {
+      const now = performance.now(); for (const g of ACTORS) if (now - g.t < 600) for (let i = 0; i < g.np; i++) take(g.pts[i * 3], g.pts[i * 3 + 1], g.pts[i * 3 + 2]);
+    }
+    if (!best.length) return null;
+    let r = Math.random() * total; for (const b of best) { r -= b[3]; if (r <= 0) return [b[0], b[1], b[2]]; } return best[0].slice(0, 3);
+  };
   const wake = () => sound.start();          // browsers only allow audio after a gesture
   addEventListener('pointerdown', wake); addEventListener('keydown', wake);
   $('mute').addEventListener('click', () => { sound.setMuted(!sound.muted); $('mute').textContent = sound.muted ? 'Sound: off' : 'Sound: on'; });
@@ -219,6 +235,7 @@ async function boot() {
     flora.update(u, time, env, camera, travel.atHome);
     travel.updateContent(u, time, env, camera, viewOf(camera));
     world.sky.position.copy(camera.position);
+    sound.listen(camera);
     renderer.toneMappingExposure = env.exposure;
   };
 
@@ -243,7 +260,7 @@ async function boot() {
     const k = player.keys, fast = k.has('ShiftLeft') || k.has('ShiftRight') ? 4 : 1;
     if (k.has('KeyE') || k.has('Period')) { stop(); setU(uTarget + dt * 0.012 * fast); }
     if (k.has('KeyQ') || k.has('Comma')) { stop(); setU(uTarget - dt * 0.012 * fast); }
-    if (playing) { setU(uTarget + dt / 150); if (uTarget >= 1) stop(); }
+    if (playing) { setU(uTarget + dt / PLAY_SECONDS); if (uTarget >= 1) stop(); }
     u += (uTarget - u) * Math.min(1, dt * 12);
     if (Math.abs(uTarget - u) < 1e-7) u = uTarget;
     try {

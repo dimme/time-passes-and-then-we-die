@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { clamp, smooth } from './util.js?v=ef07112a';
-import { shared } from './textures.js?v=ef07112a';
+import { clamp, smooth } from './util.js?v=fea1c89f';
+import { shared } from './textures.js?v=fea1c89f';
 
 // ---------- terrain shape (pure functions, shared with gameplay) ----------
 export const ISLAND = 240;       // half-width of the island (m)

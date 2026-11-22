@@ -1,12 +1,12 @@
 // People: an anatomical figure (about 7.5 heads tall) dressed for its century, walking the streets or standing by a fire.
 // The body is in people-body.js, the clothes in people-outfits.js; people who do things other than walk are in people-actors.js.
 import * as THREE from 'three';
-import { merge } from './util.js?v=ef07112a';
-import { hex } from './organic.js?v=ef07112a';
-import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js?v=ef07112a';
-import { personOf } from './people-outfits.js?v=ef07112a';
-import { surface } from './people-rig.js?v=ef07112a';
-import { Movers, traffic, CROSS_SPAN } from './movers.js?v=ef07112a';
+import { merge } from './util.js?v=fea1c89f';
+import { hex } from './organic.js?v=fea1c89f';
+import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js?v=fea1c89f';
+import { personOf } from './people-outfits.js?v=fea1c89f';
+import { surface } from './people-rig.js?v=fea1c89f';
+import { Movers, traffic, CROSS_SPAN } from './movers.js?v=fea1c89f';
 
 // =====================================================================================
 // The walk: a gait cycle computed per vertex from the instance's position along its path
@@ -117,7 +117,7 @@ export function buildPeople(world, scene, r) {
   const crowd = (variant, n, from, to, o, woman, opts) => {
     const items = lanes(n, from, to, { v: [1, 1.6], off: side, cross: 0.4, s: tall(woman ? 0.93 : 1), ...o });
     for (const it of items) { it.hair = hairOf(); if (o.glow) it.glow = o.glow(); if (woman) it.v *= 0.92; }
-    const m = new Movers(world, personParts(variant), items, { crossSpan: CROSS_SPAN, ...opts }); movers.push(m); scene.add(...m.meshes);
+    const m = new Movers(world, personParts(variant), items, { crossSpan: CROSS_SPAN, ...opts }); m.sound = 'people'; movers.push(m); scene.add(...m.meshes);
   };
   const drab = cloth([0x4a3c30, 0x33333c, 0x6a5a4a, 0x5a2a22, 0x242424, 0x3a4a3a]), dark = cloth([0x1c1c20, 0x2a2420, 0x30343c, 0x3a3028]);
   const gowns = cloth([0x6a3a3a, 0x3a4a6a, 0x7a6a50, 0x40503a, 0x8a8478, 0x503a50]), skirts = cloth([0x5a3030, 0x30405a, 0x6a5a44, 0x384830, 0x2a2a30]);

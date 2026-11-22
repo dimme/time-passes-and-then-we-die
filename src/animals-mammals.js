@@ -1,5 +1,5 @@
 // Mammals: deer, wolf, horse, the first small hoofed mammals, brontotheres and the elephants of the ice age.
-import { Rig, loft, mass, cone, slab, frustum, put, padFoot, hide, hex, BLACK, IVORY, HOOF, NAIL } from './animals-rig.js?v=ef07112a';
+import { Rig, loft, mass, cone, slab, frustum, put, padFoot, hide, hex, BLACK, IVORY, HOOF, NAIL } from './animals-rig.js?v=fea1c89f';
 
 /** Vertex-colour multipliers that turn a hide of colour `base` into `target` (both hex). */
 const tone = (base, target) => { const a = hex(base), b = hex(target); return b.map((v, i) => v / a[i]); };

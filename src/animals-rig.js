@@ -1,7 +1,7 @@
 // Building blocks for animals: lofted skins, a small skeleton builder with skin weights, leg IK and hide textures.
 import * as THREE from 'three';
-import { rng } from './util.js?v=ef07112a';
-import { canvasTex, normalMap } from './textures.js?v=ef07112a';
+import { rng } from './util.js?v=fea1c89f';
+import { canvasTex, normalMap } from './textures.js?v=fea1c89f';
 
 export const H = Math.PI / 2, TAU = Math.PI * 2;
 export const hex = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255].map((v) => v ** 2.2);

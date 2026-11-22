@@ -1,9 +1,9 @@
 // Farm animals for the later ages: the plough ox and the sheep, built with the same rig as the wild animals (animals-rig.js),
 // plus herds of them standing still (baked to one instanced mesh) and living mounts and draught animals that walk a path.
 import * as THREE from 'three';
-import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose } from './animals-rig.js?v=ef07112a';
-import { species } from './animals.js?v=ef07112a';
-import { pathOf, where } from './site-medieval-kit.js?v=ef07112a';
+import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose } from './animals-rig.js?v=fea1c89f';
+import { species } from './animals.js?v=fea1c89f';
+import { pathOf, where } from './site-medieval-kit.js?v=fea1c89f';
 
 const tone = (base, target) => { const a = hex(base), b = hex(target); return b.map((v, i) => v / a[i]); };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * Math.max(0, Math.min(1, t)));

@@ -2,17 +2,17 @@
 // East is +x, south is +z. Old town to the north-west, the Bridgewater Canal and its basin across the middle (z = 120),
 // the mills of Ancoats to the north-east, the 1830 railway on its viaduct along z = 19, terraces to the south-east.
 import * as THREE from 'three';
-import { rng, smooth } from './util.js?v=ef07112a';
-import { uToYear, yearToU } from './timeline.js?v=ef07112a';
-import { makeKinds } from './flora.js?v=ef07112a';
-import { species } from './animals.js?v=ef07112a';
-import { actors } from './people-actors.js?v=ef07112a';
-import { cartParts } from './vehicles.js?v=ef07112a';
-import { Bag, vehicleMat } from './vehicles-kit.js?v=ef07112a';
-import { Kit, Props, Followers, fin, mat4, clipped, pathOf, where, smoke, grove, outline } from './site-medieval-kit.js?v=ef07112a';
-import { Walkers, horse } from './site-medieval-beasts.js?v=ef07112a';
-import { walls } from './site-medieval-cathedral.js?v=ef07112a';
-import { trainParts, track } from './site-manchester-train.js?v=ef07112a';
+import { rng, smooth } from './util.js?v=fea1c89f';
+import { uToYear, yearToU } from './timeline.js?v=fea1c89f';
+import { makeKinds } from './flora.js?v=fea1c89f';
+import { species } from './animals.js?v=fea1c89f';
+import { actors } from './people-actors.js?v=fea1c89f';
+import { cartParts } from './vehicles.js?v=fea1c89f';
+import { Bag, vehicleMat } from './vehicles-kit.js?v=fea1c89f';
+import { Kit, Props, Followers, fin, mat4, clipped, pathOf, where, smoke, grove, outline } from './site-medieval-kit.js?v=fea1c89f';
+import { Walkers, horse } from './site-medieval-beasts.js?v=fea1c89f';
+import { walls } from './site-medieval-cathedral.js?v=fea1c89f';
+import { trainParts, track } from './site-manchester-train.js?v=fea1c89f';
 
 const G = 6, WATER = 4.8, CANAL = 120, RIVER = -330, DECK = 6.5, RAILZ = 16.5;
 const quay = (x) => { const a = Math.abs(x); return a < 60 ? 22 : a > 70 ? 7 : 22 - (a - 60) * 1.5; };   // half-width of the water: canal, and the basin at Castlefield

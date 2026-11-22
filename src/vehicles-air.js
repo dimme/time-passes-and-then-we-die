@@ -1,10 +1,10 @@
 // Things that fly over Manhattan, period by period: balloons, airships, aeroplanes, helicopters, drones and what comes after.
 // Every model faces +x with y up, in metres, and hangs around its own centre; starboard is +z.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js?v=ef07112a';
-import { rng, lerp, clamp } from './util.js?v=ef07112a';
-import { Movers } from './movers.js?v=ef07112a';
-import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=fea1c89f';
+import { rng, lerp, clamp } from './util.js?v=fea1c89f';
+import { Movers } from './movers.js?v=fea1c89f';
+import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js?v=fea1c89f';
 
 const PI = Math.PI, RAD = PI / 180;
 const A = {
@@ -439,14 +439,15 @@ class Flight extends Movers {
   update(u, t, view) {
     const on = !(u < this.minU || u > this.maxU), first = this.meshes[0], L = this.span * 2;
     for (const m of this.meshes) m.visible = on;
-    if (!on) return;
-    let k = 0;
+    this.np = 0; if (!on) return;
+    let k = 0; const rec = this.sound && (this.pts || (this.pts = new Float32Array(this.items.length * 3)));
     for (let i = 0; i < this.items.length; i++) {
       const it = this.items[i];
       if (u < it.u0 || u >= it.u1) continue;
       const along = ((((it.off + it.v * t) % L) + L) % L) - this.span, ph = it.ph + t * it.w, sn = Math.sin(ph), D = (G * it.bank) / (it.w * it.w);   // a bank of b·sin swings the track D·sin to the side
       const c = Math.cos(it.hdg), s = Math.sin(it.hdg), side = -D * sn, scale = (it.s || 1) * clamp((this.span - Math.abs(along)) / (this.span * 0.04), 0, 1);   // shrinks to nothing where the course wraps round
       _p.set(it.cx + c * along + s * side, it.alt + it.bob * Math.sin(ph * 0.6), it.cz - s * along + c * side);
+      if (rec && scale > 0.05) { rec[this.np * 3] = _p.x; rec[this.np * 3 + 1] = _p.y; rec[this.np * 3 + 2] = _p.z; this.np++; }
       if (view) {
         _sphere.center.copy(_p); _sphere.radius = this.reach * 1.1 + 1;
         const dx = _p.x - view.eye.x, dz = _p.z - view.eye.z;
@@ -484,7 +485,7 @@ export function buildAircraft(world, scene) {
     return { cx, cz, hdg, alt: lerp(alt[0], alt[1], (i + r()) / n), off: r() * span * 2, v: lerp(v[0], v[1], r()), u0: Y(from + i * step), u1: Y(to + r() * 3), tint: pal ? lin(pal[Math.floor(r() * pal.length)]) : [1, 1, 1],
       w: 0.1 + r() * 0.08, ph: r() * 7, bank, pitch, sway, bob, s };
   });
-  const mk = (kind, items, span, opts) => { const m = new Flight(world, airParts(kind, opts), items, { span, ground: false }); out.push(m); scene.add(...m.meshes); };
+  const mk = (kind, items, span, opts) => { const m = new Flight(world, airParts(kind, opts), items, { span, ground: false }); m.sound = 'aircraft'; m.engine = kind; out.push(m); scene.add(...m.meshes); };
   const add = (kind, n, from, to, o, opts) => mk(kind, fly(n, from, to, o), o.span, opts);
 
   add('balloon', 3, 1830, 1910, { alt: [180, 380], v: [2, 4.5], span: 1100, step: 12, pal: PAL.balloon, sway: 0.03, bob: 1.5 });

@@ -2,9 +2,9 @@
 // the neighbouring planets and the solar system — as they were (or will be) in the year shown.
 // Distances are true (1 unit = 1,000 km); bodies are enlarged just enough to stay visible.
 import * as THREE from 'three';
-import { smooth } from './util.js?v=ef07112a';
-import { canvasTex } from './textures.js?v=ef07112a';
-import { moonDistance } from './timeline.js?v=ef07112a';
+import { smooth } from './util.js?v=fea1c89f';
+import { canvasTex } from './textures.js?v=fea1c89f';
+import { moonDistance } from './timeline.js?v=fea1c89f';
 
 export const LIFT = 0.07;          // zoom below this is still the ground view, rising
 const AU = 149600, R_EARTH = 6.371, D0 = R_EARTH * 1.16, DMAX = 46 * AU;
@@ -141,7 +141,7 @@ export class Space {
     });
     this.earth = this.bodies[2];
     // the atlas of past continents arrives a moment later; until then the coarse hand-drawn map stands in
-    new THREE.TextureLoader().load('data/plates.png?v=ef07112a', (t) => {
+    new THREE.TextureLoader().load('data/plates.png?v=fea1c89f', (t) => {
       t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.colorSpace = THREE.NoColorSpace;
       this.earthMat.uniforms.atlas.value = t; this.earthMat.defines = { HAS_ATLAS: 1 }; this.earthMat.needsUpdate = true; this.hasAtlas = true;
     });

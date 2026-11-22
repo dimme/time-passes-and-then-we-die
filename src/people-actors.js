@@ -2,12 +2,12 @@
 //   const site = actors(world, [{ outfit: 'neolithic', action: 'reap', x: 12, z: -4, rot: 1.2 }, …]); scene.add(...site.meshes);
 //   each frame: site.update(u, t, view)
 import * as THREE from 'three';
-import { rng } from './util.js?v=ef07112a';
-import { HIP, HELD, GRIP, CHEST, CROWN, join } from './people-body.js?v=ef07112a';
-import { OUTFITS as OUTFIT, personOf } from './people-outfits.js?v=ef07112a';
-import { PROPS as PROP } from './people-props.js?v=ef07112a';
-import { ACTION } from './people-actions.js?v=ef07112a';
-import { Pose, rigMat, POSE_SIZE, PALM } from './people-rig.js?v=ef07112a';
+import { rng } from './util.js?v=fea1c89f';
+import { HIP, HELD, GRIP, CHEST, CROWN, join } from './people-body.js?v=fea1c89f';
+import { OUTFITS as OUTFIT, personOf } from './people-outfits.js?v=fea1c89f';
+import { PROPS as PROP } from './people-props.js?v=fea1c89f';
+import { ACTION } from './people-actions.js?v=fea1c89f';
+import { Pose, rigMat, POSE_SIZE, PALM } from './people-rig.js?v=fea1c89f';
 
 /** The names an actor can use: `outfit`, `action`, and `prop` (several props joined with '+', or 'none'). */
 export const OUTFITS = Object.keys(OUTFIT).filter((k) => !OUTFIT[k].walkOnly), ACTIONS = Object.keys(ACTION), PROPS = Object.keys(PROP);
@@ -99,6 +99,8 @@ function along(a, d, out) {
  * opts: { seed = 1, seat = 0, cast = true (shadows) }
  * Returns { meshes, update(u, t, view) }; view = { frustum, eye } culls as Movers does.
  */
+/** Every group of actors that is on screen, with where each of its people stands (for the sounds they make). */
+export const LIVE = new Set();
 export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
   const r = rng(seed), pick = (pal) => pal[Math.floor(r() * pal.length)], lin = (h) => { _c.set(h); return [_c.r, _c.g, _c.b]; }, byKey = new Map();
   for (const a of list) {
@@ -144,6 +146,7 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
           w.ph = d / (w.stride * a.s); w.moving = true;
         }
         const y = groundAt(x, z, a.afloat) + a.y;
+        if (np < pts.length / 3) { pts[np * 3] = x; pts[np * 3 + 1] = y + 1.5; pts[np * 3 + 2] = z; np++; }
         if (view) {
           _sphere.center.set(x, y + 1, z); _sphere.radius = 3.6 * a.s;
           const dx = x - view.eye.x, dz = z - view.eye.z;
@@ -162,5 +165,8 @@ export function actors(world, list, { seed = 1, seat = 0, cast = true } = {}) {
       if (k) { G.pose.needsUpdate = true; G.body.instanceMatrix.needsUpdate = true; if (G.floor) G.floor.instanceMatrix.needsUpdate = true; }
     }
   }
-  return { meshes, update };
+  const pts = new Float32Array(Math.max(3, list.length * 3)); let np = 0;
+  const api = { meshes, pts, get np() { return np; }, t: -1, update(u, t, view) { np = 0; api.t = performance.now(); update(u, t, view); } };
+  LIVE.add(api);
+  return api;
 }

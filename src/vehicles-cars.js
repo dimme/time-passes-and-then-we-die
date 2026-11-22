@@ -1,6 +1,6 @@
 // Road cars. Each body is one skin lofted from side-view curves; glass, lamps and trim are picked out of that same skin.
-import { clamp, lerp } from './util.js?v=ef07112a';
-import { Bag, fin, curve, loft, skin, sweep, oval, revolve, wheel, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=ef07112a';
+import { clamp, lerp } from './util.js?v=fea1c89f';
+import { Bag, fin, curve, loft, skin, sweep, oval, revolve, wheel, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=fea1c89f';
 
 const PI = Math.PI;
 export const F = {

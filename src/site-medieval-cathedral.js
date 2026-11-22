@@ -2,8 +2,8 @@
 // (130 m long, vaults at 36 m, the old south spire at 105 m), with the scaffolding and crane of the years it was going up.
 // Everything is built in a local frame: x runs from the west front (0) to the apse, z across (south is +z), y up from the floor.
 import * as THREE from 'three';
-import { mat4, fin, outline } from './site-medieval-kit.js?v=ef07112a';
-import { Bag } from './vehicles-kit.js?v=ef07112a';
+import { mat4, fin, outline } from './site-medieval-kit.js?v=fea1c89f';
+import { Bag } from './vehicles-kit.js?v=fea1c89f';
 
 const GLASS = ['glass', 0xffffff, 'fit', [0.03, 0, 0.47, 1]], ROSE = ['glass', 0xffffff, 'fit', [0.5, 0, 1, 1]], DARK = ['pane', 0x30363c, 'tile'], DOOR = ['plank', 0x6a3a2a, 'tile'];
 const STONE = 0xffffff, AGED = 0xd8d2c4, LEAD = 0xb8c0c8;

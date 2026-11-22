@@ -1,9 +1,9 @@
 // Building blocks for Giza: masonry textures, battered blocks, lofted shapes, and a collector that merges
 // everything of one material and one span of years into a single mesh.
 import * as THREE from 'three';
-import { rng, merge } from './util.js?v=ef07112a';
-import { tileNoise, normalMap, canvasTex } from './textures.js?v=ef07112a';
-import { yearToU } from './timeline.js?v=ef07112a';
+import { rng, merge } from './util.js?v=fea1c89f';
+import { tileNoise, normalMap, canvasTex } from './textures.js?v=fea1c89f';
+import { yearToU } from './timeline.js?v=fea1c89f';
 
 const _c = new THREE.Color(), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
 /** Linear RGB of a hex colour (or pass an array through). */

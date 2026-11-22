@@ -1,7 +1,7 @@
 // The first livestock: goats, sheep and cattle, shaped from one hoofed build. A few walk with their herders
 // (rigged, as the game's other animals are); the many that stand and graze are copies of one posed body.
 import * as THREE from 'three';
-import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose, TAU } from './animals-rig.js?v=ef07112a';
+import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose, TAU } from './animals-rig.js?v=fea1c89f';
 
 const tone = (base, target) => { const a = hex(base), b = hex(target); return b.map((v, i) => v / a[i]); };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * Math.max(0, Math.min(1, t)));

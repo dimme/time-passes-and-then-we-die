@@ -1,6 +1,6 @@
 // The actors' skeleton: a pose is solved on the CPU (feet and hands by two-bone IK) and applied per vertex on the GPU.
 import * as THREE from 'three';
-import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js?v=ef07112a';
+import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js?v=fea1c89f';
 
 const V = THREE.Vector3, Q = THREE.Quaternion;
 /** Where the spine bends, where a hand grips (x, y, and z beyond the shoulder line), and the half-width between the hip joints. */

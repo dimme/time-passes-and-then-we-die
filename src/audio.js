@@ -1,9 +1,9 @@
 // Every sound is synthesised with Web Audio — there are no audio files.
 // Continuous "beds" (wind, water, traffic, rain, drones …) and random one-shot
 // "events" (birds, roars, bells, horns …) each have a loudness curve over the timeline.
-import { yearToU, START } from './timeline.js?v=ef07112a';
-import { smooth } from './util.js?v=ef07112a';
-import { placeSounds } from './audio-places.js?v=ef07112a';
+import { yearToU, START } from './timeline.js?v=fea1c89f';
+import { smooth } from './util.js?v=fea1c89f';
+import { placeSounds } from './audio-places.js?v=fea1c89f';
 
 const Y = yearToU, FADE = 0.006;
 /** [fromYear, toYear, level] spans → function of slider position returning 0..1 */
@@ -12,9 +12,10 @@ function curve(...spans) {
   return (u) => { let v = 0; for (const [a, b, l] of s) v = Math.max(v, l * smooth((u - a) / FADE) * smooth((b - u) / FADE)); return v; };
 }
 const rnd = (a, b) => a + Math.random() * (b - a);
+const SOFT = new Set(['animal']);   // kinds that may sound from somewhere unseen; people, vehicles and aircraft are heard only where they are
 
 export class Sound {
-  constructor() { this.ctx = null; this.muted = false; this.beds = []; this.events = []; this.t = 0; this.place = 'home'; this.own = new Set(); this.tag = null; }
+  constructor() { this.ctx = null; this.muted = false; this.beds = []; this.events = []; this.t = 0; this.place = 'home'; this.own = new Set(); this.tag = null; this.here = null; this.ear = [0, 0, 0]; this.locate = null; }
   /** Which place is on screen: one with a soundscape of its own replaces the timeline's general sounds. */
   setPlace(id) { this.place = id; }
 
@@ -82,31 +83,31 @@ export class Sound {
     toneBed([220, 277.2, 329.6, 440, 659.3], 'sine', 2000, curve([2965, 9400, 1], [9400, 20000, 0.25]), 0.07);
 
     // ---- one-shot events: [loudness curve, events per second at full level, play function] ----
-    const E = (level, rate, play) => this.events.push({ level, rate, play, place: this.tag });
+    const E = (level, rate, play, kind = null) => this.events.push({ level, rate, play, place: this.tag, kind });
     const forest = [[-60e6, -1.2e6, 0.8], [-131e3, -100e3, 0.8], [-9500, 1700, 1], [1700, 1840, 0.6], [1840, 2165, 0.18], [2960, 120e6, 1], [280e6, 520e6, 0.2]];
     E(curve(...forest), 1.3, (v) => this.bird(v));
-    E(curve([-210e6, -66.03e6]), 0.07, (v) => this.screech(v));
-    E(curve([-236e6, -66.03e6]), 0.09, (v) => this.roar(v, rnd(45, 85), rnd(1.2, 2.4)));
-    E(curve([-190e6, -66.03e6]), 0.3, (v) => this.thump(v * 0.5, 38, 0.5));                    // giants walking
-    E(curve([-45e6, -1.2e6, 0.6], [-131e3, -100e3, 0.7], [-95e3, -27e3, 1], [-16.5e3, -9500, 1], [2e6, 140e6, 0.5]), 0.07, (v) => this.trumpet(v));
+    E(curve([-210e6, -66.03e6]), 0.07, (v) => this.screech(v), 'animal');
+    E(curve([-236e6, -66.03e6]), 0.09, (v) => this.roar(v, rnd(45, 85), rnd(1.2, 2.4)), 'animal');
+    E(curve([-190e6, -66.03e6]), 0.3, (v) => this.thump(v * 0.5, 38, 0.5), 'animal');                    // giants walking
+    E(curve([-45e6, -1.2e6, 0.6], [-131e3, -100e3, 0.7], [-95e3, -27e3, 1], [-16.5e3, -9500, 1], [2e6, 140e6, 0.5]), 0.07, (v) => this.trumpet(v), 'animal');
     E(curve([-2.33e9, -2.16e9], [-716e6, -636e6], [-420e3, -150e3], [-27e3, -16.5e3]), 0.06, (v) => this.crack(v));                 // the glacier groaning
     E(curve([-4.54e9, -4.43e9, 1], [-1e6, -14e3, 0.5], [-11.4e3, -9200, 0.7], [1500, 1640, 0.7], [-66.03e6, -65.985e6, 1], [-203e6, -196e6, 0.5], [6.5e9, 7.6e9, 1]), 16, (v) => this.crackle(v));
-    E(curve([-300e3, -14e3, 0.5], [-4000, -2700, 0.3], [1500, 1640]), 0.45, (v) => { this.thump(v * 0.7, 95, 0.25); this.thump(v * 0.45, 95, 0.25, 0.28); });   // a drum by the fire
-    E(curve([-40e3, -14e3, 0.4], [-11.4e3, -9200, 0.5], [-9600, 500, 0.5], [1500, 1640, 0.6]), 0.05, (v) => this.flute(v));
-    E(curve([-150, 1500, 0.5], [1640, 1915]), 0.3, (v) => this.hooves(v));
+    E(curve([-300e3, -14e3, 0.5], [-4000, -2700, 0.3], [1500, 1640]), 0.45, (v) => { this.thump(v * 0.7, 95, 0.25); this.thump(v * 0.45, 95, 0.25, 0.28); }, 'people');   // a drum by the fire
+    E(curve([-40e3, -14e3, 0.4], [-11.4e3, -9200, 0.5], [-9600, 500, 0.5], [1500, 1640, 0.6]), 0.05, (v) => this.flute(v), 'people');
+    E(curve([-150, 1500, 0.5], [1640, 1915]), 0.3, (v) => this.hooves(v), 'horse');
     E(curve([1000, 1500, 0.9], [1640, 1900]), 0.035, (v) => this.bell(v));   // church bells: Chartres, then New York and Manchester
-    E(curve([-2.6e6, -14e3, 0.35], [-9600, -2700, 0.5], [-2700, 1500, 0.8], [1626, 1900]), 0.18, (v) => this.clink(v));   // stone on stone, then chisels, then smiths
+    E(curve([-2.6e6, -14e3, 0.35], [-9600, -2700, 0.5], [-2700, 1500, 0.8], [1626, 1900]), 0.18, (v) => this.clink(v), 'people');   // stone on stone, then chisels, then smiths
     E(curve([1609, 1770], [1840, 1900]), 0.12, (v) => this.gull(v));
     E(curve([1790, 1840, 0.9], [1845, 1930]), 1.6, (v) => this.thump(v * 0.35, 60, 0.12));                        // engines
-    E(curve([1829, 1960]), 0.035, (v) => this.horn(v, [146.8, 185], 1.6, 'sawtooth', 500));    // steam whistle / ship horn
-    E(curve([1905, 1945, 0.6], [1945, 2050, 1]), 0.16, (v) => this.horn(v * 0.5, [392, 494], rnd(0.15, 0.5), 'square', 1800));
-    E(curve([1955, 2110]), 0.02, (v) => this.siren(v));
-    E(curve([2035, 2170]), 0.25, (v) => this.whoosh(v * 0.35, 500, 900, 1.2));                 // electric pods
-    E(curve([2150, 2850]), 0.5, (v) => this.whoosh(v, 250, 1500, rnd(1.2, 2.2)));              // flying traffic
+    E(curve([1829, 1960]), 0.035, (v) => this.horn(v, [146.8, 185], 1.6, 'sawtooth', 500), 'ship');    // steam whistle / ship horn
+    E(curve([1905, 1945, 0.6], [1945, 2050, 1]), 0.16, (v) => this.horn(v * 0.5, [392, 494], rnd(0.15, 0.5), 'square', 1800), 'car');
+    E(curve([1955, 2110]), 0.02, (v) => this.siren(v), 'car');
+    E(curve([2035, 2170]), 0.25, (v) => this.whoosh(v * 0.35, 500, 900, 1.2), 'car');                 // electric pods
+    E(curve([2150, 2850]), 0.5, (v) => this.whoosh(v, 250, 1500, rnd(1.2, 2.2)), 'flyer');              // flying traffic
     E(curve([2190, 2850]), 0.07, (v) => this.jingle(v));
     E(curve([2190, 2900]), 0.035, (v) => this.thunder(v));
     E(curve([2965, 9400, 1], [9400, 30000, 0.2]), 0.5, (v) => this.chime(v));
-    E(curve([2960, 9200]), 0.12, (v) => this.whoosh(v * 0.4, 800, 2400, 2.5));
+    E(curve([2960, 9200]), 0.12, (v) => this.whoosh(v * 0.4, 800, 2400, 2.5), 'flyer');
     E(curve([-4.54e9, -3.86e9, 0.8], [-254e6, -251.3e6, 0.8], [3e9, 7.6e9, 0.6], [-203e6, -196e6, 0.6], [-66.03e6, -65.99e6, 1]), 0.12, (v) => this.thunder(v));
     // --- before the dinosaurs ---
     E(curve([-4.54e9, -4.42e9]), 1.4, (v) => this.bubble(v));                                 // the magma ocean
@@ -114,14 +115,14 @@ export class Sound {
     E(curve([-4.27e9, -2.34e9, 0.7], [-2.15e9, -720e6, 0.7], [-632e6, -478e6, 1], [-470e6, -253e6, 0.35]), 0.16, (v) => this.surf(v));           // waves on a shore with nothing living on it
     E(curve([-375e6, -255e6]), 0.2, (v) => this.croak(v));                                    // the first voices: amphibians
     E(curve([-326e6, -294e6]), 0.22, (v) => this.buzz(v, rnd(55, 80), 1.6));                  // giant dragonflies
-    E(curve([-300e6, -252.2e6]), 0.09, (v) => this.hiss(v));
-    E(curve([-296e6, -252.2e6]), 0.045, (v) => this.roar(v * 0.55, rnd(75, 115), rnd(0.8, 1.4)));
+    E(curve([-300e6, -252.2e6]), 0.09, (v) => this.hiss(v), 'animal');
+    E(curve([-296e6, -252.2e6]), 0.045, (v) => this.roar(v * 0.55, rnd(75, 115), rnd(0.8, 1.4)), 'animal');
     // --- things in the sky ---
-    E(curve([1911, 1962]), 0.03, (v) => this.engine(v, rnd(85, 110), 7, 'sawtooth', 700));     // propeller aircraft
-    E(curve([1924, 1937, 1], [1937, 2100, 0.3], [2180, 2850, 0.8]), 0.02, (v) => this.engine(v * 0.7, rnd(48, 60), 11, 'sawtooth', 320));   // airships
-    E(curve([1958, 2110]), 0.035, (v) => this.jet(v));
-    E(curve([1950, 2110]), 0.028, (v) => this.chopper(v));
-    E(curve([2016, 2160]), 0.07, (v) => this.buzz(v * 0.5, rnd(190, 260), 2.6));              // delivery drones
+    E(curve([1911, 1962]), 0.03, (v) => this.engine(v, rnd(85, 110), 7, 'sawtooth', 700), 'aircraft');     // propeller aircraft
+    E(curve([1924, 1937, 1], [1937, 2100, 0.3], [2180, 2850, 0.8]), 0.02, (v) => this.engine(v * 0.7, rnd(48, 60), 11, 'sawtooth', 320), 'aircraft');   // airships
+    E(curve([1958, 2110]), 0.035, (v) => this.jet(v), 'aircraft');
+    E(curve([1950, 2110]), 0.028, (v) => this.chopper(v), 'aircraft');
+    E(curve([2016, 2160]), 0.07, (v) => this.buzz(v * 0.5, rnd(190, 260), 2.6), 'aircraft');              // delivery drones
 
     this.own = placeSounds(this, { bed: noiseBed, E, curve, rnd });
   }
@@ -141,12 +142,34 @@ export class Sound {
       b.g.gain.setTargetAtTime(v, now, 0.18);
     }
     if (this.muted) return;
-    for (const e of this.events) { const l = e.level(u) * (e.place ? (e.place === this.place ? 1 : 0) : own ? 0 : 1); if (l > 0.02 && Math.random() < e.rate * l * dt) e.play(l); }
+    for (const e of this.events) { const l = e.level(u) * (e.place ? (e.place === this.place ? 1 : 0) : own ? 0 : 1); if (l > 0.02 && Math.random() < e.rate * l * dt) this.emit(e, l); }
+  }
+
+  /** Play an event; one made by something in the world (a person, a car, an animal) comes from the nearest of those, or not at all. */
+  emit(e, l) {
+    if (e.kind) {
+      const at = this.locate ? this.locate(e.kind) : null;
+      if (!at) { if (!SOFT.has(e.kind)) return; const a = Math.random() * Math.PI * 2, d = rnd(40, 90), L = this.ear; this.here = [L[0] + Math.cos(a) * d, L[1] + 4, L[2] + Math.sin(a) * d]; }   // an unseen animal somewhere off in the distance
+      else this.here = at;
+    }
+    try { e.play(l); } finally { this.here = null; }
+  }
+  /** Where the visitor's ears are and which way they face (called every frame with the camera). */
+  listen(cam) {
+    const L = this.ctx && this.ctx.listener; if (!L) return;
+    const e = cam.matrixWorld.elements, p = [e[12], e[13], e[14]], f = [-e[8], -e[9], -e[10]], u = [e[4], e[5], e[6]]; this.ear = p;
+    if (L.positionX) { const t = this.ctx.currentTime; L.positionX.setTargetAtTime(p[0], t, 0.03); L.positionY.setTargetAtTime(p[1], t, 0.03); L.positionZ.setTargetAtTime(p[2], t, 0.03); L.forwardX.setTargetAtTime(f[0], t, 0.03); L.forwardY.setTargetAtTime(f[1], t, 0.03); L.forwardZ.setTargetAtTime(f[2], t, 0.03); L.upX.setTargetAtTime(u[0], t, 0.03); L.upY.setTargetAtTime(u[1], t, 0.03); L.upZ.setTargetAtTime(u[2], t, 0.03); }
+    else { L.setPosition(...p); L.setOrientation(...f, ...u); }
   }
 
   // ---------- one-shot voices ----------
   out(pan = rnd(-0.8, 0.8)) {
     const g = this.ctx.createGain();
+    if (this.here) {   // placed in the world: louder as you approach, panned by where it is around you
+      const P = this.ctx.createPanner(); P.panningModel = 'equalpower'; P.distanceModel = 'inverse'; P.refDistance = 6; P.rolloffFactor = 1.1; P.maxDistance = 20000;
+      if (P.positionX) { P.positionX.value = this.here[0]; P.positionY.value = this.here[1]; P.positionZ.value = this.here[2]; } else P.setPosition(...this.here);
+      const boost = this.ctx.createGain(); boost.gain.value = 3.2; g.connect(boost); boost.connect(P); P.connect(this.master); return g;
+    }
     if (this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(this.master); } else g.connect(this.master);
     return g;
   }
