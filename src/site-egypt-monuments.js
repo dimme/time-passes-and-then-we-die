@@ -109,9 +109,14 @@ function roadGeo(pts, width, high, deep = 3, roof = false) {
     for (const s of [1, -1]) {
       const q = [A(a, s, -deep), A(b, s, -deep), A(b, s, high), A(a, s, high)]; if (s > 0) q.reverse(); quad(...q);
       const t = 1 - 1.2 / w, top = [A(a, s, high), A(b, s, high), A(b, s * t, high), A(a, s * t, high)]; if (s > 0) top.reverse(); quad(...top);
-      const inn = [A(a, s * t, high), A(b, s * t, high), A(b, s * t, 0), A(a, s * t, 0)]; if (s > 0) inn.reverse(); if (!roof) quad(...inn);
+      const inn = [A(a, s * t, high), A(b, s * t, high), A(b, s * t, 0), A(a, s * t, 0)]; if (s > 0) inn.reverse(); quad(...inn);
+      if (roof) {   // roofing slabs from each wall towards the middle, leaving the slot along the crown that let daylight into the corridor
+        const k = 0.35 / w, sl = [A(a, s * t, high), A(b, s * t, high), A(b, s * k, high), A(a, s * k, high)], up = [A(a, s * t, high + 0.6), A(b, s * t, high + 0.6), A(b, s * k, high + 0.6), A(a, s * k, high + 0.6)];
+        const lip = [A(a, s * k, high), A(b, s * k, high), A(b, s * k, high + 0.6), A(a, s * k, high + 0.6)];
+        for (const q of [sl, up, lip]) { quad(...q); quad(...q.slice().reverse()); }   // both faces: seen from the corridor and from outside
+      }
     }
-    if (roof) quad(A(a, -1, high), A(a, 1, high), A(b, 1, high), A(b, -1, high)); else quad(A(a, -1, 0), A(a, 1, 0), A(b, 1, 0), A(b, -1, 0));
+    quad(A(a, -1, 0), A(a, 1, 0), A(b, 1, 0), A(b, -1, 0));   // the paved roadway
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.computeVertexNormals(); return g;
 }
@@ -253,7 +258,7 @@ export function buildMonuments({ P, group, mats }) {
 
   // ---- Khufu: mortuary temple (black basalt floor), causeway, valley temple, queens' pyramids, enclosure, boat pits ----
   const east = K1.x + K1.b / 2;
-  const upper1 = ob(temple(P, 'k1done', east + 12, east + 52, K1.z - 26, K1.z + 26, 8, { floor: C.basalt, doors: [0] }), K1.y1);
+  const upper1 = ob(temple(P, 'k1done', east + 12, east + 52, K1.z - 26, K1.z + 26, 8, { floor: C.basalt, doors: [0], back: true }), K1.y1);   // back: a passage through the sanctuary to the pyramid court
   {
     const x0 = east + 52, z0 = K1.z, x1 = 457, z1 = -475, yAt = (x, z) => Math.max(ground(x, z) + 0.3, 30.3 + (2.9 - 30.3) * clamp((x - 262) / (x1 - 262), 0, 1));
     const lower = ob(temple(P, 'k1done', 457, 499, -503, -447, 8, { doors: [-12, 12], floor: C.basalt, back: true }), K1.y1);
@@ -292,7 +297,7 @@ export function buildMonuments({ P, group, mats }) {
 
   // ---- Khafre: mortuary temple, causeway down to the valley temple beside the Sphinx ----
   const e2 = K2.x + K2.b / 2;
-  const upper2 = ob(temple(P, 'k2done', e2 + 14, e2 + 118, K2.z - 24, K2.z + 24, 10, { doors: [0], rows: 2 }), K2.y1);
+  const upper2 = ob(temple(P, 'k2done', e2 + 14, e2 + 118, K2.z - 24, K2.z + 24, 10, { doors: [0], rows: 2, back: true }), K2.y1);
   {
     const y = ground(372, 228) - 0.5, VZ = 212.5;   // valley temple: a great square block cased in red granite, two doors to the quay, the causeway coming in at the north-west
     causeway('fine', 'k2done', [[e2 + 118, K2.z], [e2 + 128, K2.z], [245, 200], [339, VZ], [349, VZ]], (x, z) => ground(x, z) + 0.5, 7, 3.2, true, upper2.floor, y + 0.6, K2.y1);
@@ -319,6 +324,12 @@ export function buildMonuments({ P, group, mats }) {
         .add('fine', 'k2done', put(block(1.5, 2.3, 1.9, 0.12), sx + 2.6, y + 2.6, sz), C.tura).add('fine', 'k2done', put(block(3, 0.7, 2.2, 0.05), sx + 3, y + 1.8, sz), shade(C.tura, 0.96));
     }
     P.add('blocks', 'k2done', put(block(42, 1.2, 58), 418, y - 0.2, 222), shade(C.lime, 1.05), 6); ob([rectOb([397, 439, 193, 251], -1e9, 1e9, { top: y + 1.0 })], K2.y1);   // the quay before its doors
+    // flights of steps up onto the quay from the north (the Sphinx side) and the south, so you can reach the doors on foot
+    for (const [zEdge, dir] of [[193, -1], [251, 1]]) {
+      const g = ground(418, zEdge + dir * 4), n = Math.max(1, Math.ceil((y + 1.0 - g) / 0.35));
+      for (let k = 0; k < n; k++) { const top = y + 1.0 - k * (y + 1.0 - g) / n, za = zEdge + dir * k * 0.8, zb = za + dir * 0.8;
+        P.add('blocks', 'k2done', put(block(18, top - g + 0.6, 0.8), 418, g - 0.6, (za + zb) / 2), shade(C.lime, 1.02 - k * 0.02), 6); ob([rectOb([409, 427, Math.min(za, zb), Math.max(za, zb)], -1e9, 1e9, { top })], K2.y1); }
+    }
     ob([rectOb([354, 390, 210, 246], -1e9, 1e9, { top: y + 0.6 })], K2.y1);
     // the Sphinx temple in front of the paws
     ob(temple(P, 'k2done', 345, 391, SPHINX.z - 24, SPHINX.z + 22, 5.2, { sanct: 0, c: shade(C.lime, 1.1), doors: [-14, 14], rows: 2, t: 6 }), K2.y1);
@@ -339,7 +350,7 @@ export function buildMonuments({ P, group, mats }) {
 
   // ---- Menkaure: temple finished in mud brick, causeway, three queens' pyramids to the south ----
   const e3 = K3.x + K3.b / 2;
-  const upper3 = ob(temple(P, 'k3done', e3 + 8, e3 + 62, K3.z - 22, K3.z + 22, 7, { mat: 'brick', c: C.plaster, pillar: C.tura, floor: C.mud, t: 4 }), K3.y1);
+  const upper3 = ob(temple(P, 'k3done', e3 + 8, e3 + 62, K3.z - 22, K3.z + 22, 7, { mat: 'brick', c: C.plaster, pillar: C.tura, floor: C.mud, t: 4, back: true }), K3.y1);
   const lower3 = ob(temple(P, 'k3done', 57, 103, 348, 396, 6.5, { mat: 'brick', c: C.plaster, pillar: C.tura, floor: C.mud, t: 4, back: true }), K3.y1);
   causeway('brick', 'k3done', [[e3 + 62, K3.z], [e3 + 72, K3.z], [47, 372], [57, 372]], (x, z) => ground(x, z) + 0.4, 6, 2.6, false, upper3.floor, lower3.floor, K3.y1);
   for (let i = 0; i < 3; i++) {

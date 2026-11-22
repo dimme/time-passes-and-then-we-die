@@ -71,7 +71,8 @@ export class Player {
     this.onDeck = dy !== null && this.pos.y - EYE > dy - 1.2 && dy > ground - 0.01;
     if (this.onDeck) ground = dy;
     ground += EYE;
-    this.pos.y += (ground - this.pos.y) * Math.min(1, dt * 8);
+    this.pos.y += (ground - this.pos.y) * Math.min(1, dt * (ground > this.pos.y ? 20 : 8));   // climb briskly, settle gently
+    if (this.pos.y < ground - 0.3) this.pos.y = ground - 0.3;   // never sink so far below a step that it walls you in
     if (this.fly) this.pos.y = this.fly;   // debug: hover at a fixed height
     this.camera.position.set(this.pos.x, this.pos.y, this.pos.z);
     this.camera.rotation.set(this.pitch, this.yaw, 0);

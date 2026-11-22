@@ -91,7 +91,7 @@ export default {
         monuments.update(year, world.hill); P.update(u); plain.update(u, t, camera, year); people.update(u, t, view, year);
       },
       collide(pos) {
-        const f = pos.y - 1.7; O.feet = f;
+        O.feet = pos.y - 1.7; const f = Math.max(O.feet, world.surfaceAt(last.x, last.z) - 0.05); O.feet = f;   // stand on the floor you were on, even if the eye is still catching up
         if (blocked(pos.x, pos.z, f) && last.ok) { if (!blocked(pos.x, last.z, f)) pos.z = last.z; else if (!blocked(last.x, pos.z, f)) pos.x = last.x; else { pos.x = last.x; pos.z = last.z; } }
         last.x = pos.x; last.z = pos.z; last.ok = !blocked(pos.x, pos.z, f);
       },
