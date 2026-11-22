@@ -87,6 +87,7 @@ export const ERAS = [
 ];
 export function eraAt(y) {
   let e = ERAS[0];
+  y += 1e-6 * (1 + Math.abs(y));   // the slider's rounding must not drop an era's first year into the one before
   for (const x of ERAS) if (x.from <= y) e = x;
   return e;
 }
@@ -188,7 +189,8 @@ export const EVENTS = [
 
 export function eventAt(y) {
   let e = EVENTS[0];
-  for (const x of EVENTS) if (x.y <= y + 1e-6) e = x; else break;
+  y += 1e-6 * (1 + Math.abs(y));
+  for (const x of EVENTS) if (x.y <= y) e = x; else break;
   return e;
 }
 

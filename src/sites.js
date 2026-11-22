@@ -44,14 +44,14 @@ const HOME_PLACES = [
   [-60e6, 'Bighorn Basin · Wyoming', [41.5, -109.5], [46.46, -80.43]], [-40e6, 'The Badlands · South Dakota', [43.8, -102.3], [44.51, -82.62]],
   [-7e6, 'Manhattan · New York', NY], [1.1e9, 'What is left of the Earth'],
 ].map(([from, place, coords, paleo]) => ({ from, place, coords: coords || null, paleo: paleo || null, home: coords === NY, elevator: coords === NY }));
-function homeAt(year) { let h = HOME_PLACES[0]; for (const p of HOME_PLACES) if (p.from <= year) h = p; else break; return h; }
+function homeAt(year) { const y = year + 1e-6 * (1 + Math.abs(year)); let h = HOME_PLACES[0]; for (const p of HOME_PLACES) if (p.from <= y) h = p; else break; return h; }
 
 /** [from year, site id] in order; a stage lasts until the next one begins. */
 export const STAGES = [
   [-Infinity, 'home'], [-7e6, 'africa'], [-70e3, 'cave'], [-14e3, 'home'], [-9600, 'crescent'], [-4000, 'sumer'],
   [-2700, 'egypt'], [-1250, 'greece'], [-150, 'rome'], [500, 'medieval'], [1500, 'home'], [1770, 'manchester'], [1840, 'home'],
 ];
-export function siteIdAt(year) { let id = 'home'; for (const [from, s] of STAGES) if (from <= year) id = s; else break; return id; }
+export function siteIdAt(year) { const y = year + 1e-6 * (1 + Math.abs(year)); let id = 'home'; for (const [from, s] of STAGES) if (from <= y) id = s; else break; return id; }   // the slider's rounding must not drop a stage's first year into the one before
 
 const FADE = 0.28;   // seconds of darkness either side of a journey
 
@@ -108,7 +108,7 @@ export class Travel {
   /** The caption for this year, if the place has its own. */
   eventAt(year) {
     const ev = this.atHome ? null : this.site.events; if (!ev || !ev.length) return null;
-    let e = ev[0]; for (const x of ev) if (x.y <= year + 1e-6) e = x; else break; return e;
+    const y = year + 1e-6 * (1 + Math.abs(year)); let e = ev[0]; for (const x of ev) if (x.y <= y) e = x; else break; return e;
   }
   updateContent(u, t, env, camera, view) {
     if (this.atHome) this.home.update(u, t, env, camera, view);
