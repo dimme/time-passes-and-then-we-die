@@ -134,7 +134,7 @@ export class Sound {
   update(u, dt) {
     const ctx = this.ctx; if (!ctx || ctx.state !== 'running') return;
     this.t += dt; const now = ctx.currentTime;
-    const own = this.own.has(this.place), gate = (x) => (x.place ? (x.place === this.place ? 1 : 0) : own ? 0.3 : 1);
+    const own = this.own.has(this.place), gate = (x) => (x.place ? (x.place === this.place ? 1 : 0) : own ? 0 : 1);   // a place's own soundscape replaces the general one entirely
     for (const b of this.beds) {
       let v = b.level(u) * b.max * gate(b);
       if (b.wobble) { v *= 1 + b.wobble * Math.sin(this.t * 0.37 + b.max * 40) * Math.sin(this.t * 0.13 + 1); b.f.frequency.setTargetAtTime(b.freq * (1 + 0.35 * Math.sin(this.t * 0.21 + b.freq)), now, 0.3); }
