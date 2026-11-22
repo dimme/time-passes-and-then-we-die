@@ -1,9 +1,9 @@
 // Every sound is synthesised with Web Audio — there are no audio files.
 // Continuous "beds" (wind, water, traffic, rain, drones …) and random one-shot
 // "events" (birds, roars, bells, horns …) each have a loudness curve over the timeline.
-import { yearToU, START } from './timeline.js';
-import { smooth } from './util.js';
-import { placeSounds } from './audio-places.js';
+import { yearToU, START } from './timeline.js?v=ef07112a';
+import { smooth } from './util.js?v=ef07112a';
+import { placeSounds } from './audio-places.js?v=ef07112a';
 
 const Y = yearToU, FADE = 0.006;
 /** [fromYear, toYear, level] spans → function of slider position returning 0..1 */

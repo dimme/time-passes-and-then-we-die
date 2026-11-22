@@ -1,11 +1,11 @@
 // Rome, 150 BCE – 500 CE: the Forum between the Capitoline and the Palatine, the Tiber, the Colosseum, an aqueduct and the road out.
 // Tufa, brick and timber under the Republic; marble at the height of the empire; then fire, stripped roofs and grass between the paving stones.
 import * as THREE from 'three';
-import { rng, clamp, smooth } from './util.js';
-import { yearToU, uToYear } from './timeline.js';
-import { actors } from './people-actors.js';
-import { species } from './animals.js';
-import { Batch, Blocks, Beasts, C, temple, column, archRing, scaffold, crane, drape, road, statue, trees, cart, hullGeo, gableGeo, archGeo, beside, loopOf, toward, tone, shade, audit, BOX, BALL } from './site-greece-kit.js';
+import { rng, clamp, smooth } from './util.js?v=ef07112a';
+import { yearToU, uToYear } from './timeline.js?v=ef07112a';
+import { actors } from './people-actors.js?v=ef07112a';
+import { species } from './animals.js?v=ef07112a';
+import { Batch, Blocks, Beasts, C, temple, column, archRing, scaffold, crane, drape, road, statue, trees, cart, hullGeo, gableGeo, archGeo, beside, loopOf, toward, tone, shade, audit, BOX, BALL } from './site-greece-kit.js?v=ef07112a';
 
 const F = 12, PI = Math.PI, U = yearToU;
 const T0 = [-520, -300], TU = [0.427, 0.904];                                   // the Tiber: a point on its centre line, and the way it flows

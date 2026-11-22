@@ -5,8 +5,8 @@
 //   'ground' standing in front of the actor, in the actor's coordinates
 // A piece in the 'glow' group is drawn unlit (flames, light strips). s = +1 when the working hand is the right one.
 import * as THREE from 'three';
-import { hex, WHITE } from './organic.js';
-import { tag, loft, ell, join } from './people-body.js';
+import { hex, WHITE } from './organic.js?v=ef07112a';
+import { tag, loft, ell, join } from './people-body.js?v=ef07112a';
 
 const WOOD = hex(0x6a4a2a), PALE = hex(0x9a7a4a), STONE = hex(0x8a8478), FLINT = hex(0x4a4640), CLAY = hex(0xa8683c), REED = hex(0xb8985a), GRAIN = hex(0xd0b060), IRON = hex(0x4a4c50), STEEL = hex(0xa0a4aa),
   BRONZE = hex(0xb08434), HIDE = hex(0x8a6a48), ROPE = hex(0xa89868), CLOTH = hex(0xd8d0bc), SACK = hex(0x9a8a68), FLAME = [2.4, 1.1, 0.25], EMBER = [1.6, 0.4, 0.08], RED = hex(0x8a1c14), SOOT = hex(0x1c1a18), WOOL = hex(0xe0d8c8);

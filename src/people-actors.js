@@ -2,12 +2,12 @@
 //   const site = actors(world, [{ outfit: 'neolithic', action: 'reap', x: 12, z: -4, rot: 1.2 }, …]); scene.add(...site.meshes);
 //   each frame: site.update(u, t, view)
 import * as THREE from 'three';
-import { rng } from './util.js';
-import { HIP, HELD, GRIP, CHEST, CROWN, join } from './people-body.js';
-import { OUTFITS as OUTFIT, personOf } from './people-outfits.js';
-import { PROPS as PROP } from './people-props.js';
-import { ACTION } from './people-actions.js';
-import { Pose, rigMat, POSE_SIZE, PALM } from './people-rig.js';
+import { rng } from './util.js?v=ef07112a';
+import { HIP, HELD, GRIP, CHEST, CROWN, join } from './people-body.js?v=ef07112a';
+import { OUTFITS as OUTFIT, personOf } from './people-outfits.js?v=ef07112a';
+import { PROPS as PROP } from './people-props.js?v=ef07112a';
+import { ACTION } from './people-actions.js?v=ef07112a';
+import { Pose, rigMat, POSE_SIZE, PALM } from './people-rig.js?v=ef07112a';
 
 /** The names an actor can use: `outfit`, `action`, and `prop` (several props joined with '+', or 'none'). */
 export const OUTFITS = Object.keys(OUTFIT).filter((k) => !OUTFIT[k].walkOnly), ACTIONS = Object.keys(ACTION), PROPS = Object.keys(PROP);

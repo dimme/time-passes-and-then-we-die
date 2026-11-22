@@ -1,7 +1,7 @@
 // Instanced things that travel along the street grid (people, carts, cars) or through the air and rivers.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js';
-import { LAND, ISLAND } from './world.js';
+import { yearToU } from './timeline.js?v=ef07112a';
+import { LAND, ISLAND } from './world.js?v=ef07112a';
 
 const H = Math.PI / 2;
 /** Streets that cross the island stop this far from its centre line. */

@@ -1,7 +1,7 @@
 // What people wore: each outfit dresses the body for its time and place, with real shape rather than paint.
-import { hex, WHITE } from './organic.js';
-import { BODY, LEG, ARM, SKIRT, HOLD, ANKLE, sm, tag, loft, ell, join, torso, torsoAt, ARM_RINGS, LEG_RINGS, limb, hand, shoe, head, shell, hairline } from './people-body.js';
-import { umbrella } from './people-props.js';
+import { hex, WHITE } from './organic.js?v=ef07112a';
+import { BODY, LEG, ARM, SKIRT, HOLD, ANKLE, sm, tag, loft, ell, join, torso, torsoAt, ARM_RINGS, LEG_RINGS, limb, hand, shoe, head, shell, hairline } from './people-body.js?v=ef07112a';
+import { umbrella } from './people-props.js?v=ef07112a';
 
 const HAIR = hex(0x3a2a1c), LEATHER = hex(0x2a1c14), SOLE = hex(0x14100c), LINEN = hex(0xe8e2d4), FELT = hex(0x1c1a18), BUCKSKIN = hex(0x9a7448), EYE = hex(0xe6e2dc), IRIS = hex(0x2a1a10);
 const FUR = hex(0x8a7458), BRONZE = hex(0xb08434), STEEL = hex(0x9a9ea4), MAIL = hex(0x6a6e74), GOLD = hex(0xc8a040), LAPIS = hex(0x1c3a8a), TURQ = hex(0x2a8a84), ROPE = hex(0xa89868);

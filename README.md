@@ -103,3 +103,10 @@ plate reconstruction of Merdith et al. (2021, CC BY 4.0) from the GPlates Web Se
 
 Dates for the deep past and far future are rounded scientific estimates; everything after
 about 2100 is imagination.
+
+## Versions and caching
+
+Every file the game loads is requested with a version in its URL (`?v=…`), a hash of the content of everything the game
+loads, so a browser never mixes old and new files after an update. `node tools/stamp.mjs` refreshes the versions; the
+pre-commit hook in `tools/hooks` runs it on every commit. Enable the hook once per clone with
+`git config core.hooksPath tools/hooks`.

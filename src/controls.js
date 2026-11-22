@@ -1,4 +1,4 @@
-import { clamp } from './util.js';
+import { clamp } from './util.js?v=ef07112a';
 
 const EYE = 1.7;
 

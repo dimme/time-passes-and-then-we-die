@@ -14,16 +14,16 @@
 //
 // A module without `build` is a placeholder: its years stay in Manhattan until it is written.
 import * as THREE from 'three';
-import { MANHATTAN } from './world.js';
-import africa from './site-africa.js';
-import cave from './site-cave.js';
-import crescent from './site-crescent.js';
-import sumer from './site-sumer.js';
-import egypt from './site-egypt.js';
-import greece from './site-greece.js';
-import rome from './site-rome.js';
-import medieval from './site-medieval.js';
-import manchester from './site-manchester.js';
+import { MANHATTAN } from './world.js?v=ef07112a';
+import africa from './site-africa.js?v=ef07112a';
+import cave from './site-cave.js?v=ef07112a';
+import crescent from './site-crescent.js?v=ef07112a';
+import sumer from './site-sumer.js?v=ef07112a';
+import egypt from './site-egypt.js?v=ef07112a';
+import greece from './site-greece.js?v=ef07112a';
+import rome from './site-rome.js?v=ef07112a';
+import medieval from './site-medieval.js?v=ef07112a';
+import manchester from './site-manchester.js?v=ef07112a';
 
 export const SITES = { africa, cave, crescent, sumer, egypt, greece, rome, medieval, manchester };
 const NY = [40.71, -74.01];

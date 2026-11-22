@@ -1,8 +1,8 @@
 // Building kit: procedural facade textures, the handful of materials every structure shares,
 // and a geometry accumulator that merges all the detail of one structure into one mesh per material.
 import * as THREE from 'three';
-import { rng } from './util.js';
-import { shared, canvasTex, normalMap, tileNoise } from './textures.js';
+import { rng } from './util.js?v=ef07112a';
+import { shared, canvasTex, normalMap, tileNoise } from './textures.js?v=ef07112a';
 
 export const NEON = [0xff3ad8, 0x3af0ff, 0xffd23a, 0x7a5cff, 0xff5a3a, 0xe8f4ff];
 const css = (h) => '#' + h.toString(16).padStart(6, '0');

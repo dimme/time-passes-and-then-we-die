@@ -1,6 +1,6 @@
 // Building blocks for vehicles: one material whose finish is set per vertex, and smooth lofted / swept / revolved skins.
 import * as THREE from 'three';
-import { cr } from './organic.js';
+import { cr } from './organic.js?v=ef07112a';
 
 // =====================================================================================
 // Finishes and the material that reads them

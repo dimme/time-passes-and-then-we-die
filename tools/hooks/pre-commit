@@ -1,0 +1,5 @@
+#!/bin/sh
+# Stamp every loaded file with the current content version before each commit (see tools/stamp.mjs).
+# Enable once per clone with:  git config core.hooksPath tools/hooks
+node tools/stamp.mjs >/dev/null || exit 1
+git add -u index.html src vendor tools

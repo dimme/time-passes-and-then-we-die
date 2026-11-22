@@ -1,15 +1,15 @@
 // The people of Giza and what they are doing: farmers on the flood plain, gangs hauling stone, masons, scribes, bakers, priests,
 // boatmen — and the oxen, sledges, boats and chariot that move with them.
 import * as THREE from 'three';
-import { rng } from './util.js';
-import { yearToU } from './timeline.js';
-import { actors } from './people-actors.js';
-import { species } from './animals.js';
-import { pose, TAU } from './animals-rig.js';
-import { C, Parts, shade, put, block, bar, fin, offsetLoop, roundLoop, Track } from './site-egypt-kit.js';
-import { K1, K2, K3, RAMP, QUARRY, SPHINX, TOWN, PLAIN, RH, ground } from './site-egypt-land.js';
-import { FIELDS, FLOOR, PASTURE, VILLAGE, BOATS, SHADUFS, boat } from './site-egypt-plain.js';
-import { cattle, Team, grazing } from './site-egypt-animals.js';
+import { rng } from './util.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=ef07112a';
+import { actors } from './people-actors.js?v=ef07112a';
+import { species } from './animals.js?v=ef07112a';
+import { pose, TAU } from './animals-rig.js?v=ef07112a';
+import { C, Parts, shade, put, block, bar, fin, offsetLoop, roundLoop, Track } from './site-egypt-kit.js?v=ef07112a';
+import { K1, K2, K3, RAMP, QUARRY, SPHINX, TOWN, PLAIN, RH, ground } from './site-egypt-land.js?v=ef07112a';
+import { FIELDS, FLOOR, PASTURE, VILLAGE, BOATS, SHADUFS, boat } from './site-egypt-plain.js?v=ef07112a';
+import { cattle, Team, grazing } from './site-egypt-animals.js?v=ef07112a';
 
 const Y = yearToU, EVER = [-1e12, 1e12], frac = (v) => v - Math.floor(v);
 const toward = (x, z, tx, tz) => Math.atan2(z - tz, tx - x);

@@ -1,5 +1,5 @@
 // Dinosaurs and pterosaurs.
-import { Rig, loft, mass, cone, slab, strip, fan, put, at, mirror, padFoot, hide, hex, IVORY, HORN, TOOTH, NAIL } from './animals-rig.js';
+import { Rig, loft, mass, cone, slab, strip, fan, put, at, mirror, padFoot, hide, hex, IVORY, HORN, TOOTH, NAIL } from './animals-rig.js?v=ef07112a';
 
 const clamp = (v) => Math.max(0, Math.min(1, v));
 const EYE = hex(0x1a1206);

@@ -1,12 +1,12 @@
 // People: an anatomical figure (about 7.5 heads tall) dressed for its century, walking the streets or standing by a fire.
 // The body is in people-body.js, the clothes in people-outfits.js; people who do things other than walk are in people-actors.js.
 import * as THREE from 'three';
-import { merge } from './util.js';
-import { hex } from './organic.js';
-import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js';
-import { personOf } from './people-outfits.js';
-import { surface } from './people-rig.js';
-import { Movers, traffic, CROSS_SPAN } from './movers.js';
+import { merge } from './util.js?v=ef07112a';
+import { hex } from './organic.js?v=ef07112a';
+import { HIP, KNEE, ANKLE, SHOULDER, ELBOW } from './people-body.js?v=ef07112a';
+import { personOf } from './people-outfits.js?v=ef07112a';
+import { surface } from './people-rig.js?v=ef07112a';
+import { Movers, traffic, CROSS_SPAN } from './movers.js?v=ef07112a';
 
 // =====================================================================================
 // The walk: a gait cycle computed per vertex from the instance's position along its path

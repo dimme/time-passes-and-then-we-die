@@ -1,9 +1,9 @@
 // The stone of Giza: three pyramids that rise course by course, their ramps, quarry, temples, causeways and tombs, and the Sphinx.
 import * as THREE from 'three';
-import { rng, clamp, merge } from './util.js';
-import { C, lin, shade, put, block, wall, skin, fin, rectOb, boxOb, stripOb } from './site-egypt-kit.js';
-import { buildInsides } from './site-egypt-inside.js';
-import { K1, K2, K3, RAMP, QUARRY, SPHINX, RH, SLOPE, ground, builtCourses } from './site-egypt-land.js';
+import { rng, clamp, merge } from './util.js?v=ef07112a';
+import { C, lin, shade, put, block, wall, skin, fin, rectOb, boxOb, stripOb } from './site-egypt-kit.js?v=ef07112a';
+import { buildInsides } from './site-egypt-inside.js?v=ef07112a';
+import { K1, K2, K3, RAMP, QUARRY, SPHINX, RH, SLOPE, ground, builtCourses } from './site-egypt-land.js?v=ef07112a';
 
 const SIDES = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 

@@ -4,15 +4,15 @@
 //   city-landmarks.js  Empire State, Chrysler, the World Trade Center, Brooklyn Bridge
 //   city-props.js      camps, fort, mill, wall, park, street furniture, the far future
 import * as THREE from 'three';
-import { rng, smooth, clamp } from './util.js';
-import { yearToU } from './timeline.js';
-import { LAND } from './world.js';
-import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js';
-import { Scatter } from './flora.js';
-import { Kit, M, NEON, setNight, conform, pushOut, padTop } from './city-kit.js';
-import { TYPES } from './city-types.js';
-import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js';
-import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js';
+import { rng, smooth, clamp } from './util.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=ef07112a';
+import { LAND } from './world.js?v=ef07112a';
+import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js?v=ef07112a';
+import { Scatter } from './flora.js?v=ef07112a';
+import { Kit, M, NEON, setNight, conform, pushOut, padTop } from './city-kit.js?v=ef07112a';
+import { TYPES } from './city-types.js?v=ef07112a';
+import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js?v=ef07112a';
+import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js?v=ef07112a';
 
 export { TYPES };
 const Y = yearToU;

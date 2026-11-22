@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { rng, smooth, box, vcMat } from './util.js';
-import { yearToU } from './timeline.js';
-import { shared } from './textures.js';
-import { windTime, leafMat, floraTextures } from './flora-tex.js';
-import { Builder, norm, tube, arc, ribbon, kite, grow, foliage, boulder } from './flora-geo.js';
+import { rng, smooth, box, vcMat } from './util.js?v=ef07112a';
+import { yearToU } from './timeline.js?v=ef07112a';
+import { shared } from './textures.js?v=ef07112a';
+import { windTime, leafMat, floraTextures } from './flora-tex.js?v=ef07112a';
+import { Builder, norm, tube, arc, ribbon, kite, grow, foliage, boulder } from './flora-geo.js?v=ef07112a';
 
 const FADE = 0.003;
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _c = new THREE.Color();

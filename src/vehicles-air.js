@@ -1,10 +1,10 @@
 // Things that fly over Manhattan, period by period: balloons, airships, aeroplanes, helicopters, drones and what comes after.
 // Every model faces +x with y up, in metres, and hangs around its own centre; starboard is +z.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js';
-import { rng, lerp, clamp } from './util.js';
-import { Movers } from './movers.js';
-import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js';
+import { yearToU } from './timeline.js?v=ef07112a';
+import { rng, lerp, clamp } from './util.js?v=ef07112a';
+import { Movers } from './movers.js?v=ef07112a';
+import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js?v=ef07112a';
 
 const PI = Math.PI, RAD = PI / 180;
 const A = {

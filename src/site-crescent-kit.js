@@ -2,11 +2,11 @@
 // procedural textures for mud brick, plaster, rubble, reed and tilled earth, a small geometry builder that
 // collects everything of one material into one mesh, standing crops, and things to bump into.
 import * as THREE from 'three';
-import { rng } from './util.js';
-import { canvasTex, normalMap, shared } from './textures.js';
-import { leafMat } from './flora-tex.js';
-import { Builder } from './flora-geo.js';
-import { makeKinds } from './flora.js';
+import { rng } from './util.js?v=ef07112a';
+import { canvasTex, normalMap, shared } from './textures.js?v=ef07112a';
+import { leafMat } from './flora-tex.js?v=ef07112a';
+import { Builder } from './flora-geo.js?v=ef07112a';
+import { makeKinds } from './flora.js?v=ef07112a';
 
 export const lin = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255].map((v) => v ** 2.2);
 export const shade = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
