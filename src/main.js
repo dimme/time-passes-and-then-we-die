@@ -141,6 +141,31 @@ async function boot() {
   // zooming out: 0 = standing on the ground, 1 = the whole solar system
   const space = new Space($('tags')), zoomEl = $('zoom');
   let zoom = 0, zoomTarget = 0;
+
+  // ---- the space elevator (2990–9600): board at the pad on the shore, a shuttle takes you out to the ground station in the
+  // harbour, and the climber carries you up the tether to the station at geostationary height, 35,786 km up; then back down.
+  const LIFT_YEARS = [2990, 9600], BASE = { x: 420, z: 200 }, PAD = { x: 226, z: 200 }, GEO = 35786, CLIMB = 42, GLIDE = 4;
+  const pad = new THREE.Mesh(new THREE.RingGeometry(3.2, 4.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8adfe8, transparent: true, opacity: 0.8, depthWrite: false })); home.add(pad);
+  let ride = null;   // { stage: 'out' | 'up' | 'top' | 'down' | 'back', t, from }
+  const altAt = (s) => 0.02 + (GEO - 0.02) * (Math.exp(7 * s) - 1) / (Math.exp(7) - 1);   // km: slow off the ground, fast in the empty middle
+  const rideBtn = $('ride'), rideHud = $('ridehud');
+  const fmtKm = (km) => (km < 10 ? (km * 1000).toFixed(0) + ' m' : Math.round(km).toLocaleString('en') + ' km');
+  const realTime = (km) => { const h = km / 200; return h < 1 / 60 ? 'under a minute' : h < 1 ? Math.round(h * 60) + ' min' : h < 48 ? h.toFixed(1) + ' hours' : (h / 24).toFixed(1) + ' days'; };
+  const startRide = () => { if (!ride) { ride = { stage: 'out', t: 0, from: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw } }; zoom = zoomTarget = 0; } else if (ride.stage === 'top') { ride.stage = 'down'; ride.t = 0; } };
+  rideBtn.addEventListener('click', (e) => { e.stopPropagation(); startRide(); rideBtn.blur(); });
+  addEventListener('keydown', (e) => { if (e.code === 'Enter' && (rideBtn.classList.contains('on'))) startRide(); });
+  const endRide = () => { if (!ride) return; player.pos.x = ride.from.x; player.pos.z = ride.from.z; player.yaw = ride.from.yaw; player.pos.y = ride.from.y; ride = null; space.ride = null; zoom = zoomTarget = 0; };
+  /** Advance the ride; returns the altitude in km (0 while gliding over the harbour). */
+  const stepRide = (dt, year) => {
+    if (!travel.atHome || year < LIFT_YEARS[0] || year >= LIFT_YEARS[1]) { endRide(); return 0; }
+    ride.t += dt;
+    if (ride.stage === 'out' && ride.t > GLIDE) { ride.stage = 'up'; ride.t = 0; }
+    if (ride.stage === 'up' && ride.t > CLIMB) { ride.stage = 'top'; ride.t = 0; }
+    if (ride.stage === 'down' && ride.t > CLIMB) { ride.stage = 'back'; ride.t = 0; }
+    if (ride.stage === 'back' && ride.t > GLIDE) { endRide(); return 0; }
+    const s = Math.min(1, ride.t / CLIMB);
+    return ride.stage === 'up' ? altAt(s) : ride.stage === 'top' ? GEO : ride.stage === 'down' ? altAt(1 - s) : 0;
+  };
   zoomEl.addEventListener('input', () => { zoomTarget = zoomEl.value / 1000; });
   mark('@wired');
   const draw = () => {
@@ -152,13 +177,23 @@ async function boot() {
     travel.update(year, dt);
     envAt(u, env); travel.applyEnv(year, env); env.grass *= Q.grass;
     // the view from above
+    // the space elevator
+    const liftOn = travel.atHome && year >= LIFT_YEARS[0] && year < LIFT_YEARS[1];
+    pad.visible = liftOn; if (liftOn) pad.position.set(PAD.x, world.surfaceAt(PAD.x, PAD.z) + 0.08, PAD.z);
+    const alt = ride ? stepRide(dt, year) : 0, near = liftOn && !ride && zoom === 0 && Math.hypot(player.pos.x - PAD.x, player.pos.z - PAD.z) < 9;
+    rideBtn.classList.toggle('on', near || (ride && ride.stage === 'top')); rideBtn.textContent = ride ? 'Ride back down to the ground (Enter)' : 'Take the space elevator (Enter)';
+    rideHud.classList.toggle('on', !!ride);
+    if (ride) {
+      rideHud.innerHTML = ride.stage === 'out' || ride.stage === 'back' ? (ride.stage === 'out' ? 'Shuttle to the ground station' : 'Back to the shore') : `<b>${fmtKm(alt)}</b><br>${ride.stage === 'top' ? 'Geostationary station: you circle the Earth once a day, hanging over the same spot' : ride.stage === 'up' ? 'Climbing' : 'Descending'} · a real climber would take ${realTime(Math.max(alt, 0.001))} to get here`;
+      zoom = zoomTarget = alt > 3 ? LIFT + 0.004 : 0; space.ride = alt > 3 ? alt : null;
+    }
     const k = player.keys;
-    if (k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
-    if (k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
+    if (!ride && k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
+    if (!ride && k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 6); if (Math.abs(zoomTarget - zoom) < 1e-4) zoom = zoomTarget;
     if (document.activeElement !== zoomEl) zoomEl.value = Math.round(zoomTarget * 1000);
-    $('lift').style.opacity = Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);
-    $('tags').style.display = zoom > LIFT ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
+    $('lift').style.opacity = ride ? Math.max(0, 1 - Math.abs(alt - 3) / 0.6) * 0.8 : Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);   // a brief fade where the ride leaves the city for space
+    $('tags').style.display = zoom > LIFT && !ride ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
     sound.setDistance(Math.min(1, zoom / (LIFT * 2.5)));
     if (zoom > LIFT) {
       envAt(u, envWorld);
@@ -166,7 +201,17 @@ async function boot() {
       renderer.toneMappingExposure = 1; return;
     }
     world.update(env, dt, time, camera, u);
-    player.update(zoom > 0.002 ? 0 : dt);
+    player.update(zoom > 0.002 || ride ? 0 : dt);
+    if (ride) {   // in the shuttle over the harbour, or in the climber below 3 km: the camera rides along
+      const gy = Math.max(world.heightAt(BASE.x, BASE.z), world.sea), g = Math.min(1, ride.t / GLIDE), e = g * g * (3 - 2 * g), f = ride.from;
+      if (ride.stage === 'out' || ride.stage === 'back') {
+        const k2 = ride.stage === 'out' ? e : 1 - e, tx = BASE.x + 12, tz = BASE.z + 12, ty = gy + 52;
+        camera.position.set(f.x + (tx - f.x) * k2, f.y + (ty - f.y) * k2, f.z + (tz - f.z) * k2);
+        camera.rotation.set(0.15 * k2, -Math.PI / 2 + (f.yaw + Math.PI / 2) * (1 - k2) * 0 + 0, 0, 'YXZ'); camera.lookAt(BASE.x, gy + 60 + 400 * k2, BASE.z);
+      } else {
+        camera.position.set(BASE.x + 12, gy + 52 + alt * 1000, BASE.z + 12); camera.rotation.set(-0.12 - Math.min(0.5, alt * 0.2), Math.PI / 2, 0, 'YXZ');
+      }
+    }
     if (zoom > 0) {   // lifting off: rise and look down
       const s = zoom / LIFT; camera.position.y += s * s * 700; camera.rotation.x += (-1.3 - camera.rotation.x) * Math.min(1, s * 1.4);
     }

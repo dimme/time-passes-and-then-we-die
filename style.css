@@ -26,6 +26,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color:
 #veil { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; background: #000; opacity: 0; pointer-events: none; z-index: 5;
   font-family: Georgia, 'Times New Roman', serif; font-size: clamp(22px, 3.4vw, 44px); letter-spacing: .02em; text-align: center; padding: 0 24px; }
 #lift { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+#ride { display: none; position: fixed; left: 50%; bottom: 170px; transform: translateX(-50%); z-index: 6; padding: 10px 18px; font-size: 15px; border-radius: 22px; border: 1px solid rgba(160,235,255,.7); background: rgba(10,30,40,.72); color: #dffaff; cursor: pointer; }
+#ride.on { display: block; }
+#ridehud { display: none; position: fixed; left: 50%; top: 18%; transform: translateX(-50%); z-index: 6; text-align: center; color: #e8fbff; text-shadow: 0 1px 6px #000; font-size: 15px; line-height: 1.5; pointer-events: none; }
+#ridehud.on { display: block; }
+#ridehud b { font-size: 30px; font-weight: 400; letter-spacing: .02em; }
 #tags { display: none; position: fixed; inset: 0; pointer-events: none; }
 .tag { position: absolute; transform: translate(10px, -50%); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #dfe6f5; text-shadow: 0 0 4px #000, 0 1px 2px #000; white-space: nowrap; }
 .scale { position: absolute; left: 50%; top: 22px; transform: translateX(-50%); font-family: Georgia, 'Times New Roman', serif; font-size: clamp(18px, 2.2vw, 28px); text-shadow: 0 1px 4px #000; }

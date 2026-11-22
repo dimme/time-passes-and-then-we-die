@@ -155,7 +155,9 @@ export class Space {
     tether.scale.y = 8.6; tether.position.y = 1;                                            // from the surface to 61,000 km up, in Earth radii
     const station = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff })); station.position.y = 6.62;   // geostationary
     const weight = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 6), new THREE.MeshBasicMaterial({ color: 0xbfe8ff })); weight.position.y = 9.6;
-    this.elevator = new THREE.Group(); this.elevator.add(tether, station, weight); this.station = station; this.earth.mesh.add(this.elevator);
+    this.tether = tether; this.elevator = new THREE.Group(); this.elevator.add(tether, station, weight); this.station = station; this.earth.mesh.add(this.elevator);
+    // the climber you ride in: a lit capsule on the tether (only drawn during a ride)
+    this.climber = new THREE.Mesh(new THREE.CapsuleGeometry(1, 2.4, 4, 10), new THREE.MeshBasicMaterial({ color: 0x9af0ff })); this.climber.visible = false; scene.add(this.climber); this.ride = null;
 
     // rubble: the asteroid belt always, and a disc of debris while the planets are still forming
     const cloud = (n, r0, r1, thick, color, size) => {
@@ -210,7 +212,7 @@ export class Space {
       let dl = b[1] - a[1]; if (dl > 180) dl -= 360; else if (dl < -180) dl += 360;
       lat = a[0] + (b[0] - a[0]) * t; lon = a[1] + dl * t;
     }
-    u.site.value.copy(onGlobe(lat, lon)); u.marker.value = site.coords ? 1 - smooth((k - 0.2) / 0.12) : 0;   // no marker where no one can say where the place was
+    u.site.value.copy(onGlobe(lat, lon)); u.marker.value = site.coords && this.ride === null ? 1 - smooth((k - 0.2) / 0.12) : 0;   // no marker where no one can say where the place was
 
     // turn the globe so the place on screen is in daylight, facing the camera's starting point
     const toSun = v.copy(E).multiplyScalar(-1).normalize().clone();
@@ -232,8 +234,17 @@ export class Space {
     const tilt = smooth((k - 0.3) / 0.3), dir = facing.clone().addScaledVector(sideways, lean).normalize().lerp(new THREE.Vector3(0.2, 0.86, 0.47), tilt).normalize();
     const target = this._t.copy(E).multiplyScalar(1 - smooth((k - 0.62) / 0.2));
     cam.position.copy(target).addScaledVector(dir, d); cam.up.set(0, 1, 0); cam.lookAt(target);
+    if (this.ride !== null && this.elevator.visible) {   // riding the elevator: just beside the tether at this altitude, looking back down at the Earth
+      const up = u.site.value.clone().applyQuaternion(this.earth.mesh.quaternion), side = new THREE.Vector3(1, 0, 0).cross(up).normalize(), alt = this.ride / 1000;
+      const off = 0.004 + alt * 0.12; cam.position.copy(E).addScaledVector(up, R_EARTH + alt).addScaledVector(side, off);
+      this.tether.scale.x = this.tether.scale.z = Math.min(1, off * 0.012 / 0.012 / R_EARTH * 2);   // a thread beside you, not a wall (the elevator group is in Earth radii)
+      cam.up.copy(side).negate(); cam.lookAt(this._t.copy(E).addScaledVector(up, R_EARTH * 0.55 + alt * 0.4));
+      this.climber.position.copy(E).addScaledVector(up, R_EARTH + alt - 0.0004 - alt * 0.01); this.climber.quaternion.setFromUnitVectors(UP, up); this.climber.scale.setScalar(Math.max(0.0003, alt * 0.004)); this.climber.visible = true;
+      cam.aspect = aspect; cam.near = Math.max(0.0003, alt * 0.02); cam.far = 6e8; cam.updateProjectionMatrix(); cam.updateMatrixWorld(); this.stars.position.copy(cam.position);
+    } else { this.climber.visible = false; this.tether.scale.x = this.tether.scale.z = 1; }
+    if (this.ride !== null && this.elevator.visible) { /* camera already set */ } else {
     cam.aspect = aspect; cam.near = Math.max(0.05, d * 0.01); cam.far = 6e8; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
-    this.stars.position.copy(cam.position);
+    this.stars.position.copy(cam.position); }
 
     // sizes: true until a body would shrink below a few pixels, then held there
     const fit = (mesh, radius, min = 0.0045) => mesh.scale.setScalar(Math.max(radius, cam.position.distanceTo(mesh.position) * min));
