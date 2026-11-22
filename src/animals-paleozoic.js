@@ -1,7 +1,7 @@
 // Before the dinosaurs: trilobites, the first land arthropods, the first four-legged animals, giant dragonflies, sail-backs and the survivors of the Great Dying.
 import * as THREE from 'three';
-import { rng } from './util.js?v=fea1c89f';
-import { Rig, loft, mass, cone, at, mirror, hide, hex, TAU, TOOTH, NAIL, IVORY, HORN } from './animals-rig.js?v=fea1c89f';
+import { rng } from './util.js?v=740e009b';
+import { Rig, loft, mass, cone, at, mirror, hide, hex, TAU, TOOTH, NAIL, IVORY, HORN } from './animals-rig.js?v=740e009b';
 
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 const smooth = (t) => { t = clamp(t); return t * t * (3 - 2 * t); };

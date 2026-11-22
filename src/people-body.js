@@ -1,7 +1,7 @@
 // The human body: an anatomical figure (about 7.5 heads tall) lofted from rings and tagged for the animation shaders.
 import * as THREE from 'three';
-import { smooth } from './util.js?v=fea1c89f';
-import { cr } from './organic.js?v=fea1c89f';
+import { smooth } from './util.js?v=740e009b';
+import { cr } from './organic.js?v=740e009b';
 
 // =====================================================================================
 // Geometry helpers: everything is indexed, smooth-shaded, and tagged for the walk shader

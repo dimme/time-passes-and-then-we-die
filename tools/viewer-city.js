@@ -3,11 +3,11 @@
 //                          prop:camp|village|fort|windmill|palisade|park|pool|elevator|fire|gas|crook|cobra|signal|hydrant|subway
 //                          building:<type>[:seed[:corner]]          &zoom=2&focus=x,y,z&night=1
 import * as THREE from 'three';
-import { rng } from '../src/util.js?v=fea1c89f';
-import { setNight } from '../src/city-kit.js?v=fea1c89f';
-import { TYPES } from '../src/city-types.js?v=fea1c89f';
-import { empireState, chrysler, twinTower, oneWTC, bridge } from '../src/city-landmarks.js?v=fea1c89f';
-import * as P from '../src/city-props.js?v=fea1c89f';
+import { rng } from '../src/util.js?v=740e009b';
+import { setNight } from '../src/city-kit.js?v=740e009b';
+import { TYPES } from '../src/city-types.js?v=740e009b';
+import { empireState, chrysler, twinTower, oneWTC, bridge } from '../src/city-landmarks.js?v=740e009b';
+import * as P from '../src/city-props.js?v=740e009b';
 
 const q = new URLSearchParams(location.search), [kind, name, seed, corner] = (q.get('m') || 'landmark:esb').split(':'), r = rng(parseInt(seed || '7', 10)), night = q.get('night') === '1';
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, preserveDrawingBuffer: true });

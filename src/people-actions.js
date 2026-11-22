@@ -1,6 +1,6 @@
 // What people do: each action poses the body (see Pose in people-rig.js) for a moment of its cycle.
-import { HIP, ANKLE } from './people-body.js?v=fea1c89f';
-import { HOLD } from './people-props.js?v=fea1c89f';
+import { HIP, ANKLE } from './people-body.js?v=740e009b';
+import { HOLD } from './people-props.js?v=740e009b';
 
 const TAU = Math.PI * 2, sin = Math.sin, cos = Math.cos;
 const fract = (v) => v - Math.floor(v), mix = (a, b, t) => a + (b - a) * t, ss = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };

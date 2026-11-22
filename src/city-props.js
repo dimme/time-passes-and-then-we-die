@@ -1,10 +1,10 @@
 // Everything that is not a building: camps and villages, the fort, the mill and the wall, the park, street furniture, the far future.
 // Things that stood on the island's original rolling ground take a lift(x, z) function and ride the land (see Kit.on / conform).
 import * as THREE from 'three';
-import { merge, vcMat } from './util.js?v=fea1c89f';
-import { staticPerson } from './fauna.js?v=fea1c89f';
-import { Kit, Solid, inside, M, facadeOf, lin, WHITE, pick } from './city-kit.js?v=fea1c89f';
-import { around, pierced, glaze, mul, DARK, CANDLE, LAMP } from './city-types.js?v=fea1c89f';
+import { merge, vcMat } from './util.js?v=740e009b';
+import { staticPerson } from './fauna.js?v=740e009b';
+import { Kit, Solid, inside, M, facadeOf, lin, WHITE, pick } from './city-kit.js?v=740e009b';
+import { around, pierced, glaze, mul, DARK, CANDLE, LAMP } from './city-types.js?v=740e009b';
 
 const PI = Math.PI, IRON = 0x1b1d1d, WOOD = 0x5a4028, STONE = 0x9a9488;
 const BLOB = new THREE.IcosahedronGeometry(1, 1), HEMI = new THREE.SphereGeometry(1, 14, 6, 0, PI * 2, 0, PI / 2), BOWL = new THREE.SphereGeometry(1, 10, 5, 0, PI * 2, PI / 2, PI / 2);
@@ -259,15 +259,21 @@ export function pool() {
   return k.build();
 }
 
-/** The space elevator's ground station, tether and climber. */
+/** The space elevator's ground station: a raised plaza at the foot of the tether, six legs leaning in to hold it, and the
+ *  tether itself, rising out of sight. The climber car stands at the centre (src/elevator.js); you walk up and step in. */
 export function elevator() {
-  const k = new Kit(), white = 0xf0f4f4;
-  k.lathe(M.trim, white, [[36, -2], [34, 3], [27, 9], [24, 11.5], [20, 13], [14, 22], [10.5, 36], [9, 44], [6, 47], [2.2, 49]], 0, 0, 0, 32);
-  k.cyl(M.glow, 0x8adfe8, 27.4, 27.4, 0.7, 0, 9.2, 0, 32, true); k.cyl(M.glow, 0x8adfe8, 14.3, 14.3, 0.5, 0, 22, 0, 32, true);
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * PI * 2; k.rod(M.trim, white, 1.2, [Math.sin(a) * 33, 2, Math.cos(a) * 33], [Math.sin(a) * 6, 60, Math.cos(a) * 6], 6); k.geo(M.trim, white, HEMI, Math.sin(a) * 40, -1, Math.cos(a) * 40, 0, 0, 0, 5, 3.5, 5); }
-  const tether = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.6, 9000, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false })); tether.position.y = 4500;
-  const car = new THREE.Mesh(new THREE.LatheGeometry([[0, -7], [3.2, -4.5], [4.2, 0], [3.2, 4.5], [0, 7]].map((p) => new THREE.Vector2(p[0], p[1])), 12), new THREE.MeshBasicMaterial({ color: 0x8af4ff, fog: false }));
-  const g = group(k, tether, car); g.userData.tick = (t) => { car.position.y = 60 + ((t * 30) % 1500); };
+  const k = new Kit(), white = 0xf0f4f4, sol = new Solid(), TOP = 0.25;
+  k.box(M.trim, white, 26, TOP, 26, 0, 0, 0);
+  k.cyl(M.glow, 0x8adfe8, 12.2, 12.2, 0.04, 0, TOP, 0, 48, true); k.cyl(M.glow, 0x8adfe8, 5.2, 5.2, 0.04, 0, TOP, 0, 40, true);
+  sol.pad(0, 0, 13, 13, TOP);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * PI * 2 + PI / 6, x = Math.sin(a) * 11, z = Math.cos(a) * 11;
+    k.rod(M.trim, white, 0.55, [x, TOP, z], [Math.sin(a) * 0.9, 70, Math.cos(a) * 0.9], 8); k.geo(M.trim, white, HEMI, x, TOP - 0.2, z, 0, 0, 0, 1.6, 1, 1.6);
+    sol.wall(x, z, x + 0.01, z, 0.9);
+  }
+  k.cyl(M.glow, 0x8adfe8, 1.4, 1.4, 0.6, 0, 70, 0, 24, true);
+  const tether = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 9000, 10), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false })); tether.position.y = 4500 + 3.4;
+  const g = group(k, tether); g.userData.solid = sol;
   return g;
 }
 

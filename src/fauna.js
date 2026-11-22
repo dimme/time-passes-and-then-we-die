@@ -1,11 +1,11 @@
 // Everything that moves: animals, people and vehicles.
 import * as THREE from 'three';
-import { rng } from './util.js?v=fea1c89f';
-import { buildAnimals } from './animals.js?v=fea1c89f';
-import { buildPeople } from './people.js?v=fea1c89f';
-import { buildVehicles } from './vehicles.js?v=fea1c89f';
+import { rng } from './util.js?v=740e009b';
+import { buildAnimals } from './animals.js?v=740e009b';
+import { buildPeople } from './people.js?v=740e009b';
+import { buildVehicles } from './vehicles.js?v=740e009b';
 
-export { staticPerson } from './people.js?v=fea1c89f';
+export { staticPerson } from './people.js?v=740e009b';
 
 const _vp = new THREE.Matrix4(), _view = { frustum: new THREE.Frustum(), eye: new THREE.Vector3() };
 /** The camera's frustum and position, for culling instanced travellers. */

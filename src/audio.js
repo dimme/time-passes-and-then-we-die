@@ -1,9 +1,9 @@
 // Every sound is synthesised with Web Audio — there are no audio files.
 // Continuous "beds" (wind, water, traffic, rain, drones …) and random one-shot
 // "events" (birds, roars, bells, horns …) each have a loudness curve over the timeline.
-import { yearToU, START } from './timeline.js?v=fea1c89f';
-import { smooth } from './util.js?v=fea1c89f';
-import { placeSounds } from './audio-places.js?v=fea1c89f';
+import { yearToU, START } from './timeline.js?v=740e009b';
+import { smooth } from './util.js?v=740e009b';
+import { placeSounds } from './audio-places.js?v=740e009b';
 
 const Y = yearToU, FADE = 0.006;
 /** [fromYear, toYear, level] spans → function of slider position returning 0..1 */
@@ -12,7 +12,8 @@ function curve(...spans) {
   return (u) => { let v = 0; for (const [a, b, l] of s) v = Math.max(v, l * smooth((u - a) / FADE) * smooth((b - u) / FADE)); return v; };
 }
 const rnd = (a, b) => a + Math.random() * (b - a);
-const SOFT = new Set(['animal']);   // kinds that may sound from somewhere unseen; people, vehicles and aircraft are heard only where they are
+const SOFT = new Set(['animal']);
+const BEDS = 0.45;   // the background (wind, water, insects, city air) sits well under the sounds things make   // kinds that may sound from somewhere unseen; people, vehicles and aircraft are heard only where they are
 
 export class Sound {
   constructor() { this.ctx = null; this.muted = false; this.beds = []; this.events = []; this.t = 0; this.place = 'home'; this.own = new Set(); this.tag = null; this.here = null; this.ear = [0, 0, 0]; this.locate = null; }
@@ -137,7 +138,7 @@ export class Sound {
     this.t += dt; const now = ctx.currentTime;
     const own = this.own.has(this.place), gate = (x) => (x.place ? (x.place === this.place ? 1 : 0) : own ? 0 : 1);   // a place's own soundscape replaces the general one entirely
     for (const b of this.beds) {
-      let v = b.level(u) * b.max * gate(b);
+      let v = b.level(u) * b.max * gate(b) * BEDS;
       if (b.wobble) { v *= 1 + b.wobble * Math.sin(this.t * 0.37 + b.max * 40) * Math.sin(this.t * 0.13 + 1); b.f.frequency.setTargetAtTime(b.freq * (1 + 0.35 * Math.sin(this.t * 0.21 + b.freq)), now, 0.3); }
       b.g.gain.setTargetAtTime(v, now, 0.18);
     }
@@ -166,9 +167,9 @@ export class Sound {
   out(pan = rnd(-0.8, 0.8)) {
     const g = this.ctx.createGain();
     if (this.here) {   // placed in the world: louder as you approach, panned by where it is around you
-      const P = this.ctx.createPanner(); P.panningModel = 'equalpower'; P.distanceModel = 'inverse'; P.refDistance = 6; P.rolloffFactor = 1.1; P.maxDistance = 20000;
+      const P = this.ctx.createPanner(); P.panningModel = 'equalpower'; P.distanceModel = 'inverse'; P.refDistance = 9; P.rolloffFactor = 1; P.maxDistance = 20000;
       if (P.positionX) { P.positionX.value = this.here[0]; P.positionY.value = this.here[1]; P.positionZ.value = this.here[2]; } else P.setPosition(...this.here);
-      const boost = this.ctx.createGain(); boost.gain.value = 3.2; g.connect(boost); boost.connect(P); P.connect(this.master); return g;
+      const boost = this.ctx.createGain(); boost.gain.value = 9; g.connect(boost); boost.connect(P); P.connect(this.master); return g;
     }
     if (this.ctx.createStereoPanner) { const p = this.ctx.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(this.master); } else g.connect(this.master);
     return g;

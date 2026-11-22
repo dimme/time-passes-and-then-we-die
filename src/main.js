@@ -1,21 +1,22 @@
 import * as THREE from 'three';
-import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=fea1c89f';
-import { World } from './world.js?v=fea1c89f';
-import { buildFlora } from './flora.js?v=fea1c89f';
-import { buildFauna, viewOf } from './fauna.js?v=fea1c89f';
-import { Travel } from './sites.js?v=fea1c89f';
-import { Space, LIFT } from './space.js?v=fea1c89f';
-import { buildCity } from './city.js?v=fea1c89f';
-import { Player } from './controls.js?v=fea1c89f';
-import { UI } from './ui.js?v=fea1c89f';
-import { Sound } from './audio.js?v=fea1c89f';
-import { LIVE as ACTORS } from './people-actors.js?v=fea1c89f';
-import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=fea1c89f';
-import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=fea1c89f';
-import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=fea1c89f';
-import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=fea1c89f';
-import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=fea1c89f';
-import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=fea1c89f';
+import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=740e009b';
+import { World, LAND } from './world.js?v=740e009b';
+import { Elevator, BASE, YEARS } from './elevator.js?v=740e009b';
+import { buildFlora } from './flora.js?v=740e009b';
+import { buildFauna, viewOf } from './fauna.js?v=740e009b';
+import { Travel } from './sites.js?v=740e009b';
+import { Space, LIFT } from './space.js?v=740e009b';
+import { buildCity } from './city.js?v=740e009b';
+import { Player } from './controls.js?v=740e009b';
+import { UI } from './ui.js?v=740e009b';
+import { Sound } from './audio.js?v=740e009b';
+import { LIVE as ACTORS } from './people-actors.js?v=740e009b';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=740e009b';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=740e009b';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=740e009b';
+import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=740e009b';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=740e009b';
+import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=740e009b';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view'), beginBtn = $('begin'), statusEl = $('loadstatus');
@@ -138,7 +139,8 @@ async function boot() {
   sound.locate = (kind) => {
     const e = sound.ear, R = REACH[kind] || 150, best = []; let total = 0;
     const take = (x, y, z) => { const d = Math.hypot(x - e[0], y - e[1], z - e[2]); if (d < R) { const w = 1 / (d + 8); best.push([x, y, z, w]); total += w; } };
-    if (travel.atHome) {
+    if (sound.inside) { if (kind !== 'people') return null; const now = performance.now(); for (const g of ACTORS) if (now - g.t < 600) for (let i = 0; i < g.np; i++) take(g.pts[i * 3], g.pts[i * 3 + 1], g.pts[i * 3 + 2]); }
+    else if (travel.atHome) {
       if (kind === 'animal') { for (const a of fauna.herd.list) if (a.in && a.obj) take(a.obj.position.x, a.obj.position.y + 1, a.obj.position.z); }
       else for (const m of fauna.movers) if (m.sound === kind && m.np) for (let i = 0; i < m.np; i++) take(m.pts[i * 3], m.pts[i * 3 + 1], m.pts[i * 3 + 2]);
     } else if (kind === 'people') {
@@ -158,35 +160,37 @@ async function boot() {
   const space = new Space($('tags')), zoomEl = $('zoom');
   let zoom = 0, zoomTarget = 0;
 
-  // ---- the space elevator (2990–9600): board at the pad on the shore, a shuttle takes you out to the ground station in the
-  // harbour, and the climber carries you up the tether to the station at geostationary height, 35,786 km up; then back down.
-  const LIFT_YEARS = [2990, 9600], BASE = { x: 420, z: 200 }, PAD = { x: 226, z: 200 }, GEO = 35786, CLIMB = 42, GLIDE = 4;
-  const pad = new THREE.Mesh(new THREE.RingGeometry(3.2, 4.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8adfe8, transparent: true, opacity: 0.8, depthWrite: false })); home.add(pad);
-  let ride = null;   // { stage: 'out' | 'up' | 'top' | 'down' | 'back', t, from }
-  const altAt = (s) => 0.02 + (GEO - 0.02) * (Math.exp(7 * s) - 1) / (Math.exp(7) - 1);   // km: slow off the ground, fast in the empty middle
+  // ---- the space elevator (2990–9600): walk into the car in its plaza, ride up to the station, walk round, ride down.
+  // Inside, the visitor walks in the car's (and the station's) own coordinates; the world outside is drawn from where the car is.
+  const lift = new Elevator(), liftFloor = LAND + 0.25; home.add(lift.outside);
+  const room = { surfaceAt: () => 0, heightAt: () => 0, sea: -1e9, profile: { bounds: { x: 1e4, z: 1e4 } }, deck: null };
+  const worldCam = camera.clone(), lastIn = { x: 0, z: 0 }; let inLift = null;   // { world, collide } saved while inside
   const rideBtn = $('ride'), rideHud = $('ridehud');
   const fmtKm = (km) => (km < 10 ? (km * 1000).toFixed(0) + ' m' : Math.round(km).toLocaleString('en') + ' km');
   const realTime = (km) => { const h = km / 200; return h < 1 / 60 ? 'under a minute' : h < 1 ? Math.round(h * 60) + ' min' : h < 48 ? h.toFixed(1) + ' hours' : (h / 24).toFixed(1) + ' days'; };
-  const startRide = () => { if (!ride) { ride = { stage: 'out', t: 0, from: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw } }; zoom = zoomTarget = 0; } else if (ride.stage === 'top') { ride.stage = 'down'; ride.t = 0; } };
-  rideBtn.addEventListener('click', (e) => { e.stopPropagation(); startRide(); rideBtn.blur(); });
-  addEventListener('keydown', (e) => { if (e.code === 'Enter' && (rideBtn.classList.contains('on'))) startRide(); });
-  const endRide = () => { if (!ride) return; player.pos.x = ride.from.x; player.pos.z = ride.from.z; player.yaw = ride.from.yaw; player.pos.y = ride.from.y; ride = null; space.ride = null; zoom = zoomTarget = 0; };
-  /** Advance the ride; returns the altitude in km (0 while gliding over the harbour). */
-  const stepRide = (dt, year) => {
-    if (!travel.atHome || year < LIFT_YEARS[0] || year >= LIFT_YEARS[1]) { endRide(); return 0; }
-    ride.t += dt;
-    if (ride.stage === 'out' && ride.t > GLIDE) { ride.stage = 'up'; ride.t = 0; }
-    if (ride.stage === 'up' && ride.t > CLIMB) { ride.stage = 'top'; ride.t = 0; }
-    if (ride.stage === 'down' && ride.t > CLIMB) { ride.stage = 'back'; ride.t = 0; }
-    if (ride.stage === 'back' && ride.t > GLIDE) { endRide(); return 0; }
-    const s = Math.min(1, ride.t / CLIMB);
-    return ride.stage === 'up' ? altAt(s) : ride.stage === 'top' ? GEO : ride.stage === 'down' ? altAt(1 - s) : 0;
+  const enterLift = () => {
+    inLift = { world: player.world, collide: player.collide };
+    player.pos.x -= BASE.x; player.pos.z -= BASE.z; player.pos.y = 1.7; lastIn.x = player.pos.x; lastIn.z = player.pos.z;
+    player.world = room; player.collide = (pos) => { lift.collide(pos, lastIn); lastIn.x = pos.x; lastIn.z = pos.z; };
+    sound.inside = true;
   };
+  const leaveLift = () => {
+    if (!inLift) return; player.world = inLift.world; player.collide = inLift.collide; inLift = null; sound.inside = false;
+    if (lift.stage !== 'ground') { lift.stage = 'ground'; lift.alt = 0; player.pos.x = 7; player.pos.z = 0; }   // the timeline moved on mid-ride: you are back in the plaza
+    player.pos.x += BASE.x; player.pos.z += BASE.z; player.pos.y = liftFloor + 1.7; zoom = zoomTarget = 0;
+  };
+  const startLift = () => { if (inLift && lift.inCar(player.pos.x, player.pos.z)) lift.go(); };
+  rideBtn.addEventListener('click', (e) => { e.stopPropagation(); startLift(); rideBtn.blur(); });
+  addEventListener('keydown', (e) => { if (e.code === 'Enter') startLift(); });
   zoomEl.addEventListener('input', () => { zoomTarget = zoomEl.value / 1000; });
   mark('@wired');
   const draw = () => {
-    const away = zoom > LIFT, sc = away ? space.scene : scene, cam = away ? space.camera : camera;
+    const away = zoom > LIFT, sc = away ? space.scene : scene, cam = away ? space.camera : inLift ? worldCam : camera;
     if (post) { renderPass.scene = sc; renderPass.camera = cam; bloom.strength = away ? 0.55 : env.bloom; composer.render(); } else renderer.render(sc, cam);
+    if (inLift) {   // the car (and the station) drawn over the outside, which shows through their windows
+      const ex = renderer.toneMappingExposure; renderer.autoClear = false; renderer.clearDepth(); renderer.toneMappingExposure = 1;
+      renderer.render(lift.scene, camera); renderer.autoClear = true; renderer.toneMappingExposure = ex;
+    }
   };
   const simulate = (dt, time) => {
     const year = uToYear(u);
@@ -194,47 +198,47 @@ async function boot() {
     envAt(u, env); travel.applyEnv(year, env); env.grass *= Q.grass;
     // the view from above
     // the space elevator
-    const liftOn = travel.atHome && year >= LIFT_YEARS[0] && year < LIFT_YEARS[1];
-    pad.visible = liftOn; if (liftOn) pad.position.set(PAD.x, world.surfaceAt(PAD.x, PAD.z) + 0.08, PAD.z);
-    const alt = ride ? stepRide(dt, year) : 0, near = liftOn && !ride && zoom === 0 && Math.hypot(player.pos.x - PAD.x, player.pos.z - PAD.z) < 9;
-    rideBtn.classList.toggle('on', near || (ride && ride.stage === 'top')); rideBtn.textContent = ride ? 'Ride back down to the ground (Enter)' : 'Take the space elevator (Enter)';
-    rideHud.classList.toggle('on', !!ride);
-    if (ride) {
-      rideHud.innerHTML = ride.stage === 'out' || ride.stage === 'back' ? (ride.stage === 'out' ? 'Shuttle to the ground station' : 'Back to the shore') : `<b>${fmtKm(alt)}</b><br>${ride.stage === 'top' ? 'Geostationary station: you circle the Earth once a day, hanging over the same spot' : ride.stage === 'up' ? 'Climbing' : 'Descending'} · a real climber would take ${realTime(Math.max(alt, 0.001))} to get here`;
-      zoom = zoomTarget = alt > 3 ? LIFT + 0.004 : 0; space.ride = alt > 3 ? alt : null;
-    }
+    const liftOn = travel.atHome && year >= YEARS[0] && year < YEARS[1];
+    if (inLift && !liftOn) leaveLift();
+    lift.outside.visible = liftOn && !inLift; lift.outside.position.set(BASE.x, liftFloor, BASE.z);
+    if (liftOn && !inLift && zoom === 0 && lift.atDoor(player.pos.x - BASE.x, player.pos.z - BASE.z)) enterLift();
+    if (inLift) { lift.update(dt, u, time); if (lift.outDoor(player.pos.x, player.pos.z)) leaveLift(); }
+    const inCar = inLift && lift.inCar(player.pos.x, player.pos.z), ready = inCar && (lift.stage === 'ground' || lift.stage === 'top');
+    rideBtn.classList.toggle('on', ready); rideBtn.textContent = lift.stage === 'top' ? 'Ride back down to the ground (Enter)' : 'Start the climb (Enter)';
+    rideHud.classList.toggle('on', !!inLift && lift.stage !== 'ground');
+    if (inLift && lift.stage !== 'ground') rideHud.innerHTML = `<b>${fmtKm(lift.alt)}</b><br>${lift.stage === 'top' ? 'The geostationary station: walk out of the door to look round; come back to the car to ride down' : lift.stage === 'up' ? 'Climbing' : 'Descending'}${lift.stage === 'top' ? '' : ` · a real climber would take ${realTime(Math.max(lift.alt, 0.001))} to get here`}`;
+    const liftSpace = !!inLift && lift.alt > 1.2;   // above the weather: the outside is drawn by the space view
+    if (inLift) { zoom = zoomTarget = liftSpace ? LIFT + 0.004 : 0; }
     const k = player.keys;
-    if (!ride && k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
-    if (!ride && k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
+    if (!inLift && k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
+    if (!inLift && k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 6); if (Math.abs(zoomTarget - zoom) < 1e-4) zoom = zoomTarget;
     if (document.activeElement !== zoomEl) zoomEl.value = Math.round(zoomTarget * 1000);
-    $('lift').style.opacity = ride ? Math.max(0, 1 - Math.abs(alt - 3) / 0.6) * 0.8 : Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);   // a brief fade where the ride leaves the city for space
-    $('tags').style.display = zoom > LIFT && !ride ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
-    sound.setDistance(Math.min(1, zoom / (LIFT * 2.5)));
+    $('lift').style.opacity = inLift ? Math.max(0, 1 - Math.abs(lift.alt - 1.2) / 0.25) * 0.85 : Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);   // a brief fade where the ride leaves the city for space
+    $('tags').style.display = zoom > LIFT && !inLift ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
+    sound.setDistance(inLift ? 0 : Math.min(1, zoom / (LIFT * 2.5)));
     if (zoom > LIFT) {
       envAt(u, envWorld);
       space.update(zoom, year, envWorld, travel.site, time, innerWidth / innerHeight, innerWidth, innerHeight);
+      if (liftSpace) { player.update(dt); camera.updateMatrixWorld(); space.inside(lift.alt, camera.quaternion); sound.listen(camera); }
       renderer.toneMappingExposure = 1; return;
     }
-    world.update(env, dt, time, camera, u);
-    player.update(zoom > 0.002 || ride ? 0 : dt);
-    if (ride) {   // in the shuttle over the harbour, or in the climber below 3 km: the camera rides along
-      const gy = Math.max(world.heightAt(BASE.x, BASE.z), world.sea), g = Math.min(1, ride.t / GLIDE), e = g * g * (3 - 2 * g), f = ride.from;
-      if (ride.stage === 'out' || ride.stage === 'back') {
-        const k2 = ride.stage === 'out' ? e : 1 - e, tx = BASE.x + 12, tz = BASE.z + 12, ty = gy + 52;
-        camera.position.set(f.x + (tx - f.x) * k2, f.y + (ty - f.y) * k2, f.z + (tz - f.z) * k2);
-        camera.rotation.set(0.15 * k2, -Math.PI / 2 + (f.yaw + Math.PI / 2) * (1 - k2) * 0 + 0, 0, 'YXZ'); camera.lookAt(BASE.x, gy + 60 + 400 * k2, BASE.z);
-      } else {
-        camera.position.set(BASE.x + 12, gy + 52 + alt * 1000, BASE.z + 12); camera.rotation.set(-0.12 - Math.min(0.5, alt * 0.2), Math.PI / 2, 0, 'YXZ');
-      }
+    player.update(zoom > 0.002 ? 0 : dt);
+    let view = camera;
+    if (inLift) {   // the outside as seen from where the car is: the same view, from the plaza or from up the tether
+      camera.updateMatrixWorld(); view = worldCam; worldCam.quaternion.copy(camera.quaternion);
+      worldCam.position.set(BASE.x + camera.position.x, liftFloor + lift.alt * 1000 + camera.position.y, BASE.z + camera.position.z);
+      worldCam.aspect = camera.aspect; worldCam.far = camera.far; worldCam.near = camera.near; worldCam.updateProjectionMatrix();
     }
+    world.update(env, dt, time, view, u);
     if (zoom > 0) {   // lifting off: rise and look down
       const s = zoom / LIFT; camera.position.y += s * s * 700; camera.rotation.x += (-1.3 - camera.rotation.x) * Math.min(1, s * 1.4);
     }
     camera.updateMatrixWorld(); camera.matrixWorldInverse.copy(camera.matrixWorld).invert();   // culling below needs this frame's view
-    flora.update(u, time, env, camera, travel.atHome);
-    travel.updateContent(u, time, env, camera, viewOf(camera));
-    world.sky.position.copy(camera.position);
+    if (view !== camera) { view.updateMatrixWorld(); view.matrixWorldInverse.copy(view.matrixWorld).invert(); }
+    flora.update(u, time, env, view, travel.atHome);
+    travel.updateContent(u, time, env, view, viewOf(view));
+    world.sky.position.copy(view.position);
     sound.listen(camera);
     renderer.toneMappingExposure = env.exposure;
   };
@@ -281,6 +285,7 @@ async function boot() {
   requestAnimationFrame(frame);
 
   // handy for poking at the world from the console
-  window.game = { setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, travel, setZoom: (z) => { zoom = zoomTarget = z; }, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
+  window.game = { lift: null, setYear: (y) => { uTarget = u = yearToU(y); }, setU: (v) => { uTarget = u = v; }, get year() { return uToYear(u); }, get quality() { return quality; }, travel, setZoom: (z) => { zoom = zoomTarget = z; }, get post() { return post; }, timings, player, renderer, city, sound, fauna, THREE };
+  window.game.lift = lift;
 }
 boot().catch((err) => fatal('The game could not start.', err && err.stack ? err.stack : err));

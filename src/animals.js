@@ -1,12 +1,12 @@
 // Animals: every species, and the herd that wanders the island. Models live in animals-*.js, the rig in animals-rig.js.
-import { rng } from './util.js?v=fea1c89f';
-import { yearToU } from './timeline.js?v=fea1c89f';
-import { animTime } from './organic.js?v=fea1c89f';
-import { TAU, pose } from './animals-rig.js?v=fea1c89f';
-import { mammals } from './animals-mammals.js?v=fea1c89f';
-import { dinosaurs } from './animals-dinos.js?v=fea1c89f';
-import { birds } from './animals-birds.js?v=fea1c89f';
-import { paleozoic } from './animals-paleozoic.js?v=fea1c89f';
+import { rng } from './util.js?v=740e009b';
+import { yearToU } from './timeline.js?v=740e009b';
+import { animTime } from './organic.js?v=740e009b';
+import { TAU, pose } from './animals-rig.js?v=740e009b';
+import { mammals } from './animals-mammals.js?v=740e009b';
+import { dinosaurs } from './animals-dinos.js?v=740e009b';
+import { birds } from './animals-birds.js?v=740e009b';
+import { paleozoic } from './animals-paleozoic.js?v=740e009b';
 
 export { pose };
 

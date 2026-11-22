@@ -1,7 +1,7 @@
 // Shared building blocks for living things: swept tubes, small detail shapes, skin textures and materials.
 import * as THREE from 'three';
-import { rng, part } from './util.js?v=fea1c89f';
-import { canvasTex, normalMap } from './textures.js?v=fea1c89f';
+import { rng, part } from './util.js?v=740e009b';
+import { canvasTex, normalMap } from './textures.js?v=740e009b';
 
 export const H = Math.PI / 2;
 /** Time uniform shared by every animated skin material. */

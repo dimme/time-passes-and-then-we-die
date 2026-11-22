@@ -1,10 +1,10 @@
 // Below the plateau: the black land of the flood plain with its fields, palms and papyrus, the harbours and their boats,
 // the village on the desert's edge and the town of the pyramid builders. Also the land beyond the edge of the terrain.
 import * as THREE from 'three';
-import { rng, smooth, clamp, lerp } from './util.js?v=fea1c89f';
-import { makeKinds } from './flora.js?v=fea1c89f';
-import { C, lin, shade, put, block, wall, lathe, vault, bar, skin, fin, cropTex, papyrusTex , rectOb, boxOb, stripOb } from './site-egypt-kit.js?v=fea1c89f';
-import { terrain, ground, PLAIN, BASINS, TOWN } from './site-egypt-land.js?v=fea1c89f';
+import { rng, smooth, clamp, lerp } from './util.js?v=740e009b';
+import { makeKinds } from './flora.js?v=740e009b';
+import { C, lin, shade, put, block, wall, lathe, vault, bar, skin, fin, cropTex, papyrusTex , rectOb, boxOb, stripOb } from './site-egypt-kit.js?v=740e009b';
+import { terrain, ground, PLAIN, BASINS, TOWN } from './site-egypt-land.js?v=740e009b';
 
 /** Where things on the plain are, for the people who work there. */
 export const FIELDS = { reap: [480, 528, 262, 294], plough: [480, 528, 300, 332], hoe: [480, 528, 338, 370], reap2: [640, 700, 120, 160] };

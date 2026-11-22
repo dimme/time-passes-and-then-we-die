@@ -1,11 +1,11 @@
 // The Fertile Crescent at Jericho, 9600 – 4000 BCE: a spring under dry hills, and the first people who stayed
 // in one place to grow their food. Round houses and a stone tower first; later square houses, herds and pots.
 import * as THREE from 'three';
-import { rng, smooth, clamp } from './util.js?v=fea1c89f';
-import { yearToU, uToYear } from './timeline.js?v=fea1c89f';
-import { actors } from './people-actors.js?v=fea1c89f';
-import { bundle, hearth, rack, onFace, Shape, field, sheaf, heap, pot, ladder, house, furnish, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js?v=fea1c89f';
-import { livestock, standing, drove } from './site-crescent-animals.js?v=fea1c89f';
+import { rng, smooth, clamp } from './util.js?v=740e009b';
+import { yearToU, uToYear } from './timeline.js?v=740e009b';
+import { actors } from './people-actors.js?v=740e009b';
+import { bundle, hearth, rack, onFace, Shape, field, sheaf, heap, pot, ladder, house, furnish, Solids, kinds, planted, lin, shade, local } from './site-crescent-kit.js?v=740e009b';
+import { livestock, standing, drove } from './site-crescent-animals.js?v=740e009b';
 
 const FLAT = 3, SEA = 2.1;
 const V = [-70, -125], VR = 58, GATE = 0.9;          // the village, the radius of its wall, the bearing of its gate

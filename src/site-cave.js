@@ -2,12 +2,12 @@
 // La Madeleine and Lascaux. Rock shelters under the cliff, a painted cave in it, steppe and a cold river below.
 // Neanderthals have the valley first; our own kind arrives about 42,000 years ago and, much later, paints the cave.
 import * as THREE from 'three';
-import { rng, smooth, part, ball, cyl } from './util.js?v=fea1c89f';
-import { shared, canvasTex } from './textures.js?v=fea1c89f';
-import { makeKinds } from './flora.js?v=fea1c89f';
-import { Builder, norm, tube } from './flora-geo.js?v=fea1c89f';
-import { actors } from './people-actors.js?v=fea1c89f';
-import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, hideTex, hearth, debitage } from './site-africa-kit.js?v=fea1c89f';
+import { rng, smooth, part, ball, cyl } from './util.js?v=740e009b';
+import { shared, canvasTex } from './textures.js?v=740e009b';
+import { makeKinds } from './flora.js?v=740e009b';
+import { Builder, norm, tube } from './flora-geo.js?v=740e009b';
+import { actors } from './people-actors.js?v=740e009b';
+import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, hideTex, hearth, debitage } from './site-africa-kit.js?v=740e009b';
 
 const sin = Math.sin, cos = Math.cos, exp = Math.exp;
 

@@ -1,8 +1,8 @@
 // Building kit for the towns of the later ages (Chartres, Manchester): textured masonry gathered into a few meshes per
 // span of years, walls pierced by real window and door openings, props in one draw call, colliders, and things that follow paths.
 import * as THREE from 'three';
-import { rng } from './util.js?v=fea1c89f';
-import { Bag, vehicleMat, fin } from './vehicles-kit.js?v=fea1c89f';
+import { rng } from './util.js?v=740e009b';
+import { Bag, vehicleMat, fin } from './vehicles-kit.js?v=740e009b';
 
 export { fin };
 const _v = new THREE.Vector3(), _a = new THREE.Vector3(), _b = new THREE.Vector3(), _n = new THREE.Vector3(), _m = new THREE.Matrix4(), _n3 = new THREE.Matrix3(), _c = new THREE.Color(), _q = new THREE.Quaternion(), _e = new THREE.Euler();

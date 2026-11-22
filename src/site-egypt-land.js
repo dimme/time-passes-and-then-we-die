@@ -1,5 +1,5 @@
 // The ground at Giza: a limestone plateau above the Nile's flood plain. x runs east, z south; the river is at x > 780.
-import { smooth, clamp, lerp } from './util.js?v=fea1c89f';
+import { smooth, clamp, lerp } from './util.js?v=740e009b';
 
 export const PLAIN = 1.6, LOW = 3, RH = 24;          // flood plain, low desert, greatest height of the building ramp (m)
 export const SLOPE = 0.7857;                          // run per rise of a pyramid face (51.84°)

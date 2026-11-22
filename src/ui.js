@@ -1,4 +1,4 @@
-import { ERAS, EVENTS, START, END, NOW, yearToU, uToYear, formatYear, eraAt, eventAt } from './timeline.js?v=fea1c89f';
+import { ERAS, EVENTS, START, END, NOW, yearToU, uToYear, formatYear, eraAt, eventAt } from './timeline.js?v=740e009b';
 
 const $ = (id) => document.getElementById(id);
 const clamp01 = (v) => Math.max(0, Math.min(1, v));

@@ -1,12 +1,12 @@
 // Vehicles: carts, cars, pods, flying traffic, ships and (from vehicles-air.js) aircraft.
 import * as THREE from 'three';
-import { yearToU } from './timeline.js?v=fea1c89f';
-import { species, pose } from './animals.js?v=fea1c89f';
-import { Movers, traffic, CROSS_SPAN } from './movers.js?v=fea1c89f';
-import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=fea1c89f';
-import { carParts } from './vehicles-cars.js?v=fea1c89f';
-import { shipParts } from './vehicles-ships.js?v=fea1c89f';
-import { buildAircraft } from './vehicles-air.js?v=fea1c89f';
+import { yearToU } from './timeline.js?v=740e009b';
+import { species, pose } from './animals.js?v=740e009b';
+import { Movers, traffic, CROSS_SPAN } from './movers.js?v=740e009b';
+import { Bag, fin, curve, loft, sweep, oval, revolve, spokedWheel, vehicleMat, at } from './vehicles-kit.js?v=740e009b';
+import { carParts } from './vehicles-cars.js?v=740e009b';
+import { shipParts } from './vehicles-ships.js?v=740e009b';
+import { buildAircraft } from './vehicles-air.js?v=740e009b';
 
 export { carParts, shipParts };
 

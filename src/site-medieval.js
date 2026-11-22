@@ -2,14 +2,14 @@
 // through the open fields and Fulbert's church (1000), the cathedral going up (1194–1221), the walled town, the plague (1348) and after.
 // East is +x, south is +z. The town stands on flat ground at 6 m; the Eure runs along the east side.
 import * as THREE from 'three';
-import { rng, smooth } from './util.js?v=fea1c89f';
-import { uToYear, yearToU } from './timeline.js?v=fea1c89f';
-import { makeKinds } from './flora.js?v=fea1c89f';
-import { actors } from './people-actors.js?v=fea1c89f';
-import { Bag } from './vehicles-kit.js?v=fea1c89f';
-import { Kit, Props, Followers, fin, mat4, texture, clipped, loop, smoke, append, grove } from './site-medieval-kit.js?v=fea1c89f';
-import { beasts, baked, herdOf, Walkers, horse } from './site-medieval-beasts.js?v=fea1c89f';
-import { woodenChurch, stoneChurch, westFront, northSpire, cathedralBody, scaffold, crane, walls } from './site-medieval-cathedral.js?v=fea1c89f';
+import { rng, smooth } from './util.js?v=740e009b';
+import { uToYear, yearToU } from './timeline.js?v=740e009b';
+import { makeKinds } from './flora.js?v=740e009b';
+import { actors } from './people-actors.js?v=740e009b';
+import { Bag } from './vehicles-kit.js?v=740e009b';
+import { Kit, Props, Followers, fin, mat4, texture, clipped, loop, smoke, append, grove } from './site-medieval-kit.js?v=740e009b';
+import { beasts, baked, herdOf, Walkers, horse } from './site-medieval-beasts.js?v=740e009b';
+import { woodenChurch, stoneChurch, westFront, northSpire, cathedralBody, scaffold, crane, walls } from './site-medieval-cathedral.js?v=740e009b';
 
 const G = 6, WATER = 4.6, CZ = 18, RA = 175, RB = 150;   // ground, river level, and the town wall: an oval about (0, CZ)
 const riverX = (z) => 338 + 14 * Math.sin(z / 170);

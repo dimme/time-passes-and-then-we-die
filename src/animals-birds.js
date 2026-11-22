@@ -1,5 +1,5 @@
 // Birds on the wing: crow, gull and hawk from one plan with different proportions.
-import { Rig, loft, mass, strip, fan, mirror, hide, hex } from './animals-rig.js?v=fea1c89f';
+import { Rig, loft, mass, strip, fan, mirror, hide, hex } from './animals-rig.js?v=740e009b';
 
 const clamp = (v) => Math.max(0, Math.min(1, v));
 let FEATHER, VANE;

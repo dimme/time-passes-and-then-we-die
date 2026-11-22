@@ -2,9 +2,9 @@
 // the neighbouring planets and the solar system — as they were (or will be) in the year shown.
 // Distances are true (1 unit = 1,000 km); bodies are enlarged just enough to stay visible.
 import * as THREE from 'three';
-import { smooth } from './util.js?v=fea1c89f';
-import { canvasTex } from './textures.js?v=fea1c89f';
-import { moonDistance } from './timeline.js?v=fea1c89f';
+import { smooth } from './util.js?v=740e009b';
+import { canvasTex } from './textures.js?v=740e009b';
+import { moonDistance } from './timeline.js?v=740e009b';
 
 export const LIFT = 0.07;          // zoom below this is still the ground view, rising
 const AU = 149600, R_EARTH = 6.371, D0 = R_EARTH * 1.16, DMAX = 46 * AU;
@@ -141,7 +141,7 @@ export class Space {
     });
     this.earth = this.bodies[2];
     // the atlas of past continents arrives a moment later; until then the coarse hand-drawn map stands in
-    new THREE.TextureLoader().load('data/plates.png?v=fea1c89f', (t) => {
+    new THREE.TextureLoader().load('data/plates.png?v=740e009b', (t) => {
       t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.colorSpace = THREE.NoColorSpace;
       this.earthMat.uniforms.atlas.value = t; this.earthMat.defines = { HAS_ATLAS: 1 }; this.earthMat.needsUpdate = true; this.hasAtlas = true;
     });
@@ -175,6 +175,18 @@ export class Space {
     this._v = new THREE.Vector3(); this._q = new THREE.Quaternion(); this._t = new THREE.Vector3();
   }
 
+  /** Riding the space elevator: the camera at `alt` km up the tether, turned as the visitor's own camera is turned (q), with the
+   *  game's axes laid on the ground at the place (x east, y up, z south). Call after update(). */
+  inside(alt, q) {
+    const E = this.earth.mesh.position, up = this.earthMat.uniforms.site.value.clone().applyQuaternion(this.earth.mesh.quaternion).normalize();
+    const pole = new THREE.Vector3(0, 1, 0).applyQuaternion(this.earth.mesh.quaternion), north = pole.addScaledVector(up, -pole.dot(up)).normalize(), south = north.clone().negate(), east = up.clone().cross(south).normalize();
+    const basis = new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(east, up, south)), cam = this.camera, h = alt / 1000;
+    cam.position.copy(E).addScaledVector(up, R_EARTH + h).addScaledVector(east, 0.00002);
+    cam.quaternion.copy(basis).multiply(q);
+    cam.near = Math.max(0.00005, h * 0.05); cam.far = 6e8; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+    this.stars.position.copy(cam.position); this.earthMat.uniforms.marker.value = 0;
+    this.tether.scale.x = this.tether.scale.z = 0.0006;   // a thread a few metres thick, not a pillar
+  }
   /** zoom ∈ (LIFT, 1]; env is the timeline's (Manhattan's) environment; site = { place, coords }. */
   update(zoom, year, env, site, time, aspect, w, h) {
     const k = (zoom - LIFT) / (1 - LIFT), d = D0 * Math.pow(DMAX / D0, k), set = (c, a, m = 1) => c.setRGB(a[0] * m, a[1] * m, a[2] * m, THREE.SRGBColorSpace);
