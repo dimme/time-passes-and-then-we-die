@@ -1,7 +1,7 @@
 // The Liverpool & Manchester Railway, 1830: a Rocket-type locomotive, its tender, a first-class coach and open
 // second-class carriages. Built along +x (the engine leads), rails at y = 0, standard gauge.
 import * as THREE from 'three';
-import { Bag, fin, spokedWheel, at } from './vehicles-kit.js?v=740e009b';
+import { Bag, fin, spokedWheel, at } from './vehicles-kit.js?v=c0a40a57';
 
 const Y = fin(0xe0b020, 0.5), BLACK = fin(0x16161a, 0.5, 0.3), WHITE = fin(0xe8e4d8, 0.6), COPPER = fin(0xb86a38, 0.35, 0.8), IRON = fin(0x2c2c30, 0.45, 0.7), BRASS = fin(0xc8a040, 0.3, 0.9), WOOD = fin(0x7a5a38, 0.85),
   BLUE = fin(0x2a4a8a, 0.6), GREEN = fin(0x2a5a3a, 0.6), DARK = fin(0x20242a, 0.3, 0.2), OAK = fin(0x5a3c22, 0.8), COAL = fin(0x0c0c0e, 0.9), FIRE = fin(0xff7a20, 0.8, 0, 2.5);

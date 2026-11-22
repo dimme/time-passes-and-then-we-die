@@ -1,7 +1,7 @@
 // Foliage, trunk and rock textures, painted once on canvases; and the swaying alpha-tested leaf material.
 import * as THREE from 'three';
-import { rng } from './util.js?v=740e009b';
-import { canvasTex, tileNoise } from './textures.js?v=740e009b';
+import { rng } from './util.js?v=c0a40a57';
+import { canvasTex, tileNoise } from './textures.js?v=c0a40a57';
 
 export const windTime = { value: 0 };
 const hsl = (h, s, l, a = 1) => `hsla(${h},${s}%,${l}%,${a})`;

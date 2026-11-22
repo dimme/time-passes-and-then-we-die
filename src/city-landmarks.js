@@ -1,7 +1,7 @@
 // Hand-made landmarks: true heights, plans scaled to this small Manhattan's 80 × 48 m blocks.
 import * as THREE from 'three';
-import { Kit, M, facadeOf, lin } from './city-kit.js?v=740e009b';
-import { around, stage, piers, flatRoof, decoBase, facets, cap, mast, lobby, mul, LAMP, OFFICE } from './city-types.js?v=740e009b';
+import { Kit, M, facadeOf, lin } from './city-kit.js?v=c0a40a57';
+import { around, stage, piers, flatRoof, decoBase, facets, cap, mast, lobby, mul, LAMP, OFFICE } from './city-types.js?v=c0a40a57';
 
 const PI = Math.PI, TAR = 0x2c2c2e, STEEL = 0xc6cace;
 

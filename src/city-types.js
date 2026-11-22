@@ -1,7 +1,7 @@
 // Building types. Each TYPES[name](r, corner) returns { obj, fw, fd }: obj stands on y=0 centred on its footprint with its
 // street front facing +z; corner is -1 / +1 when the -x / +x side also faces a street.
 import * as THREE from 'three';
-import { Kit, Solid, M, facadeOf, lin, WHITE, NEON, pick } from './city-kit.js?v=740e009b';
+import { Kit, Solid, M, facadeOf, lin, WHITE, NEON, pick } from './city-kit.js?v=c0a40a57';
 
 const PI = Math.PI;
 const SIDES = [[0, 1, 0], [1, 0, PI / 2], [0, -1, PI], [-1, 0, -PI / 2]];

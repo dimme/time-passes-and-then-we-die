@@ -4,15 +4,16 @@
 //   city-landmarks.js  Empire State, Chrysler, the World Trade Center, Brooklyn Bridge
 //   city-props.js      camps, fort, mill, wall, park, street furniture, the far future
 import * as THREE from 'three';
-import { rng, smooth, clamp } from './util.js?v=740e009b';
-import { yearToU } from './timeline.js?v=740e009b';
-import { LAND } from './world.js?v=740e009b';
-import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js?v=740e009b';
-import { Scatter } from './flora.js?v=740e009b';
-import { Kit, M, NEON, setNight, conform, pushOut, padTop } from './city-kit.js?v=740e009b';
-import { TYPES } from './city-types.js?v=740e009b';
-import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js?v=740e009b';
-import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js?v=740e009b';
+import { rng, smooth, clamp } from './util.js?v=c0a40a57';
+import { yearToU } from './timeline.js?v=c0a40a57';
+import { LAND } from './world.js?v=c0a40a57';
+import { shared, canvasTex, normalMap, tileNoise, detailMap } from './textures.js?v=c0a40a57';
+import { Scatter } from './flora.js?v=c0a40a57';
+import { Kit, M, NEON, setNight, conform, pushOut, padTop } from './city-kit.js?v=c0a40a57';
+import { TYPES } from './city-types.js?v=c0a40a57';
+import { empireState, chrysler, twinTower, oneWTC, bridge, BRIDGE_DECK } from './city-landmarks.js?v=c0a40a57';
+import { paleoCamp, lenapeVillage, fort, windmill, palisade, park, pool, elevator, holo, lampParts, signalParts, hydrantParts, subwayParts } from './city-props.js?v=c0a40a57';
+import { BASE } from './elevator.js?v=c0a40a57';
 
 export { TYPES };
 const Y = yearToU;
@@ -51,7 +52,7 @@ export function buildCity(world, scene) {
   /** the land at a point relative to (X, Z), for things that stood on the island's original hills */
   const liftAt = (X, Z) => (x, z) => world.heightAt(X + x, Z + z) - world.heightAt(X, Z);
 
-  const reserved = { '2,-3': 1929, '1,-5': 1927, '1,1': 1966, '1,2': 1966, '2,1': 0, '1,0': 1733, '3,2': 2990 };   // 3,2: the space elevator's plaza
+  const reserved = { '2,-3': 1929, '1,-5': 1927, '1,1': 1966, '1,2': 1966, '2,1': 0, '1,0': 1733 };
   for (let c = 0; c < 4; c++) for (let row = -8; row < 8; row++) {
     const cut = reserved[`${c},${row}`];
     if (cut === 0) continue;
@@ -185,7 +186,7 @@ export function buildCity(world, scene) {
   }
   addProp(flatMesh(fb, new THREE.MeshStandardMaterial({ color: 0x3a3f4c, roughness: 0.55, metalness: 0.5, emissive: 0x16303a })), 0, 0, 2172, 2950);
   // the star age
-  addProp(elevator(), 150, 150, 2990, 9600);
+  addProp(elevator(), BASE.x, BASE.z, 2990, 9600);
 
   /** Build a building the first time it is needed, and set it on its lot. */
   const realise = (o) => {

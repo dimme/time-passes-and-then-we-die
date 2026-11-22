@@ -4,15 +4,15 @@
 //       | air:<kind>[:trail] | tree:<kind> | building:<type>[:seed] | list
 //       | actor:<outfit>:<action>[:prop]      a person doing something at time t (prop: names joined with '+', or 'none')
 import * as THREE from 'three';
-import { rng } from '../src/util.js?v=740e009b';
-import { animTime } from '../src/organic.js?v=740e009b';
-import { species, pose } from '../src/animals.js?v=740e009b';
-import { personParts } from '../src/people.js?v=740e009b';
-import { actors, OUTFITS, ACTIONS, PROPS } from '../src/people-actors.js?v=740e009b';
-import { carParts, cartParts, flyerParts, shipParts } from '../src/vehicles.js?v=740e009b';
-import { airParts, AIR_KINDS } from '../src/vehicles-air.js?v=740e009b';
-import { makeKinds } from '../src/flora.js?v=740e009b';
-import { TYPES } from '../src/city.js?v=740e009b';
+import { rng } from '../src/util.js?v=c0a40a57';
+import { animTime } from '../src/organic.js?v=c0a40a57';
+import { species, pose } from '../src/animals.js?v=c0a40a57';
+import { personParts } from '../src/people.js?v=c0a40a57';
+import { actors, OUTFITS, ACTIONS, PROPS } from '../src/people-actors.js?v=c0a40a57';
+import { carParts, cartParts, flyerParts, shipParts } from '../src/vehicles.js?v=c0a40a57';
+import { airParts, AIR_KINDS } from '../src/vehicles-air.js?v=c0a40a57';
+import { makeKinds } from '../src/flora.js?v=c0a40a57';
+import { TYPES } from '../src/city.js?v=c0a40a57';
 
 const q = new URLSearchParams(location.search), spec = (q.get('m') || 'list').split(':'), t = parseFloat(q.get('t') || '0');
 const canvas = document.getElementById('c');

@@ -1,14 +1,14 @@
 // Egypt · Giza, 2700–1250 BCE: the plateau above the Nile's flood plain, where three pyramids rise and then stand for a thousand years.
 import * as THREE from 'three';
-import { uToYear } from './timeline.js?v=740e009b';
-import { shared } from './textures.js?v=740e009b';
-import { animTime } from './organic.js?v=740e009b';
-import { C, Parts, masonry, reedTex } from './site-egypt-kit.js?v=740e009b';
-import { terrain, K1, K2, K3, RH, SLOPE, RAMP, rampScale, builtCourses } from './site-egypt-land.js?v=740e009b';
-import { Obstacles } from './site-egypt-kit.js?v=740e009b';
-import { buildMonuments } from './site-egypt-monuments.js?v=740e009b';
-import { buildPlain } from './site-egypt-plain.js?v=740e009b';
-import { buildPeople } from './site-egypt-people.js?v=740e009b';
+import { uToYear } from './timeline.js?v=c0a40a57';
+import { shared } from './textures.js?v=c0a40a57';
+import { animTime } from './organic.js?v=c0a40a57';
+import { C, Parts, masonry, reedTex } from './site-egypt-kit.js?v=c0a40a57';
+import { terrain, K1, K2, K3, RH, SLOPE, RAMP, rampScale, builtCourses } from './site-egypt-land.js?v=c0a40a57';
+import { Obstacles } from './site-egypt-kit.js?v=c0a40a57';
+import { buildMonuments } from './site-egypt-monuments.js?v=c0a40a57';
+import { buildPlain } from './site-egypt-plain.js?v=c0a40a57';
+import { buildPeople } from './site-egypt-people.js?v=c0a40a57';
 
 const rgb = (h) => [(h >> 16 & 255) / 255, (h >> 8 & 255) / 255, (h & 255) / 255];
 const SKY = { top: rgb(0x3a84d8), hor: rgb(0xe6dcc4), sun: rgb(0xfff2d8), ground: rgb(0xd0b381), water: rgb(0x4f6f52), far: rgb(0xc8ac7c), cloudCol: rgb(0xffffff) };

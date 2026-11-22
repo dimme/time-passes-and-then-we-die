@@ -1,11 +1,11 @@
 // Uruk in southern Mesopotamia, 4000 – 2700 BCE: the first city. A flat plain of silt between the Euphrates and
 // its canals, barley in long strips, a town of mud brick round two temple precincts — and in them the first writing.
 import * as THREE from 'three';
-import { rng, smooth, clamp } from './util.js?v=740e009b';
-import { yearToU, uToYear } from './timeline.js?v=740e009b';
-import { actors } from './people-actors.js?v=740e009b';
-import { Shape, field, sheaf, heap, pot, ladder, house, opening, furnish, Solids, kinds, planted, lin, shade, local, rect } from './site-crescent-kit.js?v=740e009b';
-import { livestock, standing, drove, loopOf, onLoop } from './site-crescent-animals.js?v=740e009b';
+import { rng, smooth, clamp } from './util.js?v=c0a40a57';
+import { yearToU, uToYear } from './timeline.js?v=c0a40a57';
+import { actors } from './people-actors.js?v=c0a40a57';
+import { Shape, field, sheaf, heap, pot, ladder, house, opening, furnish, Solids, kinds, planted, lin, shade, local, rect } from './site-crescent-kit.js?v=c0a40a57';
+import { livestock, standing, drove, loopOf, onLoop } from './site-crescent-animals.js?v=c0a40a57';
 
 const FLAT = 3, CANAL = 135, RIVER = 310;
 const PX0 = -100, PX1 = -40, PZ0 = -120, PZ1 = -60, PH = 13, H0 = 7;   // the terrace of the sky god, and its height before it was raised

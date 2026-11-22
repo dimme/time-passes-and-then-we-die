@@ -1,6 +1,6 @@
 // The long-horned cattle of the Nile: drawing the plough, treading out the grain, grazing. Built on the shared animal rig.
 import * as THREE from 'three';
-import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose, TAU } from './animals-rig.js?v=740e009b';
+import { Rig, loft, mass, cone, slab, frustum, put, hide, hex, BLACK, HOOF, pose, TAU } from './animals-rig.js?v=c0a40a57';
 
 const tone = (base, target) => { const a = hex(base), b = hex(target); return b.map((v, i) => v / a[i]); };
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * Math.max(0, Math.min(1, t)));

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { rng } from './util.js?v=740e009b';
+import { rng } from './util.js?v=c0a40a57';
 
 /** Tileable fractal value noise, returned as a Float32Array of size*size values in 0..1. */
 export function tileNoise(size, period = 4, octaves = 5, seed = 1) {

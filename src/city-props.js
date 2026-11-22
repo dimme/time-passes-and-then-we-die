@@ -1,10 +1,10 @@
 // Everything that is not a building: camps and villages, the fort, the mill and the wall, the park, street furniture, the far future.
 // Things that stood on the island's original rolling ground take a lift(x, z) function and ride the land (see Kit.on / conform).
 import * as THREE from 'three';
-import { merge, vcMat } from './util.js?v=740e009b';
-import { staticPerson } from './fauna.js?v=740e009b';
-import { Kit, Solid, inside, M, facadeOf, lin, WHITE, pick } from './city-kit.js?v=740e009b';
-import { around, pierced, glaze, mul, DARK, CANDLE, LAMP } from './city-types.js?v=740e009b';
+import { merge, vcMat } from './util.js?v=c0a40a57';
+import { staticPerson } from './fauna.js?v=c0a40a57';
+import { Kit, Solid, inside, M, facadeOf, lin, WHITE, pick } from './city-kit.js?v=c0a40a57';
+import { around, pierced, glaze, mul, DARK, CANDLE, LAMP } from './city-types.js?v=c0a40a57';
 
 const PI = Math.PI, IRON = 0x1b1d1d, WOOD = 0x5a4028, STONE = 0x9a9488;
 const BLOB = new THREE.IcosahedronGeometry(1, 1), HEMI = new THREE.SphereGeometry(1, 14, 6, 0, PI * 2, 0, PI / 2), BOWL = new THREE.SphereGeometry(1, 10, 5, 0, PI * 2, PI / 2, PI / 2);

@@ -1,22 +1,22 @@
 import * as THREE from 'three';
-import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=740e009b';
-import { World, LAND } from './world.js?v=740e009b';
-import { Elevator, BASE, YEARS } from './elevator.js?v=740e009b';
-import { buildFlora } from './flora.js?v=740e009b';
-import { buildFauna, viewOf } from './fauna.js?v=740e009b';
-import { Travel } from './sites.js?v=740e009b';
-import { Space, LIFT } from './space.js?v=740e009b';
-import { buildCity } from './city.js?v=740e009b';
-import { Player } from './controls.js?v=740e009b';
-import { UI } from './ui.js?v=740e009b';
-import { Sound } from './audio.js?v=740e009b';
-import { LIVE as ACTORS } from './people-actors.js?v=740e009b';
-import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=740e009b';
-import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=740e009b';
-import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=740e009b';
-import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=740e009b';
-import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=740e009b';
-import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=740e009b';
+import { NOW, yearToU, uToYear, envAt } from './timeline.js?v=c0a40a57';
+import { World, LAND } from './world.js?v=c0a40a57';
+import { Elevator, BASE, YEARS } from './elevator.js?v=c0a40a57';
+import { buildFlora } from './flora.js?v=c0a40a57';
+import { buildFauna, viewOf } from './fauna.js?v=c0a40a57';
+import { Travel } from './sites.js?v=c0a40a57';
+import { Space, LIFT } from './space.js?v=c0a40a57';
+import { buildCity } from './city.js?v=c0a40a57';
+import { Player } from './controls.js?v=c0a40a57';
+import { UI } from './ui.js?v=c0a40a57';
+import { Sound } from './audio.js?v=c0a40a57';
+import { LIVE as ACTORS } from './people-actors.js?v=c0a40a57';
+import { EffectComposer } from '../vendor/jsm/postprocessing/EffectComposer.js?v=c0a40a57';
+import { RenderPass } from '../vendor/jsm/postprocessing/RenderPass.js?v=c0a40a57';
+import { UnrealBloomPass } from '../vendor/jsm/postprocessing/UnrealBloomPass.js?v=c0a40a57';
+import { OutputPass } from '../vendor/jsm/postprocessing/OutputPass.js?v=c0a40a57';
+import { ShaderPass } from '../vendor/jsm/postprocessing/ShaderPass.js?v=c0a40a57';
+import { FXAAShader } from '../vendor/jsm/shaders/FXAAShader.js?v=c0a40a57';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('view'), beginBtn = $('begin'), statusEl = $('loadstatus');
@@ -207,14 +207,15 @@ async function boot() {
     rideBtn.classList.toggle('on', ready); rideBtn.textContent = lift.stage === 'top' ? 'Ride back down to the ground (Enter)' : 'Start the climb (Enter)';
     rideHud.classList.toggle('on', !!inLift && lift.stage !== 'ground');
     if (inLift && lift.stage !== 'ground') rideHud.innerHTML = `<b>${fmtKm(lift.alt)}</b><br>${lift.stage === 'top' ? 'The geostationary station: walk out of the door to look round; come back to the car to ride down' : lift.stage === 'up' ? 'Climbing' : 'Descending'}${lift.stage === 'top' ? '' : ` · a real climber would take ${realTime(Math.max(lift.alt, 0.001))} to get here`}`;
-    const liftSpace = !!inLift && lift.alt > 1.2;   // above the weather: the outside is drawn by the space view
+    const liftSpace = !!inLift && lift.alt > 2.5;   // above the weather: the outside is drawn by the space view
     if (inLift) { zoom = zoomTarget = liftSpace ? LIFT + 0.004 : 0; }
+    if (inLift && lift.alt > 0.02) env.fogD /= 1 + (lift.alt * 1000) / 60;   // climbing out of the haze: the ground stays sharp below
     const k = player.keys;
     if (!inLift && k.has('KeyR')) zoomTarget = Math.min(1, zoomTarget + dt * 0.22);
     if (!inLift && k.has('KeyF')) zoomTarget = Math.max(0, zoomTarget - dt * 0.22);
     zoom += (zoomTarget - zoom) * Math.min(1, dt * 6); if (Math.abs(zoomTarget - zoom) < 1e-4) zoom = zoomTarget;
     if (document.activeElement !== zoomEl) zoomEl.value = Math.round(zoomTarget * 1000);
-    $('lift').style.opacity = inLift ? Math.max(0, 1 - Math.abs(lift.alt - 1.2) / 0.25) * 0.85 : Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);   // a brief fade where the ride leaves the city for space
+    $('lift').style.opacity = inLift ? Math.max(0, 1 - Math.abs(lift.alt - 2.5) / 0.5) * 0.85 : Math.max(0, 1 - Math.abs(zoom - LIFT) / 0.014);   // a brief fade where the ride leaves the city for space
     $('tags').style.display = zoom > LIFT && !inLift ? 'block' : 'none'; document.body.classList.toggle('away', zoom > LIFT);
     sound.setDistance(inLift ? 0 : Math.min(1, zoom / (LIFT * 2.5)));
     if (zoom > LIFT) {
@@ -228,7 +229,7 @@ async function boot() {
     if (inLift) {   // the outside as seen from where the car is: the same view, from the plaza or from up the tether
       camera.updateMatrixWorld(); view = worldCam; worldCam.quaternion.copy(camera.quaternion);
       worldCam.position.set(BASE.x + camera.position.x, liftFloor + lift.alt * 1000 + camera.position.y, BASE.z + camera.position.z);
-      worldCam.aspect = camera.aspect; worldCam.far = camera.far; worldCam.near = camera.near; worldCam.updateProjectionMatrix();
+      worldCam.aspect = camera.aspect; worldCam.far = Math.max(camera.far, 30000); worldCam.near = camera.near; worldCam.updateProjectionMatrix();
     }
     world.update(env, dt, time, view, u);
     if (zoom > 0) {   // lifting off: rise and look down

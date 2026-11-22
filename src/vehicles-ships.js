@@ -1,6 +1,6 @@
 // Ships on the two rivers: a 17th-century three-master, an ocean liner and a container ship. Waterline at y = 0, bow towards +x.
-import { rng, lerp, smooth, clamp } from './util.js?v=740e009b';
-import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js?v=740e009b';
+import { rng, lerp, smooth, clamp } from './util.js?v=c0a40a57';
+import { Bag, fin, curve, loft, skin, revolve, vehicleMat, at } from './vehicles-kit.js?v=c0a40a57';
 
 const PI = Math.PI;
 const S = {

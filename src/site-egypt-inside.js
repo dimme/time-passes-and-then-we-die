@@ -2,8 +2,8 @@
 // Maragioglio & Rinaldi), walkable, lit by a few oil lamps. Everything here is in each pyramid's own frame: x metres east of its
 // centre, z metres south of it (the game's z runs south), y metres above its base.
 import * as THREE from 'three';
-import { C, lin, shade } from './site-egypt-kit.js?v=740e009b';
-import { K1, K2, K3, builtCourses } from './site-egypt-land.js?v=740e009b';
+import { C, lin, shade } from './site-egypt-kit.js?v=c0a40a57';
+import { K1, K2, K3, builtCourses } from './site-egypt-land.js?v=c0a40a57';
 
 const tan = (deg) => Math.tan((deg * Math.PI) / 180);
 const LIME = lin(C.lime), GRANITE = lin(C.granite), ROCK = shade(C.rock, 0.85), DARK = [0.02, 0.018, 0.015], TURA = lin(C.tura);

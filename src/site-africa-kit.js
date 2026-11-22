@@ -1,11 +1,11 @@
 // Shared by the two Stone Age places (site-africa.js, site-cave.js): scenery placed on the drawn ground and
 // shown for its span of years, camp fires with smoke, herds of animals, and a few hand-made textures.
 import * as THREE from 'three';
-import { rng, merge, part, ball, cyl } from './util.js?v=740e009b';
-import { yearToU } from './timeline.js?v=740e009b';
-import { species, pose } from './animals.js?v=740e009b';
-import { animTime } from './organic.js?v=740e009b';
-import { canvasTex } from './textures.js?v=740e009b';
+import { rng, merge, part, ball, cyl } from './util.js?v=c0a40a57';
+import { yearToU } from './timeline.js?v=c0a40a57';
+import { species, pose } from './animals.js?v=c0a40a57';
+import { animTime } from './organic.js?v=c0a40a57';
+import { canvasTex } from './textures.js?v=c0a40a57';
 
 export const Y = yearToU, TAU = Math.PI * 2;
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0), _c = new THREE.Color();

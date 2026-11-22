@@ -1,13 +1,13 @@
 // East African Rift, 7 million to 70 thousand years ago: a lake-margin plain like Olduvai's, between the fault scarp
 // and a rift lake with a volcano beyond it. Upright apes, then stone knappers, hand-axe makers, fire keepers, and us.
 import * as THREE from 'three';
-import { rng, smooth, part, ball, cyl } from './util.js?v=740e009b';
-import { shared } from './textures.js?v=740e009b';
-import { makeKinds } from './flora.js?v=740e009b';
-import { Builder, norm, tube, arc, foliage } from './flora-geo.js?v=740e009b';
-import { leafMat, floraTextures } from './flora-tex.js?v=740e009b';
-import { actors } from './people-actors.js?v=740e009b';
-import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, thatchTex, hearth, debitage } from './site-africa-kit.js?v=740e009b';
+import { rng, smooth, part, ball, cyl } from './util.js?v=c0a40a57';
+import { shared } from './textures.js?v=c0a40a57';
+import { makeKinds } from './flora.js?v=c0a40a57';
+import { Builder, norm, tube, arc, foliage } from './flora-geo.js?v=c0a40a57';
+import { leafMat, floraTextures } from './flora-tex.js?v=c0a40a57';
+import { actors } from './people-actors.js?v=c0a40a57';
+import { Y, TAU, keyed, rgb, tone, facing, drawnGround, Stuff, Fires, Beasts, Field, thatchTex, hearth, debitage } from './site-africa-kit.js?v=c0a40a57';
 
 const sin = Math.sin, cos = Math.cos, exp = Math.exp;
 

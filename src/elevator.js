@@ -7,14 +7,18 @@
 // its door facing +x). main.js draws the outside first (the city, or the space view from the right height) and this scene
 // over it, so the windows show whatever is outside at that altitude.
 import * as THREE from 'three';
-import { actors } from './people-actors.js?v=740e009b';
+import { actors } from './people-actors.js?v=c0a40a57';
 
-export const BASE = { x: 150, z: 150 };          // the ground station: a plaza cleared for it in the garden city
+export const BASE = { x: -28, z: 30 };            // the ground station: a plaza in the park block just ahead of where you start (no buildings there since 1733)
 export const YEARS = [2990, 9600];
 export const GEO = 35786;                         // km
 const R = 3.6, WALL = 0.25, H = 3.2, CONSOLE = 1.15, DOOR = 0.42;   // the car: radius, wall, height; the console round the tether; the door's half-angle
 const HUB = 16, HUB_H = 6;                         // the station's hall round the docked car
 const CLIMB = 60;                                  // seconds for the ride, either way
+// Height (km) t seconds into the climb: from rest, a gentle push at first (18 m after 5 s, half a kilometre after 15, two after
+// 20), then ever faster through the empty middle; the way down is the same in reverse, braking gently onto the plaza.
+const TAU = 4.1, AMP = GEO / (Math.exp(CLIMB / TAU) - 1 - CLIMB / TAU);
+const climbAlt = (t) => AMP * (Math.exp(t / TAU) - 1 - t / TAU);
 
 const mat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.2, ...o });
 const glassMat = () => new THREE.MeshPhysicalMaterial({ color: 0xbfe6ff, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.14, depthWrite: false, side: THREE.DoubleSide });
@@ -135,8 +139,8 @@ export class Elevator {
   go() { if (this.stage === 'ground') { this.stage = 'up'; this.t = 0; } else if (this.stage === 'top') { this.stage = 'down'; this.t = 0; } }
   update(dt, u, time) {
     if (this.riding) {
-      this.t += dt; const s = Math.min(1, this.t / CLIMB), k = this.stage === 'up' ? s : 1 - s;
-      this.alt = 0.002 + (GEO - 0.002) * (Math.exp(7 * k) - 1) / (Math.exp(7) - 1);
+      this.t += dt; const s = Math.min(1, this.t / CLIMB), tt = (this.stage === 'up' ? s : 1 - s) * CLIMB;
+      this.alt = climbAlt(tt);
       if (s >= 1) { this.stage = this.stage === 'up' ? 'top' : 'ground'; this.alt = this.stage === 'top' ? GEO : 0; }
     }
     const shut = this.riding ? 1 : 0, door = this.car.userData.door; door.position.z += ((shut ? 0 : 2 * R * Math.sin(DOOR) * 0.98) - door.position.z) * Math.min(1, dt * 3);

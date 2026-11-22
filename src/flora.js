@@ -1,9 +1,10 @@
 import * as THREE from 'three';
-import { rng, smooth, box, vcMat } from './util.js?v=740e009b';
-import { yearToU } from './timeline.js?v=740e009b';
-import { shared } from './textures.js?v=740e009b';
-import { windTime, leafMat, floraTextures } from './flora-tex.js?v=740e009b';
-import { Builder, norm, tube, arc, ribbon, kite, grow, foliage, boulder } from './flora-geo.js?v=740e009b';
+import { rng, smooth, box, vcMat } from './util.js?v=c0a40a57';
+import { BASE } from './elevator.js?v=c0a40a57';
+import { yearToU } from './timeline.js?v=c0a40a57';
+import { shared } from './textures.js?v=c0a40a57';
+import { windTime, leafMat, floraTextures } from './flora-tex.js?v=c0a40a57';
+import { Builder, norm, tube, arc, ribbon, kite, grow, foliage, boulder } from './flora-geo.js?v=c0a40a57';
 
 const FADE = 0.003;
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _c = new THREE.Color();
@@ -297,7 +298,7 @@ export function buildFlora(world, scene) {
       for (let i = Math.round(n / [].concat(kinds).length); i > 0; i--) {
         const [x, z] = place();
         let [a, b] = span(x, z);
-        if (Math.abs(x - 150) < 17 && Math.abs(z - 150) < 17 && a < 9600 && b > 2990) { if (a < 2990) b = 2990; else a = 9600; }   // the space elevator's plaza stays clear while it stands
+        if (Math.abs(x - BASE.x) < 17 && Math.abs(z - BASE.z) < 17 && a < 9600 && b > 2990) { if (a < 2990) b = 2990; else a = 9600; }   // the space elevator's plaza stays clear while it stands
         const it = { x, z, s: size[0] + r() * (size[1] - size[0]), rot: r() * 6.28, u0: Y(a), u1: Y(b), tint: tint() };
         if (extra) extra(it);
         items.push(it);
